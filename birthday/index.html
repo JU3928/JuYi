@@ -51,6 +51,7 @@
             animation: heroFloat 4s ease-in-out infinite;
             filter: drop-shadow(0 0 60px rgba(231, 121, 138, 0.35));
             letter-spacing: -2px;
+            transition: all 0.8s ease;
         }
         @keyframes heroFloat {
             0%, 100% { transform: translateY(0); }
@@ -60,25 +61,30 @@
             font-size: 28px; font-weight: 600;
             color: #f0c4d0; letter-spacing: 6px;
             margin: 12px 0 6px;
+            transition: all 0.6s ease;
         }
         #hero .subtitle-en {
             font-size: 15px; color: rgba(232,180,195,0.6);
             letter-spacing: 4px; text-transform: uppercase;
             margin-bottom: 40px;
+            transition: all 0.6s ease;
         }
         /* Countdown */
         .countdown-row {
             display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;
+            transition: all 0.6s ease;
         }
         .countdown-item {
             background: rgba(255,255,255,0.04);
             border: 1px solid rgba(255,255,255,0.08);
             border-radius: 16px; padding: 18px 20px; min-width: 72px;
             backdrop-filter: blur(12px);
+            transition: all 0.6s ease;
         }
         .countdown-item .num {
             font-size: 40px; font-weight: 700; color: #f0c4d0;
             font-variant-numeric: tabular-nums; font-family: "SF Mono", "Consolas", monospace;
+            transition: all 0.5s ease;
         }
         .countdown-item .label {
             font-size: 12px; color: rgba(232,180,195,0.5);
@@ -90,6 +96,54 @@
         }
         @keyframes hintPulse {
             0%,100% { opacity: 0.35; } 50% { opacity: 0.8; }
+        }
+        /* Birthday mode */
+        #hero.birthday-mode .date-3d {
+            background: linear-gradient(180deg, #ffd700 0%, #ffb347 40%, #ff6b9d 100%);
+            -webkit-background-clip: text; background-clip: text;
+            filter: drop-shadow(0 0 80px rgba(255, 215, 0, 0.5));
+            animation: heroFloat 2s ease-in-out infinite, dateGlow 1.5s ease-in-out infinite;
+        }
+        @keyframes dateGlow {
+            0%,100% { filter: drop-shadow(0 0 80px rgba(255, 215, 0, 0.5)); }
+            50% { filter: drop-shadow(0 0 120px rgba(255, 180, 50, 0.8)); }
+        }
+        #hero.birthday-mode .subtitle-cn {
+            color: #ffd700; letter-spacing: 8px;
+        }
+        #hero.birthday-mode .subtitle-en {
+            color: rgba(255,215,0,0.7);
+        }
+        #hero.birthday-mode .countdown-row {
+            gap: 8px;
+        }
+        #hero.birthday-mode .countdown-item {
+            background: rgba(255,215,0,0.1);
+            border-color: rgba(255,215,0,0.3);
+        }
+        #hero.birthday-mode .countdown-item .num {
+            color: #ffd700; font-size: 48px;
+            animation: celebrateNum 0.6s ease-in-out infinite;
+        }
+        @keyframes celebrateNum {
+            0%,100% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+        }
+        .birthday-banner {
+            display: none; margin: 24px auto;
+            background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,107,157,0.15));
+            border: 1px solid rgba(255,215,0,0.3);
+            border-radius: 20px; padding: 20px 32px;
+            font-size: 20px; color: #ffd700; letter-spacing: 4px;
+            font-weight: 700;
+            animation: bannerIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        #hero.birthday-mode .birthday-banner {
+            display: inline-block;
+        }
+        @keyframes bannerIn {
+            from { opacity: 0; transform: scale(0.8) translateY(20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
         }
 
         /* ===== Section 2: Wishes ===== */
@@ -376,7 +430,8 @@
             <div class="countdown-item"><div class="num" id="cd-mins">--</div><div class="label">分</div></div>
             <div class="countdown-item"><div class="num" id="cd-secs">--</div><div class="label">秒</div></div>
         </div>
-        <div class="scroll-hint">↓ 向下滑动 ↓</div>
+        <div class="birthday-banner" id="birthdayBanner">🎂 就是今天！生日快乐！🎂</div>
+        <div class="scroll-hint" id="scrollHint">↓ 向下滑动 ↓</div>
     </div>
 </section>
 
@@ -471,12 +526,12 @@
                 <div class="gift-label">💎 真实礼物</div>
                 <div class="gift-name">一只手表</div>
                 <div class="gift-meaning">
-                    时间是世界上最珍贵的东西——<br>
-                    因为它一旦流逝，就再也不会回来。<br><br>
-                    送你这只表，不是想提醒你时间在走，<br>
-                    而是想告诉你：<br>
-                    <strong style="color:#f0c4d0;">你的每一分每一秒，都值得被珍视。</strong><br><br>
-                    23岁的时光，愿你走得从容、走得漂亮。✨
+                    希望这块表能陪你<br>
+                    走过每一个值得纪念的时刻。<br><br>
+                    23岁——刚刚好的年纪。<br>
+                    不再慌张，也不设限。<br>
+                    往后的每一分每一秒，<br>
+                    <strong style="color:#f0c4d0;">愿你按自己喜欢的方式度过。</strong>
                 </div>
             </div>
         </div>
@@ -489,18 +544,22 @@
         <div class="section-tag">· For You ·</div>
         <div class="section-title">最后，想对你说</div>
         <div class="message-block">
-            <p>嗨，<span class="highlight">7月4日</span>又到了。</p>
-            <p>这一年，你一定经历了很多吧——<br>
-            有笑声、有泪水、有深夜的迷惘、<br>也有清晨的豁然开朗。</p>
-            <p>但不管怎样，你走到了今天，<br>走到了<span class="highlight">23岁</span>的门前。</p>
-            <p>23岁——<br>
-            不再是懵懂少女，<br>也还未被世俗完全定义。<br>
-            你有足够的勇气去尝试，<br>也有足够的智慧去选择。</p>
-            <p>所以，大胆往前走吧。<br>
-            去成为你想成为的人，<br>去过你想过的生活。</p>
-            <p>这个世界很大，<br>而你值得所有美好。</p>
+            <p><span class="highlight">7月4日</span>，你的生日。</p>
+            <p>这一年肯定发生了不少事吧——<br>
+            开心的、难过的、纠结的、释然的……<br>
+            不管怎样，你走到这里了，<br>
+            走到了<span class="highlight">23岁</span>的这一天。</p>
+            <p>23岁其实挺好的——<br>
+            大概知道自己想要什么了，<br>
+            也有底气去试试看。<br>
+            偶尔迷个路也没关系，<br>
+            谁不是在边走边长大呢？</p>
+            <p>总之，生日快乐。<br>
+            希望你一直做自己喜欢的事，<br>
+            成为自己喜欢的人。<br>
+            其他的，慢慢来就好。</p>
         </div>
-        <div class="signature">—— 你的朋友</div>
+        <div class="signature">—— 你的朋友 ✨</div>
     </div>
 </section>
 
@@ -570,17 +629,64 @@
     const hoursEl = document.getElementById('cd-hours');
     const minsEl = document.getElementById('cd-mins');
     const secsEl = document.getElementById('cd-secs');
+    const hero = document.getElementById('hero');
+    const banner = document.getElementById('birthdayBanner');
+    const scrollHint = document.getElementById('scrollHint');
+    let birthdayTriggered = false;
+
+    function triggerBirthday() {
+        if (birthdayTriggered) return;
+        birthdayTriggered = true;
+
+        // Switch hero to birthday celebration mode
+        hero.classList.add('birthday-mode');
+        scrollHint.textContent = '🎉 生日快乐！往下看有礼物 🎉';
+
+        // Massive celebration
+        function celebBurst() {
+            launchConfetti(150);
+            // Fireworks across the screen
+            for (let i = 0; i < 12; i++) {
+                setTimeout(() => {
+                    const x = 80 + Math.random() * (window.innerWidth - 160);
+                    const y = 80 + Math.random() * (window.innerHeight - 300);
+                    sparkAt(x, y);
+                }, i * 150);
+            }
+        }
+
+        // Three waves of celebration
+        celebBurst();
+        setTimeout(celebBurst, 3000);
+        setTimeout(celebBurst, 6000);
+
+        // Gentle periodic celebration every 30 seconds
+        setInterval(() => {
+            launchConfetti(60);
+            const x = 80 + Math.random() * (window.innerWidth - 160);
+            const y = 80 + Math.random() * (window.innerHeight - 300);
+            sparkAt(x, y);
+        }, 30000);
+
+        showToast('🎂 就是今天！生日快乐！！🎂');
+    }
 
     function update() {
         const now = new Date();
         let diff = BIRTHDAY - now;
 
         if (diff <= 0) {
-            daysEl.textContent = '🎂'; hoursEl.textContent = '🎂';
-            minsEl.textContent = '🎂'; secsEl.textContent = '🎂';
+            // Birthday time!
+            if (!birthdayTriggered) {
+                triggerBirthday();
+            }
+            // Keep the countdown numbers pulsing with celebration
+            daysEl.textContent = '🎂'; hoursEl.textContent = '🎉';
+            minsEl.textContent = '✨'; secsEl.textContent = '💝';
             return;
         }
 
+        // Normal countdown
         const days = Math.floor(diff / 86400000); diff -= days * 86400000;
         const hours = Math.floor(diff / 3600000); diff -= hours * 3600000;
         const mins = Math.floor(diff / 60000); diff -= mins * 60000;
@@ -593,6 +699,11 @@
     }
     update();
     setInterval(update, 1000);
+
+    // Also expose for testing: trigger with ?birthday in URL
+    if (window.location.search.includes('birthday')) {
+        triggerBirthday();
+    }
 })();
 
 // ── Wish Card Flip ──
