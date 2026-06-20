@@ -1,0 +1,434 @@
+/* ===== Reset & Base ===== */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html {
+    scroll-behavior: smooth;
+    /* === 修复：滚动吸附改为 mandatory，添加 padding 缓解 Safari 卡顿 === */
+    scroll-snap-type: y mandatory;
+    scroll-padding-top: 10vh;
+}
+body {
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", "Noto Serif SC", serif;
+    background: #0a0a0f;
+    color: #e8e0e8;
+    overflow-x: hidden;
+    /* === 修复：移除 cursor: default，恢复 auto === */
+    cursor: auto;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ===== Ambient Background ===== */
+.stars-canvas {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 0;
+}
+
+/* ===== Section Common ===== */
+section {
+    min-height: 100vh; display: flex;
+    align-items: center; justify-content: center;
+    position: relative; z-index: 1;
+    padding: 80px 24px;
+    scroll-snap-align: start;
+}
+
+.inner {
+    max-width: 620px; width: 100%;
+    position: relative; z-index: 2;
+}
+
+/* ===== Hero ===== */
+#hero {
+    flex-direction: column; text-align: center;
+}
+#hero .date-3d {
+    font-size: clamp(80px, 15vw, 140px);
+    font-weight: 900;
+    line-height: 1;
+    background: linear-gradient(180deg, #f5c6d0 0%, #e8798a 40%, #c44d70 100%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: heroFloat 4s ease-in-out infinite;
+    filter: drop-shadow(0 0 60px rgba(231, 121, 138, 0.35));
+    letter-spacing: -2px;
+    transition: all 0.8s ease;
+    cursor: pointer;
+}
+@keyframes heroFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-16px); }
+}
+/* === A11y：标题使用 h1/h2 语义标签 === */
+#hero .subtitle-cn {
+    font-size: 28px; font-weight: 600;
+    color: #f0c4d0; letter-spacing: 6px;
+    margin: 12px 0 6px;
+    transition: all 0.6s ease;
+}
+#hero .subtitle-en {
+    font-size: 15px;
+    /* === A11y：对比度从 0.6 提升至 0.75 === */
+    color: rgba(232,180,195,0.75);
+    letter-spacing: 4px; text-transform: uppercase;
+    margin-bottom: 40px;
+    transition: all 0.6s ease;
+}
+/* Countdown */
+.countdown-row {
+    display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;
+    transition: all 0.6s ease;
+}
+.countdown-item {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px; padding: 18px 20px; min-width: 72px;
+    backdrop-filter: blur(12px);
+    transition: all 0.6s ease;
+}
+.countdown-item .num {
+    font-size: 40px; font-weight: 700; color: #f0c4d0;
+    font-variant-numeric: tabular-nums; font-family: "SF Mono", "Consolas", monospace;
+    transition: all 0.5s ease;
+}
+.countdown-item .label {
+    font-size: 12px;
+    /* === A11y：对比度从 0.5 提升至 0.7 === */
+    color: rgba(232,180,195,0.7);
+    margin-top: 4px; letter-spacing: 2px;
+}
+.scroll-hint {
+    margin-top: 48px; font-size: 13px;
+    /* === A11y：对比度提升 === */
+    color: rgba(232,180,195,0.7);
+    letter-spacing: 3px; animation: hintPulse 2s ease-in-out infinite;
+    cursor: pointer;
+}
+@keyframes hintPulse {
+    0%,100% { opacity: 0.5; } 50% { opacity: 0.9; }
+}
+
+/* === 生日庆祝模式 === */
+#hero.birthday-mode .date-3d {
+    background: linear-gradient(180deg, #ffd700 0%, #ffb347 40%, #ff6b9d 100%);
+    -webkit-background-clip: text; background-clip: text;
+    filter: drop-shadow(0 0 80px rgba(255, 215, 0, 0.5));
+    animation: heroFloat 2s ease-in-out infinite, dateGlow 1.5s ease-in-out infinite;
+}
+@keyframes dateGlow {
+    0%,100% { filter: drop-shadow(0 0 80px rgba(255, 215, 0, 0.5)); }
+    50% { filter: drop-shadow(0 0 120px rgba(255, 180, 50, 0.8)); }
+}
+#hero.birthday-mode .subtitle-cn {
+    color: #ffd700; letter-spacing: 8px;
+}
+#hero.birthday-mode .subtitle-en {
+    color: rgba(255,215,0,0.75);
+}
+#hero.birthday-mode .countdown-row { gap: 8px; }
+#hero.birthday-mode .countdown-item {
+    background: rgba(255,215,0,0.1);
+    border-color: rgba(255,215,0,0.3);
+}
+#hero.birthday-mode .countdown-item .num {
+    color: #ffd700; font-size: 48px;
+    animation: celebrateNum 0.6s ease-in-out infinite;
+}
+@keyframes celebrateNum {
+    0%,100% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+}
+.birthday-banner {
+    display: none; margin: 24px auto;
+    background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,107,157,0.15));
+    border: 1px solid rgba(255,215,0,0.3);
+    border-radius: 20px; padding: 20px 32px;
+    font-size: 20px; color: #ffd700; letter-spacing: 4px;
+    font-weight: 700;
+    animation: bannerIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+#hero.birthday-mode .birthday-banner { display: inline-block; }
+@keyframes bannerIn {
+    from { opacity: 0; transform: scale(0.8) translateY(20px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* ===== Section 2: Wishes ===== */
+#wishes { flex-direction: column; text-align: center; }
+.section-tag {
+    font-size: 12px; letter-spacing: 4px; color: #e8798a;
+    text-transform: uppercase; margin-bottom: 8px;
+}
+.section-title {
+    font-size: clamp(26px, 5vw, 38px); font-weight: 700;
+    color: #f0d4dc; margin-bottom: 36px; letter-spacing: 2px;
+}
+.wish-cards {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 16px; width: 100%; perspective: 1200px;
+}
+.wish-card {
+    aspect-ratio: 3/4; position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+}
+/* === 悬停微动效：仅在 hover 设备上生效 === */
+@media (hover: hover) {
+    .wish-card:hover {
+        transform: scale(1.02);
+    }
+    .wish-card:hover .face.front {
+        box-shadow: 0 0 20px rgba(231,121,138,0.3);
+    }
+    .polaroid:hover {
+        transform: rotate(0deg) scale(1.05);
+        box-shadow: 0 16px 48px rgba(200,140,160,0.35);
+    }
+}
+.wish-card.flipped { transform: rotateY(180deg); }
+.wish-card.flipped:hover { transform: rotateY(180deg); }
+.wish-card .face {
+    position: absolute; inset: 0; border-radius: 16px;
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; padding: 24px;
+    backface-visibility: hidden;
+    border: 1px solid rgba(255,255,255,0.06);
+}
+.wish-card .front {
+    background: linear-gradient(145deg, rgba(200,110,130,0.18), rgba(120,60,100,0.25));
+    backdrop-filter: blur(8px);
+    font-size: 40px;
+}
+.wish-card .front .card-icon { font-size: 48px; margin-bottom: 8px; }
+.wish-card .front .card-label {
+    font-size: 14px; color: rgba(240,200,210,0.7);
+    letter-spacing: 2px;
+}
+.wish-card .back {
+    background: linear-gradient(145deg, rgba(220,130,150,0.25), rgba(140,70,100,0.3));
+    backdrop-filter: blur(12px);
+    transform: rotateY(180deg);
+    font-size: 14px; line-height: 1.8;
+    color: #f0d4dc;
+}
+
+/* 全翻奖励文字 */
+.all-flipped-hint {
+    margin-top: 20px; font-size: 13px;
+    color: rgba(240,196,208,0.6);
+    letter-spacing: 2px;
+    opacity: 0; transition: opacity 0.8s ease;
+}
+.all-flipped-hint.visible { opacity: 1; }
+
+/* ===== Section 3: Gallery ===== */
+#gallery { flex-direction: column; text-align: center; }
+.polaroid-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 20px; width: 100%;
+}
+.polaroid {
+    background: #faf5f7; padding: 12px 12px 36px;
+    border-radius: 4px; box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+    transform: rotate(var(--r, 0deg));
+    transition: transform 0.35s ease, box-shadow 0.35s ease;
+    cursor: pointer;
+}
+.polaroid .photo {
+    aspect-ratio: 1; border-radius: 2px; overflow: hidden;
+    background: linear-gradient(135deg, var(--c1, #e8c4d0), var(--c2, #d4a0b8));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 48px; position: relative;
+}
+.polaroid .photo::after {
+    content: ''; position: absolute; top: 8%; left: 15%;
+    width: 30px; height: 30px; border-radius: 50%;
+    background: rgba(255,255,255,0.25); filter: blur(4px);
+}
+.polaroid .caption {
+    margin-top: 10px; font-size: 13px; color: #6b4e5e;
+    letter-spacing: 1px; font-weight: 500;
+}
+
+/* ===== Section 4: Gift Box ===== */
+#gift { flex-direction: column; text-align: center; }
+.gift-scene { perspective: 1000px; display: inline-block; margin: 20px 0 8px; position: relative; }
+.gift-box {
+    width: 140px; height: 140px; position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.6s;
+    cursor: pointer;
+}
+.gift-box.open .gift-lid {
+    transform: rotateX(-130deg) translateY(-50px);
+}
+.gift-box-inner {
+    width: 140px; height: 140px; position: relative;
+    transform-style: preserve-3d;
+    animation: giftFloat 3s ease-in-out infinite;
+}
+@keyframes giftFloat {
+    0%,100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+.gift-body {
+    position: absolute; bottom: 0;
+    width: 130px; height: 100px;
+    background: linear-gradient(180deg, #d4899e, #b8657a);
+    border-radius: 10px; left: 5px;
+    box-shadow: 0 10px 30px rgba(180,100,120,0.4);
+}
+.gift-body::after {
+    content: ''; position: absolute;
+    top: 0; left: 50%; transform: translateX(-50%);
+    width: 18px; height: 100px;
+    background: linear-gradient(180deg, #f0c8d4, #e0a8b8);
+    border-radius: 3px;
+}
+.gift-ribbon-h {
+    position: absolute; top: 42px; left: 0;
+    width: 130px; height: 16px;
+    background: #f0c8d4; border-radius: 3px;
+}
+.gift-lid {
+    position: absolute; bottom: 92px; left: 0;
+    width: 140px; height: 30px;
+    background: linear-gradient(180deg, #e09aaf, #c87890);
+    border-radius: 10px 10px 2px 2px;
+    transform-origin: bottom center;
+    transition: transform 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 -2px 8px rgba(0,0,0,0.15);
+}
+.gift-lid::after {
+    content: '🎀'; position: absolute; top: -28px; left: 50%;
+    transform: translateX(-50%); font-size: 30px;
+    filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));
+}
+.gift-tip {
+    font-size: 13px;
+    /* === A11y：对比度提升至 0.7 === */
+    color: rgba(232,180,195,0.7);
+    letter-spacing: 2px; margin-top: 8px;
+}
+/* Watch Reveal */
+.watch-reveal {
+    max-width: 400px; margin: 0 auto;
+    opacity: 0; transform: translateY(30px);
+    transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+    pointer-events: none;
+}
+.watch-reveal.visible {
+    opacity: 1; transform: translateY(0);
+    pointer-events: auto;
+}
+.watch-display {
+    position: relative; width: 160px; height: 160px;
+    margin: 0 auto 24px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 40% 35%, #faf5f7 0%, #e8dce4 40%, #c8b0bc 100%);
+    box-shadow:
+        0 0 0 6px #d4a0b8,
+        0 0 0 12px #e8c8d8,
+        0 0 0 18px rgba(200,150,170,0.3),
+        0 16px 48px rgba(180,120,150,0.35);
+    display: flex; align-items: center; justify-content: center;
+    animation: watchFloat 3s ease-in-out infinite;
+}
+@keyframes watchFloat {
+    0%,100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+}
+.watch-display .watch-face { text-align: center; position: relative; z-index: 1; }
+.watch-display .watch-emoji {
+    font-size: 56px; display: block;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+    animation: watchShine 2s ease-in-out infinite;
+}
+@keyframes watchShine {
+    0%,100% { filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1)) brightness(1); }
+    50% { filter: drop-shadow(0 2px 12px rgba(200,150,150,0.4)) brightness(1.1); }
+}
+.watch-display::before {
+    content: ''; position: absolute; top: 18%; left: 22%;
+    width: 20px; height: 20px; border-radius: 50%;
+    background: rgba(255,255,255,0.5); filter: blur(3px);
+    z-index: 2; pointer-events: none;
+}
+.watch-info {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px; padding: 24px;
+    backdrop-filter: blur(12px);
+}
+.watch-info .gift-label {
+    font-size: 12px; letter-spacing: 3px; color: #e8798a;
+    text-transform: uppercase; margin-bottom: 8px;
+}
+.watch-info .gift-name {
+    font-size: 22px; font-weight: 700; color: #f0c4d0;
+    margin-bottom: 12px;
+}
+.watch-info .gift-meaning {
+    font-size: 14px; color: rgba(212,184,196,0.85);
+    line-height: 1.9; font-style: italic;
+}
+
+/* ===== Section 5: Message ===== */
+#message { flex-direction: column; text-align: center; }
+.message-block {
+    color: #d4b8c4; font-size: 17px; line-height: 2.2;
+    max-width: 480px; margin: 0 auto;
+}
+.message-block .highlight {
+    color: #f0c4d0; font-weight: 600;
+    background: linear-gradient(90deg, transparent, rgba(231,121,138,0.15), transparent);
+    padding: 2px 8px; border-radius: 2px;
+}
+.signature {
+    margin-top: 32px; font-size: 20px; color: #e8798a;
+    letter-spacing: 4px; font-style: italic;
+}
+
+/* ===== Confetti & Spark System ===== */
+.confetti-container {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 200;
+}
+.confetti-piece {
+    position: absolute; animation: confettiFall linear forwards;
+}
+@keyframes confettiFall {
+    0% { transform: translateY(-10vh) rotate(0deg) scale(1); opacity: 1; }
+    100% { transform: translateY(110vh) rotate(720deg) scale(0.4); opacity: 0; }
+}
+.spark {
+    position: absolute; border-radius: 50%;
+    animation: sparkOut 0.9s ease-out forwards;
+}
+@keyframes sparkOut {
+    0% { transform: translate(0,0) scale(1); opacity: 1; }
+    100% { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; }
+}
+
+/* ===== Toast ===== */
+.toast {
+    position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
+    background: rgba(30,10,20,0.85); backdrop-filter: blur(16px);
+    color: #f0c4d0; padding: 12px 28px; border-radius: 50px;
+    font-size: 14px; letter-spacing: 2px;
+    border: 1px solid rgba(231,121,138,0.25);
+    z-index: 300; pointer-events: none;
+    animation: toastIn 0.4s ease, toastOut 0.4s 2.2s ease forwards;
+}
+@keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(20px); } }
+@keyframes toastOut { to { opacity: 0; transform: translateX(-50%) translateY(-10px); } }
+
+/* ===== Responsive ===== */
+@media (max-width: 600px) {
+    section { padding: 60px 16px; }
+    .countdown-item { min-width: 56px; padding: 12px 14px; }
+    .countdown-item .num { font-size: 28px; }
+    #hero.birthday-mode .countdown-item .num { font-size: 34px; }
+    .wish-cards { grid-template-columns: repeat(2, 1fr); }
+    .polaroid-grid { grid-template-columns: repeat(2, 1fr); }
+}
