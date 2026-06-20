@@ -303,16 +303,31 @@
 
     async _onCopyClipboard() {
       const items = await this.db.getAll(STORE);
-      const data = { _format: 'JuYiAccounting/1', exportedAt: new Date().toISOString(), items };
-      const json = JSON.stringify(data);
-      try { await navigator.clipboard.writeText(json); alert('已复制到剪贴板！发给手机后点「从剪贴板导入」'); }
-      catch (e) { const ta = document.createElement('textarea'); ta.value = json; ta.style.cssText = 'position:fixed;left:-9999px'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); alert('已复制！'); }
+      let text = JSON.stringify({ _format: 'JuYiAccounting/1', exportedAt: new Date().toISOString(), items });
+      if (typeof CompressionStream !== 'undefined') {
+        try {
+          const blob = new Blob([text]);
+          const cs = new CompressionStream('gzip');
+          const compressed = await new Response(blob.stream().pipeThrough(cs)).blob();
+          text = '\x01gz' + btoa(String.fromCharCode(...new Uint8Array(await compressed.arrayBuffer())));
+        } catch (_) {}
+      }
+      const kb = (text.length / 1024).toFixed(0);
+      if (text.length > 3 * 1024 * 1024) { alert(`数据过大（${kb} KB），请改用文件导出`); return; }
+      try { await navigator.clipboard.writeText(text); alert(`已复制！(${kb} KB)`); }
+      catch (e) { const ta = document.createElement('textarea'); ta.value = text; ta.style.cssText = 'position:fixed;left:-9999px'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); alert(`已复制！(${kb} KB)`); }
     }
 
     async _onPasteClipboard() {
       let text = '';
       try { text = await navigator.clipboard.readText(); } catch (e) { text = prompt('请粘贴数据：'); }
       if (!text || !text.trim()) { alert('没有读取到数据'); return; }
+      if (text.startsWith('\x01gz')) {
+        try {
+          const bytes = Uint8Array.from(atob(text.slice(4)), c => c.charCodeAt(0));
+          text = await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
+        } catch (e) { alert('解压失败，请重新复制或改用文件导入'); return; }
+      }
       try {
         const data = JSON.parse(text);
         if (!data.items) throw new Error('格式错误');

@@ -718,31 +718,52 @@
     async _onCopyClipboard() {
       const data = await this.db.exportAll([STORE, PROGRESS_STORE]);
       data._subjects = this.subjects;
-      const json = JSON.stringify(data);
+      let text = JSON.stringify(data);
+      const rawKB = (text.length / 1024).toFixed(0);
+      let mode = 'raw';
+      // Gzip compress if supported
+      if (typeof CompressionStream !== 'undefined') {
+        try {
+          const blob = new Blob([text]);
+          const cs = new CompressionStream('gzip');
+          const compressed = await new Response(blob.stream().pipeThrough(cs)).blob();
+          const buf = await compressed.arrayBuffer();
+          const base64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+          text = '\x01gz' + base64; // magic prefix
+          mode = 'gzip';
+        } catch (_) {}
+      }
+      const finalKB = (text.length / 1024).toFixed(0);
+      if (text.length > 3 * 1024 * 1024) {
+        alert(`数据过大（${finalKB} KB），剪贴板可能截断。建议改用「导出备份」保存文件传输。`);
+        return;
+      }
       try {
-        await navigator.clipboard.writeText(json);
-        alert('已复制到剪贴板！💬 打开微信/QQ 粘贴发给手机，手机上用「从剪贴板导入」即可');
+        await navigator.clipboard.writeText(text);
+        alert(`已复制！(${finalKB} KB${mode === 'gzip' ? '，已压缩' : ''})\n发给手机后在手机端点击「从剪贴板导入」`);
       } catch (e) {
-        // Fallback for non-HTTPS
         const ta = document.createElement('textarea');
-        ta.value = json;
-        ta.style.position = 'fixed'; ta.style.left = '-9999px';
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand('copy');
-        document.body.removeChild(ta);
-        alert('已复制！发送到手机后在手机端点「从剪贴板导入」');
+        ta.value = text; ta.style.cssText = 'position:fixed;left:-9999px';
+        document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+        alert(`已复制！(${finalKB} KB) → 发给手机后点「从剪贴板导入」`);
       }
     }
 
     async _onPasteClipboard() {
       let text = '';
-      try {
-        text = await navigator.clipboard.readText();
-      } catch (e) {
-        text = prompt('请粘贴数据（在微信/QQ 中长按复制电脑发来的消息，然后粘贴到这里）：');
-      }
+      try { text = await navigator.clipboard.readText(); }
+      catch (e) { text = prompt('请粘贴数据（在微信/QQ 中长按复制电脑发来的消息，然后粘贴到这里）：'); }
       if (!text || !text.trim()) { alert('没有读取到数据'); return; }
+      // Decompress if gzip-prefixed
+      if (text.startsWith('\x01gz')) {
+        try {
+          const base64 = text.slice(4);
+          const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+          const ds = new DecompressionStream('gzip');
+          const decompressed = await new Response(new Blob([bytes]).stream().pipeThrough(ds)).text();
+          text = decompressed;
+        } catch (e) { alert('解压失败，请重新复制；或改用文件导入'); return; }
+      }
       try {
         const data = JSON.parse(text);
         if (!data._format || !data.stores?.[STORE]) throw new Error('格式不正确');
@@ -765,7 +786,7 @@
         await this.reload();
         this._renderAll();
         alert('导入成功！');
-      } catch (e) { alert('导入失败：' + e.message + '\n\n请确保复制的是一段完整的 JSON 数据（以 {"_format":"JuYiDB/2" 开头）'); }
+      } catch (e) { alert('导入失败：' + e.message + '\n请重新复制或改用文件导入'); }
     }
 
     _updateThemeBtn() {
