@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>JuYi</title>
+  <link rel="stylesheet" href="shared/base.css">
+  <style>
+    .hub {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: var(--jy-space-6);
+    }
+
+    .hub__logo {
+      font-size: 3rem;
+      margin-bottom: var(--jy-space-2);
+    }
+
+    .hub__title {
+      font-size: var(--jy-font-size-2xl);
+      font-weight: 700;
+      margin-bottom: var(--jy-space-1);
+    }
+
+    .hub__subtitle {
+      color: var(--jy-text-secondary);
+      margin-bottom: var(--jy-space-8);
+      font-size: var(--jy-font-size-md);
+    }
+
+    .hub__modules {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: var(--jy-space-4);
+      width: 100%;
+      max-width: 700px;
+    }
+
+    .hub-card {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--jy-space-4);
+      padding: var(--jy-space-5);
+      background: var(--jy-surface);
+      border: 1px solid var(--jy-border);
+      border-radius: var(--jy-radius-lg);
+      text-decoration: none;
+      color: inherit;
+      transition: all var(--jy-transition);
+    }
+    .hub-card:hover {
+      border-color: var(--jy-accent);
+      box-shadow: var(--jy-shadow-md);
+      transform: translateY(-2px);
+      text-decoration: none;
+    }
+
+    .hub-card__icon {
+      font-size: 2.5rem;
+      flex-shrink: 0;
+      width: 56px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--jy-bg-secondary);
+      border-radius: var(--jy-radius-lg);
+    }
+
+    .hub-card__info h3 {
+      font-size: var(--jy-font-size-lg);
+      font-weight: 600;
+      margin-bottom: var(--jy-space-1);
+    }
+
+    .hub-card__info p {
+      font-size: var(--jy-font-size-sm);
+      color: var(--jy-text-secondary);
+      line-height: 1.5;
+    }
+
+    .hub-card__badge {
+      display: inline-block;
+      padding: 0.1rem 0.45rem;
+      font-size: var(--jy-font-size-xs);
+      font-weight: 600;
+      border-radius: 99px;
+      background: var(--jy-success-soft);
+      color: var(--jy-success);
+      margin-top: var(--jy-space-2);
+    }
+
+    .hub-card--coming {
+      opacity: 0.55;
+      pointer-events: none;
+    }
+
+    .hub-card--coming .hub-card__badge {
+      background: var(--jy-bg-tertiary);
+      color: var(--jy-text-muted);
+    }
+
+    .hub__footer {
+      margin-top: var(--jy-space-8);
+      text-align: center;
+      color: var(--jy-text-muted);
+      font-size: var(--jy-font-size-xs);
+    }
+
+    .theme-toggle {
+      position: fixed;
+      top: var(--jy-space-4);
+      right: var(--jy-space-4);
+    }
+  </style>
+</head>
+<body>
+
+  <button id="themeToggle" class="jy-btn jy-btn--ghost jy-btn--icon theme-toggle" title="切换暗色模式">🌙</button>
+
+  <main class="hub">
+    <div class="hub__logo">🏯</div>
+    <h1 class="hub__title">JuYi</h1>
+    <p class="hub__subtitle">每个模块都可独立使用</p>
+
+    <div class="hub__modules">
+      <a href="modules/error-notebook/index.html" class="hub-card">
+        <div class="hub-card__icon">📒</div>
+        <div class="hub-card__info">
+          <h3>错题本</h3>
+          <p>图文混排 · 普通/难题分类 · 科目/标签筛选 · 断点续复习</p>
+          <span class="hub-card__badge">✅</span>
+        </div>
+      </a>
+
+      <a href="modules/fitness/index.html" class="hub-card">
+        <div class="hub-card__icon">🏃</div>
+        <div class="hub-card__info">
+          <h3>健身</h3>
+          <p>体重追踪曲线 · 运动日志 · 强度统计 · 标签筛选</p>
+          <span class="hub-card__badge">✅</span>
+        </div>
+      </a>
+
+      <a href="modules/accounting/index.html" class="hub-card">
+        <div class="hub-card__icon">💰</div>
+        <div class="hub-card__info">
+          <h3>记账</h3>
+          <p>收支记录 · 分类饼图 · 月度统计 · 标签管理</p>
+          <span class="hub-card__badge">✅</span>
+        </div>
+      </a>
+
+      <div class="hub-card hub-card--coming">
+        <div class="hub-card__icon">📔</div>
+        <div class="hub-card__info">
+          <h3>日记</h3>
+          <p>日期索引 · 富文本 · 情绪标签 · 图片插入</p>
+          <span class="hub-card__badge">🔮</span>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    // 主题切换
+    const toggle = document.getElementById('themeToggle');
+    const saved = localStorage.getItem('jy_theme');
+    if (saved === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      toggle.textContent = '☀️';
+    }
+
+    toggle.addEventListener('click', () => {
+      const current = document.documentElement.getAttribute('data-theme');
+      const next = current === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      localStorage.setItem('jy_theme', next);
+      toggle.textContent = next === 'dark' ? '☀️' : '🌙';
+    });
+  </script>
+</body>
+</html>

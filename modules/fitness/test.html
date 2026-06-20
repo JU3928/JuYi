@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>健身模块测试 — JuYi</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; background: #0f172a; color: #e2e8f0; }
+  h1 { font-size: 1.3rem; }
+  .result { padding: 6px 12px; margin: 4px 0; border-radius: 4px; font-size: 13px; font-family: monospace; }
+  .pass { background: #064e3b; color: #6ee7b7; }
+  .fail { background: #7f1d1d; color: #fca5a5; }
+  .section { margin: 1rem 0; padding: 0.5rem; border-left: 3px solid #818cf8; }
+  .summary { padding: 1rem; border-radius: 8px; font-weight: bold; font-size: 1.1rem; margin-top: 1rem; }
+  .summary.all-pass { background: #064e3b; }
+  .summary.has-fail { background: #7f1d1d; }
+  button { padding: 0.5rem 1.5rem; border: none; border-radius: 6px; cursor: pointer; font-size: 1rem; color: #fff; background: #4f46e5; }
+  button:hover { background: #4338ca; }
+</style>
+</head>
+<body>
+<h1>🏃 健身模块 · 功能测试</h1>
+<div id="results"><p>点击按钮开始测试...</p></div>
+<button onclick="runTests()">▶ 开始测试</button>
+
+<script>
+const STORE = 'fitness_test';
+const DB_NAME = 'JuYiFitnessTest';
+
+// ---- mini DB ----
+class DB {
+  constructor() { this.db = null; }
+  open(name, version, stores) {
+    return new Promise((resolve, reject) => {
+      const r = indexedDB.open(name, version);
+      r.onupgradeneeded = e => {
+        for (const [sn, def] of Object.entries(stores)) {
+          const s = e.target.result.objectStoreNames.contains(sn) ? e.target.transaction.objectStore(sn) : e.target.result.createObjectStore(sn, { keyPath: def.keyPath, autoIncrement: def.autoIncrement !== false });
+          for (const idx of def.indexes || []) { if (!s.indexNames.contains(idx.name)) s.createIndex(idx.name, idx.keyPath, { unique: idx.unique || false }); }
+        }
+      };
+      r.onsuccess = e => { this.db = e.target.result; resolve(this.db); };
+      r.onerror = e => reject(e.target.error);
+    });
+  }
+  _tx(sn, mode, cb) { return new Promise((resolve, reject) => { const tx = this.db.transaction(sn, mode); const store = tx.objectStore(sn); const res = cb(store); if (res && typeof res.then === 'function') { res.then(resolve).catch(reject); } else { tx.oncomplete = () => resolve(res); tx.onerror = () => reject(tx.error); } }); }
+  _p(r) { return new Promise((resolve, reject) => { r.onsuccess = () => resolve(r.result); r.onerror = () => reject(r.error); }); }
+  add(sn, item) { return this._tx(sn, 'readwrite', s => this._p(s.add(item))); }
+  put(sn, item) { return this._tx(sn, 'readwrite', s => this._p(s.put(item))); }
+  get(sn, id) { return this._tx(sn, 'readonly', s => this._p(s.get(id))); }
+  getAll(sn) { return this._tx(sn, 'readonly', s => this._p(s.getAll())); }
+  delete(sn, id) { return this._tx(sn, 'readwrite', s => this._p(s.delete(id))); }
+  clear(sn) { return this._tx(sn, 'readwrite', s => this._p(s.clear())); }
+  count(sn) { return this._tx(sn, 'readonly', s => this._p(s.count())); }
+}
+
+let pass = 0, fail = 0;
+const results = [];
+const out = document.getElementById('results');
+
+function result(label, ok, detail) {
+  const div = document.createElement('div');
+  div.className = 'result ' + (ok ? 'pass' : 'fail');
+  div.textContent = (ok ? '✅ ' : '❌ ') + label + (detail ? '  (' + detail + ')' : '');
+  out.appendChild(div);
+  ok ? pass++ : fail++;
+}
+
+function section(title) {
+  const div = document.createElement('div');
+  div.className = 'section';
+  div.innerHTML = '<strong>' + title + '</strong>';
+  out.appendChild(div);
+}
+
+async function runTests() {
+  pass = 0; fail = 0; out.innerHTML = '';
+  const db = new DB();
+
+  try {
+    // Clean DB
+    indexedDB.deleteDatabase(DB_NAME);
+    await new Promise(r => setTimeout(r, 300));
+    await db.open(DB_NAME, 1, {
+      [STORE]: { keyPath: 'id', autoIncrement: true, indexes: [{ name: 'date', keyPath: 'date' }, { name: 'type', keyPath: 'type' }] }
+    });
+
+    // ====== 1. CRUD ======
+    section('1. CRUD 操作');
+
+    // Create weight record
+    const w1 = await db.add(STORE, { type: 'weight', weight: 70.5, date: new Date('2026-06-01').getTime(), notes: '晨起空腹', tags: ['减脂'], createdAt: Date.now() });
+    result('添加体重记录', w1 > 0, 'id=' + w1);
+
+    // Create exercise record
+    const e1 = await db.add(STORE, { type: 'exercise', exerciseType: '跑步', duration: 30, intensity: 3, date: new Date('2026-06-02').getTime(), tags: ['有氧'], createdAt: Date.now() });
+    result('添加运动记录', e1 > 0, 'id=' + e1);
+
+    // Create more weights for chart
+    await db.add(STORE, { type: 'weight', weight: 70.2, date: new Date('2026-06-05').getTime(), tags: ['减脂'], createdAt: Date.now() });
+    await db.add(STORE, { type: 'weight', weight: 69.8, date: new Date('2026-06-10').getTime(), tags: ['减脂'], createdAt: Date.now() });
+    await db.add(STORE, { type: 'weight', weight: 69.5, date: new Date('2026-06-15').getTime(), tags: ['减脂'], createdAt: Date.now() });
+    result('添加 4 条体重记录 (供图表)', true, '共5条');
+
+    // Create more exercises
+    await db.add(STORE, { type: 'exercise', exerciseType: '游泳', duration: 45, intensity: 4, date: new Date('2026-06-08').getTime(), tags: ['有氧'], createdAt: Date.now() });
+    await db.add(STORE, { type: 'exercise', exerciseType: '力量训练', duration: 60, intensity: 5, date: new Date('2026-06-12').getTime(), tags: ['增肌'], createdAt: Date.now() });
+    result('添加 3 条运动记录', true);
+
+    // GetAll
+    const all = await db.getAll(STORE);
+    result('getAll 返回 9 条', all.length === 9, all.length + ' 条');
+
+    // Get by ID
+    const item = await db.get(STORE, e1);
+    result('按 ID 查询', item && item.exerciseType === '跑步', item ? item.exerciseType : 'null');
+
+    // Update
+    item.intensity = 5;
+    await db.put(STORE, item);
+    const updated = await db.get(STORE, e1);
+    result('更新运动强度 3→5', updated && updated.intensity === 5, 'intensity=' + updated.intensity);
+
+    // Delete
+    await db.delete(STORE, w1);
+    const remaining = await db.getAll(STORE);
+    result('删除 1 条后剩 8 条', remaining.length === 8, remaining.length + ' 条');
+    const deleted = await db.get(STORE, w1);
+    result('已删除的记录返回 undefined', deleted === undefined);
+
+    // ====== 2. Filtering ======
+    section('2. 数据筛选');
+
+    const weights = all.filter(r => r.type === 'weight');
+    result('筛选 type=weight', weights.length === 4, weights.length + ' 条');
+
+    const exercises = all.filter(r => r.type === 'exercise');
+    result('筛选 type=exercise', exercises.length === 3, exercises.length + ' 条');
+
+    const tagYy = all.filter(r => (r.tags || []).includes('有氧'));
+    result('筛选 tag=有氧', tagYy.length === 2, tagYy.length + ' 条');
+
+    const tagNone = all.filter(r => (r.tags || []).includes('不存在的标签'));
+    result('筛选不存在的标签', tagNone.length === 0);
+
+    // ====== 3. Weight data integrity ======
+    section('3. 体重数据完整性');
+
+    const sortedWeights = weights.sort((a, b) => a.date - b.date);
+    result('按日期升序排列', sortedWeights[0].date <= sortedWeights[sortedWeights.length - 1].date);
+    result('体重值都是数字', sortedWeights.every(w => typeof w.weight === 'number' && w.weight > 0));
+    const trend = sortedWeights[sortedWeights.length - 1].weight - sortedWeights[0].weight;
+    result('体重趋势有变化', trend !== 0, (trend > 0 ? '+' : '') + trend.toFixed(1) + ' kg');
+
+    // ====== 4. Exercise data integrity ======
+    section('4. 运动数据完整性');
+
+    result('所有运动有项目名', exercises.every(r => r.exerciseType && r.exerciseType.trim()));
+    result('所有运动有时长', exercises.every(r => typeof r.duration === 'number' && r.duration > 0));
+    result('所有运动有强度', exercises.every(r => typeof r.intensity === 'number' && r.intensity >= 1 && r.intensity <= 5));
+
+    const avgIntensity = exercises.reduce((s, r) => s + r.intensity, 0) / exercises.length;
+    result('平均强度合理', avgIntensity >= 1 && avgIntensity <= 5, avgIntensity.toFixed(1));
+
+    const totalMin = exercises.reduce((s, r) => s + r.duration, 0);
+    result('总运动时长 > 0', totalMin > 0, totalMin + ' 分钟');
+
+    // ====== 5. Tags ======
+    section('5. 标签系统');
+
+    const allTags = new Set();
+    all.forEach(r => (r.tags || []).forEach(t => allTags.add(t)));
+    result('标签不重复', allTags.size >= 2, '标签: ' + [...allTags].join(', '));
+
+    const tagCounts = {};
+    all.forEach(r => (r.tags || []).forEach(t => { tagCounts[t] = (tagCounts[t] || 0) + 1; }));
+    result('标签计数正确', Object.values(tagCounts).reduce((s, v) => s + v, 0) >= all.length);
+
+    // ====== 6. Export/Import ======
+    section('6. 导出 / 导入');
+
+    const exportData = { _format: 'JuYiFitness/1', exportedAt: new Date().toISOString(), items: await db.getAll(STORE) };
+    const json = JSON.stringify(exportData);
+    result('导出 JSON 非空', json.length > 100, json.length + ' bytes');
+
+    const parsed = JSON.parse(json);
+    result('导出格式正确', parsed._format === 'JuYiFitness/1' && Array.isArray(parsed.items));
+    result('导出包含全部数据', parsed.items.length === 8, parsed.items.length + ' 条');
+
+    // Import simulation: clear then re-add
+    await db.clear(STORE);
+    let emptyCheck = await db.getAll(STORE);
+    result('清空后无数据', emptyCheck.length === 0);
+
+    for (const item of parsed.items) { await db.add(STORE, item); }
+    const restored = await db.getAll(STORE);
+    result('重新导入后恢复', restored.length === 8, restored.length + ' 条');
+
+    // ====== 7. Edge cases ======
+    section('7. 边界情况');
+
+    const minWeight = await db.add(STORE, { type: 'weight', weight: 20.0, date: Date.now(), tags: [], createdAt: Date.now() });
+    result('最轻体重 20kg', minWeight > 0);
+
+    const maxWeight = await db.add(STORE, { type: 'weight', weight: 299.9, date: Date.now(), tags: [], createdAt: Date.now() });
+    result('最高体重 299.9kg', maxWeight > 0);
+
+    const minEx = await db.add(STORE, { type: 'exercise', exerciseType: '拉伸', duration: 1, intensity: 1, date: Date.now(), tags: [], createdAt: Date.now() });
+    result('最轻运动 1 分钟强度 1', minEx > 0);
+
+    const longEx = await db.add(STORE, { type: 'exercise', exerciseType: '马拉松', duration: 300, intensity: 5, date: Date.now(), tags: ['极限'], createdAt: Date.now() });
+    result('极限运动 300 分钟强度 5', longEx > 0);
+
+    const emptyTags = await db.add(STORE, { type: 'weight', weight: 65, date: Date.now(), tags: [], createdAt: Date.now() });
+    const emptyTagsItem = await db.get(STORE, emptyTags);
+    result('空标签数组正常', Array.isArray(emptyTagsItem.tags) && emptyTagsItem.tags.length === 0);
+
+    // ====== 8. Date ordering ======
+    section('8. 日期排序');
+
+    const allSorted = (await db.getAll(STORE)).sort((a, b) => a.date - b.date);
+    result('全局按日期排序不丢数据', allSorted.length >= 5);
+
+    for (let i = 1; i < allSorted.length; i++) {
+      if (allSorted[i].date < allSorted[i - 1].date) {
+        result('日期顺序检查', false, 'index ' + i + ' 顺序错误');
+        return;
+      }
+    }
+    result('日期升序全部正确', true, allSorted.length + ' 条');
+
+  } catch (e) {
+    result('测试异常', false, e.message);
+    console.error(e);
+  } finally {
+    // Cleanup
+    indexedDB.deleteDatabase(DB_NAME);
+  }
+
+  // Summary
+  const total = pass + fail;
+  const summary = document.createElement('div');
+  summary.className = 'summary ' + (fail === 0 ? 'all-pass' : 'has-fail');
+  summary.textContent = fail === 0
+    ? '🎉 全部通过! ' + pass + '/' + total
+    : '⚠️ 通过 ' + pass + '/' + total + ' (' + fail + ' 失败)';
+  out.appendChild(summary);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,78 @@
+/* ======================== 布局 ======================== */
+.app-layout { display: flex; height: 100vh; overflow: hidden; }
+.sidebar {
+  width: 240px; min-width: 240px; height: 100vh;
+  background: var(--jy-bg-secondary); border-right: 1px solid var(--jy-border);
+  display: flex; flex-direction: column; overflow-y: auto; z-index: 100;
+}
+.sidebar.is-collapsed { width: 0; min-width: 0; overflow: hidden; opacity: 0; pointer-events: none; }
+.sidebar__header { padding: var(--jy-space-4); display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--jy-border-light); }
+.sidebar__logo { font-size: var(--jy-font-size-lg); font-weight: 700; }
+.sidebar__section { padding: var(--jy-space-3) var(--jy-space-4); border-bottom: 1px solid var(--jy-border-light); }
+.sidebar__section-title { display: block; font-size: var(--jy-font-size-xs); font-weight: 600; color: var(--jy-text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--jy-space-2); }
+.sidebar__footer { padding: var(--jy-space-3) var(--jy-space-4); border-top: 1px solid var(--jy-border-light); display: flex; flex-direction: column; gap: var(--jy-space-2); margin-top: auto; }
+.sidebar__action-btn { width: 100% !important; justify-content: center !important; }
+
+.filter-item { display: flex; align-items: center; gap: var(--jy-space-2); padding: 0.35rem 0.5rem; border-radius: var(--jy-radius-sm); cursor: pointer; font-size: var(--jy-font-size-sm); color: var(--jy-text-secondary); transition: all var(--jy-transition); user-select: none; }
+.filter-item:hover { background: var(--jy-bg-tertiary); color: var(--jy-text-primary); }
+.filter-item.is-active { background: var(--jy-accent-soft); color: var(--jy-accent); font-weight: 600; }
+.filter-item__count { margin-left: auto; font-size: var(--jy-font-size-xs); color: var(--jy-text-muted); }
+
+.stats-panel { font-size: var(--jy-font-size-sm); }
+.stats-panel__row { display: flex; align-items: center; justify-content: space-between; padding: 0.25rem 0; color: var(--jy-text-secondary); }
+
+/* ======================== 主区域 ======================== */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.main__toolbar { display: flex; align-items: center; gap: var(--jy-space-3); padding: var(--jy-space-3) var(--jy-space-6); border-bottom: 1px solid var(--jy-border); background: var(--jy-surface); }
+.main__toolbar-actions { margin-left: auto; }
+
+.tabs { display: flex; gap: 2px; }
+.tab { padding: 0.45rem 1rem; font-size: var(--jy-font-size-sm); font-weight: 500; border: none; background: transparent; color: var(--jy-text-secondary); cursor: pointer; border-radius: var(--jy-radius-sm); transition: all var(--jy-transition); }
+.tab:hover { background: var(--jy-bg-tertiary); }
+.tab.active { background: var(--jy-accent-soft); color: var(--jy-accent); }
+
+.panel { flex: 1; overflow-y: auto; padding: var(--jy-space-6); }
+
+/* ======================== 体重图表 ======================== */
+.chart-wrap {
+  background: var(--jy-surface); border: 1px solid var(--jy-border);
+  border-radius: var(--jy-radius-lg); padding: var(--jy-space-4); margin-bottom: var(--jy-space-5);
+}
+.chart-wrap canvas { width: 100%; height: 300px; display: block; }
+
+/* ======================== 记录列表 ======================== */
+.record-list { display: flex; flex-direction: column; gap: var(--jy-space-2); }
+
+.record-item {
+  display: flex; align-items: center; gap: var(--jy-space-3);
+  padding: var(--jy-space-3) var(--jy-space-4);
+  background: var(--jy-surface); border: 1px solid var(--jy-border);
+  border-radius: var(--jy-radius); cursor: pointer; transition: all var(--jy-transition);
+}
+.record-item:hover { border-color: var(--jy-accent); }
+.record-item__icon { font-size: 1.5rem; flex-shrink: 0; }
+.record-item__body { flex: 1; min-width: 0; }
+.record-item__main { font-weight: 600; font-size: var(--jy-font-size-base); }
+.record-item__sub { font-size: var(--jy-font-size-xs); color: var(--jy-text-muted); }
+.record-item__right { text-align: right; flex-shrink: 0; }
+.record-item__date { font-size: var(--jy-font-size-xs); color: var(--jy-text-muted); }
+.record-item__tags { display: flex; flex-wrap: wrap; gap: var(--jy-space-1); margin-top: 2px; }
+
+/* ======================== 运动统计行 ======================== */
+.exercise-stats-row { display: flex; gap: var(--jy-space-4); margin-bottom: var(--jy-space-5); flex-wrap: wrap; }
+.exercise-stat-card {
+  flex: 1; min-width: 120px; padding: var(--jy-space-4);
+  background: var(--jy-surface); border: 1px solid var(--jy-border);
+  border-radius: var(--jy-radius-lg); text-align: center;
+}
+.exercise-stat-card__value { font-size: var(--jy-font-size-2xl); font-weight: 700; }
+.exercise-stat-card__label { font-size: var(--jy-font-size-xs); color: var(--jy-text-muted); margin-top: var(--jy-space-1); }
+
+/* ======================== 响应式 ======================== */
+@media (max-width: 768px) {
+  .sidebar { position: fixed; left: 0; top: 0; z-index: 200; box-shadow: var(--jy-shadow-lg); }
+  .sidebar.is-collapsed { transform: translateX(-100%); }
+  .main__toolbar { padding: var(--jy-space-3) var(--jy-space-4); }
+  .panel { padding: var(--jy-space-3); }
+  .chart-wrap canvas { height: 200px; }
+}

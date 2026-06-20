@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>错题本 — JuYi</title>
+  <link rel="stylesheet" href="../../shared/base.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- ==================== 整体布局 ==================== -->
+  <div id="app" class="app-layout">
+
+    <!-- ========== 侧边栏 ========== -->
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar__header">
+        <h1 class="sidebar__logo">📒 错题本</h1>
+        <button id="btnToggleSidebar" class="jy-btn jy-btn--icon sidebar__toggle" title="收起侧边栏">☰</button>
+      </div>
+
+      <div class="sidebar__section">
+        <div class="sidebar__section-header jy-flex-between">
+          <span class="sidebar__section-title">📚 科目</span>
+          <button id="btnManageSubjects" class="jy-btn jy-btn--ghost jy-btn--sm" title="管理科目">⚙</button>
+        </div>
+        <div id="subjectFilterList" class="sidebar__filter-list"></div>
+      </div>
+
+      <div class="sidebar__section">
+        <span class="sidebar__section-title">🏷️ 标签</span>
+        <div id="tagFilterList" class="sidebar__filter-list"></div>
+      </div>
+
+      <div class="sidebar__section">
+        <span class="sidebar__section-title">📊 统计概览</span>
+        <div id="statsPanel" class="stats-panel"></div>
+      </div>
+
+      <div class="sidebar__footer">
+        <button id="btnExport" class="jy-btn jy-btn--outline jy-btn--sm sidebar__action-btn">💾 导出备份</button>
+        <button id="btnImport" class="jy-btn jy-btn--outline jy-btn--sm sidebar__action-btn">📥 导入恢复</button>
+        <input type="file" id="importFileInput" accept=".json" class="jy-sr-only">
+        <button id="btnResetProgress" class="jy-btn jy-btn--outline jy-btn--sm sidebar__action-btn" title="重置当前科目复习进度">🔄 重置进度</button>
+        <button id="btnToggleTheme" class="jy-btn jy-btn--outline jy-btn--sm sidebar__action-btn">🌙 暗色模式</button>
+        <a href="../../index.html" class="jy-btn jy-btn--ghost jy-btn--sm sidebar__action-btn" style="width:100%;justify-content:center;">🏠 JuYi 首页</a>
+      </div>
+    </aside>
+
+    <!-- ========== 主内容区 ========== -->
+    <main class="main">
+      <header class="main__toolbar">
+        <button id="btnOpenSidebar" class="jy-btn jy-btn--icon jy-show-mobile" title="打开侧边栏">☰</button>
+        <div class="search-box">
+          <span class="search-box__icon">🔍</span>
+          <input id="searchInput" type="text" class="search-box__input" placeholder="搜索题目内容...">
+          <button id="btnClearSearch" class="search-box__clear" style="display:none">✕</button>
+        </div>
+        <div class="main__toolbar-actions">
+          <select id="sortSelect" class="jy-select" style="width:auto">
+            <option value="createdAt-desc">最新添加</option>
+            <option value="createdAt-asc">最早添加</option>
+          </select>
+          <button id="btnAdd" class="jy-btn jy-btn--primary">＋ 添加错题</button>
+          <button id="btnStartReview" class="jy-btn jy-btn--primary" style="background:var(--jy-success)">▶ 开始复习</button>
+        </div>
+      </header>
+
+      <!-- 普通列表视图 -->
+      <div id="cardList" class="card-grid"></div>
+      <div id="emptyState" class="jy-empty" style="display:none">
+        <div class="jy-empty__icon">📝</div>
+        <div class="jy-empty__text">还没有错题，点击「＋ 添加错题」开始记录吧</div>
+      </div>
+
+      <!-- 复习模式 -->
+      <div id="reviewMode" class="review-mode" style="display:none">
+        <div class="review-mode__header">
+          <span class="review-mode__title">📝 复习：<span id="reviewSubject"></span></span>
+          <span id="reviewProgress" class="review-mode__counter"></span>
+          <button id="btnExitReview" class="jy-btn jy-btn--ghost jy-btn--sm">✕ 退出复习</button>
+        </div>
+        <div class="review-mode__body">
+          <div class="review-card">
+            <div id="reviewCardContent" class="review-card__question"></div>
+            <div class="review-card__meta-line">
+              <span id="reviewCardBadge"></span>
+              <span id="reviewCardDate" class="jy-text-muted jy-text-sm"></span>
+            </div>
+            <div class="review-card__actions">
+              <button id="btnPrevQuestion" class="jy-btn jy-btn--outline">◀ 上一题</button>
+              <button id="btnKnow" class="jy-btn review-btn--know">✅ 会</button>
+              <button id="btnDontKnow" class="jy-btn review-btn--dontknow">❌ 不会</button>
+              <button id="btnShowAnswer" class="jy-btn review-btn--answer">💡 查看解析</button>
+              <button id="btnSkip" class="jy-btn review-btn--skip">⏭ 跳过</button>
+            </div>
+          </div>
+          <div id="reviewCompleteBanner" style="display:none;text-align:center;padding:12px">
+            <button id="btnReviewReset" class="jy-btn jy-btn--primary">🔄 重新开始</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ==================== 添加/编辑错题弹窗 ==================== -->
+  <div id="editOverlay" class="jy-overlay">
+    <div class="jy-modal" style="max-width:800px">
+      <div class="jy-modal__header">
+        <span class="jy-modal__title" id="editModalTitle">添加错题</span>
+        <button class="jy-btn jy-btn--icon modal-close-btn">✕</button>
+      </div>
+      <div class="jy-modal__body">
+        <form id="editForm">
+          <div class="form-row">
+            <div class="jy-form-group" style="flex:1">
+              <label class="jy-label">科目</label>
+              <select id="editSubject" class="jy-select" required></select>
+            </div>
+          </div>
+
+          <div class="jy-form-group">
+            <label class="jy-label">📌 题目</label>
+            <div class="rich-editor" data-editor="question">
+              <div class="rich-editor__toolbar">
+                <button type="button" data-cmd="bold" title="加粗"><b>B</b></button>
+                <button type="button" data-cmd="italic" title="斜体"><i>I</i></button>
+                <button type="button" data-cmd="underline" title="下划线"><u>U</u></button>
+                <span class="rich-editor__sep"></span>
+                <button type="button" data-cmd="insertUnorderedList" title="无序列表">•</button>
+                <button type="button" data-cmd="insertOrderedList" title="有序列表">1.</button>
+                <span class="rich-editor__sep"></span>
+                <button type="button" data-cmd="image" title="插入图片">🖼️</button>
+                <input type="file" class="rich-editor__file-input" accept="image/*" style="display:none">
+                <button type="button" data-cmd="removeFormat" title="清除格式">✧</button>
+              </div>
+              <div class="rich-editor__content" contenteditable="true"
+                   data-placeholder="输入文字或 Ctrl+V 粘贴截图"></div>
+            </div>
+          </div>
+
+          <div class="jy-form-group">
+            <label class="jy-label">💡 解析 / 答案</label>
+            <div class="rich-editor" data-editor="answer">
+              <div class="rich-editor__toolbar">
+                <button type="button" data-cmd="bold" title="加粗"><b>B</b></button>
+                <button type="button" data-cmd="italic" title="斜体"><i>I</i></button>
+                <button type="button" data-cmd="underline" title="下划线"><u>U</u></button>
+                <span class="rich-editor__sep"></span>
+                <button type="button" data-cmd="insertUnorderedList" title="无序列表">•</button>
+                <button type="button" data-cmd="insertOrderedList" title="有序列表">1.</button>
+                <span class="rich-editor__sep"></span>
+                <button type="button" data-cmd="image" title="插入图片">🖼️</button>
+                <input type="file" class="rich-editor__file-input" accept="image/*" style="display:none">
+                <button type="button" data-cmd="removeFormat" title="清除格式">✧</button>
+              </div>
+              <div class="rich-editor__content" contenteditable="true"
+                   data-placeholder="输入文字或 Ctrl+V 粘贴截图"></div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="jy-form-group" style="flex:2">
+              <label class="jy-label">标签（用逗号或空格分隔）</label>
+              <input id="editTags" type="text" class="jy-input" placeholder="例如：真题, 易错, 公式">
+            </div>
+            <div class="jy-form-group" style="flex:1">
+              <label class="jy-label">来源</label>
+              <input id="editSource" type="text" class="jy-input" placeholder="例如：2024真题卷">
+            </div>
+          </div>
+
+          <div class="form-row" style="justify-content:flex-start">
+            <label class="jy-label" style="display:flex;align-items:center;gap:var(--jy-space-2);cursor:pointer;user-select:none;margin-bottom:0">
+              <input type="checkbox" id="editIsHard" style="width:18px;height:18px;cursor:pointer">
+              标记为难题
+            </label>
+          </div>
+          <input type="hidden" id="editId">
+        </form>
+      </div>
+      <div class="jy-modal__footer">
+        <button class="jy-btn jy-btn--ghost modal-close-btn">取消</button>
+        <button id="btnSave" class="jy-btn jy-btn--primary">💾 保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 查看详情弹窗 ==================== -->
+  <div id="detailOverlay" class="jy-overlay">
+    <div class="jy-modal" style="max-width:800px">
+      <div class="jy-modal__header">
+        <span class="jy-modal__title">错题详情</span>
+        <button class="jy-btn jy-btn--icon modal-close-btn">✕</button>
+      </div>
+      <div class="jy-modal__body" id="detailBody"></div>
+      <div class="jy-modal__footer">
+        <button id="btnMarkReview" class="jy-btn jy-btn--outline">✅ 已复习</button>
+        <button id="btnEditFromDetail" class="jy-btn jy-btn--outline">✏️ 编辑</button>
+        <button id="btnDeleteFromDetail" class="jy-btn jy-btn--danger">🗑 删除</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 科目管理弹窗 ==================== -->
+  <div id="subjectsOverlay" class="jy-overlay">
+    <div class="jy-modal" style="max-width:500px">
+      <div class="jy-modal__header">
+        <span class="jy-modal__title">管理科目</span>
+        <button class="jy-btn jy-btn--icon modal-close-btn">✕</button>
+      </div>
+      <div class="jy-modal__body" id="subjectsBody"></div>
+      <div class="jy-modal__footer">
+        <button class="jy-btn jy-btn--ghost modal-close-btn">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 确认删除弹窗 ==================== -->
+  <div id="confirmOverlay" class="jy-overlay">
+    <div class="jy-modal" style="max-width:400px">
+      <div class="jy-modal__header">
+        <span class="jy-modal__title">确认删除</span>
+        <button class="jy-btn jy-btn--icon modal-close-btn">✕</button>
+      </div>
+      <div class="jy-modal__body">
+        <p style="text-align:center;padding:var(--jy-space-4)">确定要删除这道错题吗？此操作不可恢复。</p>
+      </div>
+      <div class="jy-modal__footer">
+        <button class="jy-btn jy-btn--ghost modal-close-btn">取消</button>
+        <button id="btnConfirmDelete" class="jy-btn jy-btn--danger">确认删除</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 复习-查看解析弹窗 ==================== -->
+  <div id="answerOverlay" class="jy-overlay">
+    <div class="jy-modal" style="max-width:800px">
+      <div class="jy-modal__header">
+        <span class="jy-modal__title">💡 解析</span>
+        <button class="jy-btn jy-btn--icon modal-close-btn">✕</button>
+      </div>
+      <div class="jy-modal__body" id="answerBody"></div>
+      <div class="jy-modal__footer">
+        <button class="jy-btn jy-btn--ghost modal-close-btn">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

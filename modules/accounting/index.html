@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>记账 — JuYi</title>
+  <link rel="stylesheet" href="../../shared/base.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div id="app" class="app-layout">
+
+  <!-- 侧边栏 -->
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar__header">
+      <h1 class="sidebar__logo">💰 记账</h1>
+      <button id="btnToggleSidebar" class="jy-btn jy-btn--icon sidebar__toggle">☰</button>
+    </div>
+    <div class="sidebar__section">
+      <span class="sidebar__section-title">📊 统计</span>
+      <div id="statsPanel" class="stats-panel"></div>
+    </div>
+    <div class="sidebar__section">
+      <span class="sidebar__section-title">🏷️ 分类</span>
+      <div id="categoryFilterList" class="sidebar__filter-list"></div>
+    </div>
+    <div class="sidebar__section">
+      <span class="sidebar__section-title">🏷️ 标签</span>
+      <div id="tagFilterList" class="sidebar__filter-list"></div>
+    </div>
+    <div class="sidebar__footer">
+      <button id="btnExport" class="jy-btn jy-btn--outline jy-btn--sm sidebar__action-btn">💾 导出</button>
+      <button id="btnImport" class="jy-btn jy-btn--outline jy-btn--sm sidebar__action-btn">📥 导入</button>
+      <input type="file" id="importFileInput" accept=".json" class="jy-sr-only">
+      <button id="btnToggleTheme" class="jy-btn jy-btn--outline jy-btn--sm sidebar__action-btn">🌙 暗色模式</button>
+      <a href="../../index.html" class="jy-btn jy-btn--ghost jy-btn--sm sidebar__action-btn" style="width:100%;justify-content:center">🏠 首页</a>
+    </div>
+  </aside>
+
+  <!-- 主区域 -->
+  <main class="main">
+    <header class="main__toolbar">
+      <button id="btnOpenSidebar" class="jy-btn jy-btn--icon jy-show-mobile">☰</button>
+      <span id="monthLabel" style="font-weight:600;font-size:var(--jy-font-size-lg)"></span>
+      <button id="btnPrevMonth" class="jy-btn jy-btn--ghost jy-btn--sm">◀</button>
+      <button id="btnNextMonth" class="jy-btn jy-btn--ghost jy-btn--sm">▶</button>
+      <div class="main__toolbar-actions">
+        <button id="btnAddIncome" class="jy-btn jy-btn--primary" style="background:var(--jy-success)">＋ 收入</button>
+        <button id="btnAddExpense" class="jy-btn jy-btn--primary" style="background:var(--jy-danger)">－ 支出</button>
+      </div>
+    </header>
+
+    <div class="panel">
+      <div class="summary-row">
+        <div class="summary-card summary-card--income">
+          <div class="summary-card__label">收入</div>
+          <div class="summary-card__value" id="totalIncome">¥0</div>
+        </div>
+        <div class="summary-card summary-card--expense">
+          <div class="summary-card__label">支出</div>
+          <div class="summary-card__value" id="totalExpense">¥0</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-card__label">结余</div>
+          <div class="summary-card__value" id="balance">¥0</div>
+        </div>
+      </div>
+
+      <div class="chart-row">
+        <div class="pie-chart-wrap">
+          <canvas id="pieChart" width="200" height="200"></canvas>
+          <div id="pieLegend" class="pie-legend"></div>
+        </div>
+      </div>
+
+      <div id="recordList" class="record-list"></div>
+      <div id="emptyState" class="jy-empty" style="display:none">
+        <div class="jy-empty__icon">💰</div>
+        <div class="jy-empty__text">本月暂无记录</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- 添加/编辑弹窗 -->
+<div id="editOverlay" class="jy-overlay">
+  <div class="jy-modal" style="max-width:450px">
+    <div class="jy-modal__header">
+      <span class="jy-modal__title" id="editModalTitle">添加记录</span>
+      <button class="jy-btn jy-btn--icon modal-close-btn">✕</button>
+    </div>
+    <div class="jy-modal__body">
+      <form id="editForm">
+        <div class="jy-form-group">
+          <label class="jy-label">类型</label>
+          <div style="display:flex;gap:var(--jy-space-2)">
+            <label style="flex:1;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="radio" name="editTypeRadio" value="income" id="radioIncome" checked> <span style="color:var(--jy-success)">收入</span></label>
+            <label style="flex:1;display:flex;align-items:center;gap:4px;cursor:pointer"><input type="radio" name="editTypeRadio" value="expense" id="radioExpense"> <span style="color:var(--jy-danger)">支出</span></label>
+          </div>
+        </div>
+        <div class="jy-form-group">
+          <label class="jy-label">金额</label>
+          <input type="number" id="editAmount" class="jy-input" placeholder="0.00" step="0.01" min="0.01" required>
+        </div>
+        <div class="jy-form-group">
+          <label class="jy-label">分类</label>
+          <select id="editCategory" class="jy-select">
+            <optgroup label="收入"><option>工资</option><option>奖金</option><option>兼职</option><option>理财</option><option>红包</option><option>报销</option><option>其他收入</option></optgroup>
+            <optgroup label="支出"><option>餐饮</option><option>交通</option><option>购物</option><option>住房</option><option>娱乐</option><option>医疗</option><option>教育</option><option>通讯</option><option>人情</option><option>其他支出</option></optgroup>
+          </select>
+        </div>
+        <div class="jy-form-group">
+          <label class="jy-label">日期</label>
+          <input type="date" id="editDate" class="jy-input" required>
+        </div>
+        <div class="jy-form-group">
+          <label class="jy-label">备注</label>
+          <input type="text" id="editNotes" class="jy-input" placeholder="可选">
+        </div>
+        <div class="jy-form-group">
+          <label class="jy-label">标签（逗号分隔）</label>
+          <input type="text" id="editTags" class="jy-input" placeholder="例如 必须, 冲动消费">
+        </div>
+        <input type="hidden" id="editId">
+      </form>
+    </div>
+    <div class="jy-modal__footer">
+      <button class="jy-btn jy-btn--ghost modal-close-btn">取消</button>
+      <button id="btnSave" class="jy-btn jy-btn--primary">💾 保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 删除确认 -->
+<div id="confirmOverlay" class="jy-overlay">
+  <div class="jy-modal" style="max-width:400px">
+    <div class="jy-modal__header"><span class="jy-modal__title">确认删除</span><button class="jy-btn jy-btn--icon modal-close-btn">✕</button></div>
+    <div class="jy-modal__body"><p style="text-align:center;padding:var(--jy-space-4)">确定删除此记录？</p></div>
+    <div class="jy-modal__footer">
+      <button class="jy-btn jy-btn--ghost modal-close-btn">取消</button>
+      <button id="btnConfirmDelete" class="jy-btn jy-btn--danger">确认删除</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

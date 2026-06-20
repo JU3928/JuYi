@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>健身 — JuYi</title>
+  <link rel="stylesheet" href="../../shared/base.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div id="app" class="app-layout">
+
+  <!-- 侧边栏 -->
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar__header">
+      <h1 class="sidebar__logo">🏃 健身</h1>
+      <button id="btnToggleSidebar" class="jy-btn jy-btn--icon sidebar__toggle">☰</button>
+    </div>
+    <div class="sidebar__section">
+      <span class="sidebar__section-title">📊 统计</span>
+      <div id="statsPanel" class="stats-panel"></div>
+    </div>
+    <div class="sidebar__section">
+      <span class="sidebar__section-title">🏷️ 标签</span>
+      <div id="tagFilterList" class="sidebar__filter-list"></div>
+    </div>
+    <div class="sidebar__footer">
+      <button id="btnExport" class="jy-btn jy-btn--outline jy-btn--sm sidebar__action-btn">💾 导出</button>
+      <button id="btnImport" class="jy-btn jy-btn--outline jy-btn--sm sidebar__action-btn">📥 导入</button>
+      <input type="file" id="importFileInput" accept=".json" class="jy-sr-only">
+      <button id="btnToggleTheme" class="jy-btn jy-btn--outline jy-btn--sm sidebar__action-btn">🌙 暗色模式</button>
+      <a href="../../index.html" class="jy-btn jy-btn--ghost jy-btn--sm sidebar__action-btn" style="width:100%;justify-content:center">🏠 首页</a>
+    </div>
+  </aside>
+
+  <!-- 主区域 -->
+  <main class="main">
+    <header class="main__toolbar">
+      <button id="btnOpenSidebar" class="jy-btn jy-btn--icon jy-show-mobile">☰</button>
+      <div class="tabs">
+        <button class="tab active" data-tab="weight">⚖️ 体重记录</button>
+        <button class="tab" data-tab="exercise">💪 运动记录</button>
+      </div>
+      <div class="main__toolbar-actions">
+        <button id="btnAdd" class="jy-btn jy-btn--primary">＋ 添加记录</button>
+      </div>
+    </header>
+
+    <!-- 体重面板 -->
+    <div id="panelWeight" class="panel">
+      <div class="chart-wrap">
+        <canvas id="weightChart"></canvas>
+      </div>
+      <div id="weightList" class="record-list"></div>
+    </div>
+
+    <!-- 运动面板 -->
+    <div id="panelExercise" class="panel" style="display:none">
+      <div id="exerciseStatsRow" class="exercise-stats-row"></div>
+      <div id="exerciseList" class="record-list"></div>
+    </div>
+
+    <div id="emptyState" class="jy-empty" style="display:none">
+      <div class="jy-empty__icon">🏃</div>
+      <div class="jy-empty__text">还没有记录，点「＋ 添加记录」开始</div>
+    </div>
+  </main>
+</div>
+
+<!-- 添加/编辑弹窗 -->
+<div id="editOverlay" class="jy-overlay">
+  <div class="jy-modal" style="max-width:500px">
+    <div class="jy-modal__header">
+      <span class="jy-modal__title" id="editModalTitle">添加记录</span>
+      <button class="jy-btn jy-btn--icon modal-close-btn">✕</button>
+    </div>
+    <div class="jy-modal__body">
+      <form id="editForm">
+        <div class="jy-form-group">
+          <label class="jy-label">类型</label>
+          <select id="editType" class="jy-select">
+            <option value="weight">⚖️ 体重记录</option>
+            <option value="exercise">💪 运动记录</option>
+          </select>
+        </div>
+        <div class="jy-form-group">
+          <label class="jy-label">日期</label>
+          <input type="date" id="editDate" class="jy-input" required>
+        </div>
+
+        <!-- 体重字段 -->
+        <div id="weightFields">
+          <div class="jy-form-group">
+            <label class="jy-label">体重 (kg)</label>
+            <input type="number" id="editWeight" class="jy-input" placeholder="例如 70.5" step="0.1" min="20" max="300">
+          </div>
+        </div>
+
+        <!-- 运动字段 -->
+        <div id="exerciseFields" style="display:none">
+          <div class="jy-form-group">
+            <label class="jy-label">运动项目</label>
+            <input type="text" id="editExerciseType" class="jy-input" placeholder="例如 跑步、游泳、力量训练">
+          </div>
+          <div class="form-row">
+            <div class="jy-form-group" style="flex:1">
+              <label class="jy-label">时长 (分钟)</label>
+              <input type="number" id="editDuration" class="jy-input" placeholder="60" min="1">
+            </div>
+            <div class="jy-form-group" style="flex:1">
+              <label class="jy-label">强度</label>
+              <select id="editIntensity" class="jy-select">
+                <option value="1">1 - 很轻松</option>
+                <option value="2">2 - 轻松</option>
+                <option value="3" selected>3 - 中等</option>
+                <option value="4">4 - 较累</option>
+                <option value="5">5 - 力竭</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div class="jy-form-group">
+          <label class="jy-label">备注</label>
+          <input type="text" id="editNotes" class="jy-input" placeholder="可选">
+        </div>
+        <div class="jy-form-group">
+          <label class="jy-label">标签（逗号分隔）</label>
+          <input type="text" id="editTags" class="jy-input" placeholder="例如 减脂, 增肌, 有氧">
+        </div>
+        <input type="hidden" id="editId">
+      </form>
+    </div>
+    <div class="jy-modal__footer">
+      <button class="jy-btn jy-btn--ghost modal-close-btn">取消</button>
+      <button id="btnSave" class="jy-btn jy-btn--primary">💾 保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 删除确认 -->
+<div id="confirmOverlay" class="jy-overlay">
+  <div class="jy-modal" style="max-width:400px">
+    <div class="jy-modal__header"><span class="jy-modal__title">确认删除</span><button class="jy-btn jy-btn--icon modal-close-btn">✕</button></div>
+    <div class="jy-modal__body"><p style="text-align:center;padding:var(--jy-space-4)">确定删除此记录？</p></div>
+    <div class="jy-modal__footer">
+      <button class="jy-btn jy-btn--ghost modal-close-btn">取消</button>
+      <button id="btnConfirmDelete" class="jy-btn jy-btn--danger">确认删除</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
