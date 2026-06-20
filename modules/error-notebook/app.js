@@ -199,7 +199,6 @@
         subjectsOverlay: $('#subjectsOverlay'), subjectsBody: $('#subjectsBody'),
         confirmOverlay: $('#confirmOverlay'), btnConfirmDelete: $('#btnConfirmDelete'),
         btnExport: $('#btnExport'), btnImport: $('#btnImport'), importFileInput: $('#importFileInput'),
-        btnCopyClipboard: $('#btnCopyClipboard'), btnPasteClipboard: $('#btnPasteClipboard'),
         btnToggleTheme: $('#btnToggleTheme'), btnManageSubjects: $('#btnManageSubjects'),
         btnResetProgress: $('#btnResetProgress'),
         modalCloseBtns: document.querySelectorAll('.modal-close-btn'),
@@ -236,8 +235,6 @@
       E.btnExport.addEventListener('click', () => this._onExport());
       E.btnImport.addEventListener('click', () => this.els.importFileInput.click());
       E.importFileInput.addEventListener('change', () => this._onImport());
-      E.btnCopyClipboard.addEventListener('click', () => this._onCopyClipboard());
-      E.btnPasteClipboard.addEventListener('click', () => this._onPasteClipboard());
       E.btnToggleTheme.addEventListener('click', () => { this._toggleTheme(); this._updateThemeBtn(); });
       E.btnManageSubjects.addEventListener('click', () => this._openSubjectsModal());
       E.btnResetProgress.addEventListener('click', () => this._onResetProgress());
@@ -713,80 +710,6 @@
         alert('导入成功！');
       } catch (err) { alert('导入失败：' + err.message); }
       finally { this.els.importFileInput.value = ''; }
-    }
-
-    async _onCopyClipboard() {
-      const data = await this.db.exportAll([STORE, PROGRESS_STORE]);
-      data._subjects = this.subjects;
-      let text = JSON.stringify(data);
-      const rawKB = (text.length / 1024).toFixed(0);
-      let mode = 'raw';
-      // Gzip compress if supported
-      if (typeof CompressionStream !== 'undefined') {
-        try {
-          const blob = new Blob([text]);
-          const cs = new CompressionStream('gzip');
-          const compressed = await new Response(blob.stream().pipeThrough(cs)).blob();
-          const buf = await compressed.arrayBuffer();
-          const base64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
-          text = '\x01gz' + base64; // magic prefix
-          mode = 'gzip';
-        } catch (_) {}
-      }
-      const finalKB = (text.length / 1024).toFixed(0);
-      if (text.length > 3 * 1024 * 1024) {
-        alert(`数据过大（${finalKB} KB），剪贴板可能截断。建议改用「导出备份」保存文件传输。`);
-        return;
-      }
-      try {
-        await navigator.clipboard.writeText(text);
-        alert(`已复制！(${finalKB} KB${mode === 'gzip' ? '，已压缩' : ''})\n发给手机后在手机端点击「从剪贴板导入」`);
-      } catch (e) {
-        const ta = document.createElement('textarea');
-        ta.value = text; ta.style.cssText = 'position:fixed;left:-9999px';
-        document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
-        alert(`已复制！(${finalKB} KB) → 发给手机后点「从剪贴板导入」`);
-      }
-    }
-
-    async _onPasteClipboard() {
-      let text = '';
-      try { text = await navigator.clipboard.readText(); }
-      catch (e) { text = prompt('请粘贴数据（在微信/QQ 中长按复制电脑发来的消息，然后粘贴到这里）：'); }
-      if (!text || !text.trim()) { alert('没有读取到数据'); return; }
-      // Decompress if gzip-prefixed
-      if (text.startsWith('\x01gz')) {
-        try {
-          const base64 = text.slice(4);
-          const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
-          const ds = new DecompressionStream('gzip');
-          const decompressed = await new Response(new Blob([bytes]).stream().pipeThrough(ds)).text();
-          text = decompressed;
-        } catch (e) { alert('解压失败，请重新复制；或改用文件导入'); return; }
-      }
-      try {
-        const data = JSON.parse(text);
-        if (!data._format || !data.stores?.[STORE]) throw new Error('格式不正确');
-        const confirmed = confirm(`即将导入 ${data.stores[STORE].length} 条记录，确定覆盖当前数据？`);
-        if (!confirmed) return;
-        const items = data.stores[STORE].map(item => ({
-          ...item,
-          isHard: item.isHard !== undefined ? item.isHard : false,
-          createdAt: item.createdAt || Date.now(),
-          lastReviewedAt: item.lastReviewedAt || null,
-        }));
-        await this.db.clear(STORE);
-        for (const item of items) await this.db.add(STORE, item);
-        if (data.stores[PROGRESS_STORE]) {
-          await this.db.clear(PROGRESS_STORE);
-          for (const p of data.stores[PROGRESS_STORE]) await this.db.add(PROGRESS_STORE, p);
-        }
-        if (data._subjects) { this.subjects = data._subjects; this._saveSubjects(); }
-        await this._loadProgress();
-        await this.reload();
-        this._renderAll();
-        alert('导入成功！');
-      } catch (e) { alert('导入失败：' + e.message + '\n请重新复制或改用文件导入'); }
     }
 
     _updateThemeBtn() {

@@ -65,7 +65,6 @@
         sidebar: $('#sidebar'), btnToggleSidebar: $('#btnToggleSidebar'), btnOpenSidebar: $('#btnOpenSidebar'),
         statsPanel: $('#statsPanel'), categoryFilterList: $('#categoryFilterList'), tagFilterList: $('#tagFilterList'),
         btnExport: $('#btnExport'), btnImport: $('#btnImport'), importFileInput: $('#importFileInput'),
-        btnCopyClipboard: $('#btnCopyClipboard'), btnPasteClipboard: $('#btnPasteClipboard'),
         btnToggleTheme: $('#btnToggleTheme'),
         monthLabel: $('#monthLabel'), btnPrevMonth: $('#btnPrevMonth'), btnNextMonth: $('#btnNextMonth'),
         btnAddIncome: $('#btnAddIncome'), btnAddExpense: $('#btnAddExpense'),
@@ -92,8 +91,6 @@
       this.els.btnExport.addEventListener('click', () => this._onExport());
       this.els.btnImport.addEventListener('click', () => this.els.importFileInput.click());
       this.els.importFileInput.addEventListener('change', () => this._onImport());
-      this.els.btnCopyClipboard.addEventListener('click', () => this._onCopyClipboard());
-      this.els.btnPasteClipboard.addEventListener('click', () => this._onPasteClipboard());
       this.els.btnToggleTheme.addEventListener('click', () => {
         const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
         document.documentElement.setAttribute('data-theme', next);
@@ -299,44 +296,6 @@
         await this.reload(); this._renderAll();
       } catch (e) { alert('导入失败: ' + e.message); }
       finally { this.els.importFileInput.value = ''; }
-    }
-
-    async _onCopyClipboard() {
-      const items = await this.db.getAll(STORE);
-      let text = JSON.stringify({ _format: 'JuYiAccounting/1', exportedAt: new Date().toISOString(), items });
-      if (typeof CompressionStream !== 'undefined') {
-        try {
-          const blob = new Blob([text]);
-          const cs = new CompressionStream('gzip');
-          const compressed = await new Response(blob.stream().pipeThrough(cs)).blob();
-          text = '\x01gz' + btoa(String.fromCharCode(...new Uint8Array(await compressed.arrayBuffer())));
-        } catch (_) {}
-      }
-      const kb = (text.length / 1024).toFixed(0);
-      if (text.length > 3 * 1024 * 1024) { alert(`数据过大（${kb} KB），请改用文件导出`); return; }
-      try { await navigator.clipboard.writeText(text); alert(`已复制！(${kb} KB)`); }
-      catch (e) { const ta = document.createElement('textarea'); ta.value = text; ta.style.cssText = 'position:fixed;left:-9999px'; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); alert(`已复制！(${kb} KB)`); }
-    }
-
-    async _onPasteClipboard() {
-      let text = '';
-      try { text = await navigator.clipboard.readText(); } catch (e) { text = prompt('请粘贴数据：'); }
-      if (!text || !text.trim()) { alert('没有读取到数据'); return; }
-      if (text.startsWith('\x01gz')) {
-        try {
-          const bytes = Uint8Array.from(atob(text.slice(4)), c => c.charCodeAt(0));
-          text = await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
-        } catch (e) { alert('解压失败，请重新复制或改用文件导入'); return; }
-      }
-      try {
-        const data = JSON.parse(text);
-        if (!data.items) throw new Error('格式错误');
-        if (!confirm(`导入 ${data.items.length} 条记录？当前数据将被覆盖。`)) return;
-        await this.db.clear(STORE);
-        for (const item of data.items) await this.db.add(STORE, item);
-        await this.reload(); this._renderAll();
-        alert('导入成功！');
-      } catch (e) { alert('导入失败: ' + e.message); }
     }
   }
 
