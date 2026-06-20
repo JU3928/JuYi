@@ -176,7 +176,7 @@
 
         /* ===== Section 4: Gift Box ===== */
         #gift { flex-direction: column; text-align: center; }
-        .gift-scene { perspective: 1000px; display: inline-block; margin: 20px 0 32px; }
+        .gift-scene { perspective: 1000px; display: inline-block; margin: 20px 0 8px; position: relative; }
         .gift-box {
             width: 140px; height: 140px; position: relative;
             transform-style: preserve-3d;
@@ -228,17 +228,73 @@
             transform: translateX(-50%); font-size: 30px;
             filter: drop-shadow(0 4px 6px rgba(0,0,0,0.2));
         }
-        .gift-surprise {
-            position: absolute; bottom: 120px; left: 50%; transform: translateX(-50%);
-            font-size: 40px; opacity: 0; pointer-events: none;
-            transition: all 0.6s 0.3s;
-        }
-        .gift-box.open .gift-surprise {
-            opacity: 1; transform: translateX(-50%) translateY(-60px);
-        }
         .gift-tip {
             font-size: 13px; color: rgba(232,180,195,0.5);
             letter-spacing: 2px; margin-top: 8px;
+        }
+        /* Watch Reveal */
+        .watch-reveal {
+            max-width: 400px; margin: 0 auto;
+            opacity: 0; transform: translateY(30px);
+            transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+            pointer-events: none;
+        }
+        .watch-reveal.visible {
+            opacity: 1; transform: translateY(0);
+            pointer-events: auto;
+        }
+        .watch-display {
+            position: relative; width: 160px; height: 160px;
+            margin: 0 auto 24px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 40% 35%, #faf5f7 0%, #e8dce4 40%, #c8b0bc 100%);
+            box-shadow:
+                0 0 0 6px #d4a0b8,
+                0 0 0 12px #e8c8d8,
+                0 0 0 18px rgba(200,150,170,0.3),
+                0 16px 48px rgba(180,120,150,0.35);
+            display: flex; align-items: center; justify-content: center;
+            animation: watchFloat 3s ease-in-out infinite;
+        }
+        @keyframes watchFloat {
+            0%,100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+        .watch-display .watch-face {
+            text-align: center; position: relative; z-index: 1;
+        }
+        .watch-display .watch-emoji {
+            font-size: 56px; display: block;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+            animation: watchShine 2s ease-in-out infinite;
+        }
+        @keyframes watchShine {
+            0%,100% { filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1)) brightness(1); }
+            50% { filter: drop-shadow(0 2px 12px rgba(200,150,150,0.4)) brightness(1.1); }
+        }
+        .watch-display::before {
+            content: ''; position: absolute; top: 18%; left: 22%;
+            width: 20px; height: 20px; border-radius: 50%;
+            background: rgba(255,255,255,0.5); filter: blur(3px);
+            z-index: 2; pointer-events: none;
+        }
+        .watch-info {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px; padding: 24px;
+            backdrop-filter: blur(12px);
+        }
+        .watch-info .gift-label {
+            font-size: 12px; letter-spacing: 3px; color: #e8798a;
+            text-transform: uppercase; margin-bottom: 8px;
+        }
+        .watch-info .gift-name {
+            font-size: 22px; font-weight: 700; color: #f0c4d0;
+            margin-bottom: 12px;
+        }
+        .watch-info .gift-meaning {
+            font-size: 14px; color: rgba(212,184,196,0.8);
+            line-height: 1.9; font-style: italic;
         }
 
         /* ===== Section 5: Message ===== */
@@ -392,7 +448,7 @@
 <section id="gift">
     <div class="inner">
         <div class="section-tag">· Surprise ·</div>
-        <div class="section-title">拆开你的礼物吧</div>
+        <div class="section-title">🎁 有一份礼物要送给你</div>
         <div class="gift-scene">
             <div class="gift-box" id="giftBox">
                 <div class="gift-box-inner">
@@ -401,10 +457,29 @@
                         <div class="gift-ribbon-h"></div>
                     </div>
                 </div>
-                <div class="gift-surprise">💝</div>
             </div>
         </div>
-        <div class="gift-tip">👆 点一下盒子</div>
+        <div class="gift-tip" id="giftTip">👆 点一下盒子拆开看看</div>
+        <!-- Watch reveal (hidden until gift opens) -->
+        <div class="watch-reveal" id="watchReveal">
+            <div class="watch-display">
+                <div class="watch-face">
+                    <span class="watch-emoji">⌚</span>
+                </div>
+            </div>
+            <div class="watch-info">
+                <div class="gift-label">💎 真实礼物</div>
+                <div class="gift-name">一只手表</div>
+                <div class="gift-meaning">
+                    时间是世界上最珍贵的东西——<br>
+                    因为它一旦流逝，就再也不会回来。<br><br>
+                    送你这只表，不是想提醒你时间在走，<br>
+                    而是想告诉你：<br>
+                    <strong style="color:#f0c4d0;">你的每一分每一秒，都值得被珍视。</strong><br><br>
+                    23岁的时光，愿你走得从容、走得漂亮。✨
+                </div>
+            </div>
+        </div>
     </div>
 </section>
 
@@ -536,24 +611,32 @@
 // ── Gift Box ──
 (function() {
     const box = document.getElementById('giftBox');
+    const reveal = document.getElementById('watchReveal');
+    const tip = document.getElementById('giftTip');
     let opened = false;
     box.addEventListener('click', () => {
         if (!opened) {
             box.classList.add('open');
             opened = true;
-            launchConfetti(100);
-            document.querySelector('.gift-tip').textContent = '🎉 生日快乐！';
-            // Fireworks around gift
-            const rect = box.getBoundingClientRect();
-            const cx = rect.left + rect.width / 2;
-            const cy = rect.top + rect.height / 2;
-            for (let i = 0; i < 6; i++) {
-                setTimeout(() => sparkAt(cx + (Math.random()-0.5)*160, cy + (Math.random()-0.5)*120), i*120);
-            }
+            launchConfetti(120);
+            tip.textContent = '';
+            // Show watch reveal after a short delay
+            setTimeout(() => {
+                reveal.classList.add('visible');
+                // Fireworks around watch
+                const rect = reveal.querySelector('.watch-display').getBoundingClientRect();
+                const cx = rect.left + rect.width / 2;
+                const cy = rect.top + rect.height / 2;
+                for (let i = 0; i < 8; i++) {
+                    setTimeout(() => sparkAt(cx + (Math.random()-0.5)*200, cy + (Math.random()-0.5)*140), i*100);
+                }
+                reveal.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 500);
         } else {
             box.classList.remove('open');
+            reveal.classList.remove('visible');
             opened = false;
-            document.querySelector('.gift-tip').textContent = '👆 再点一下合上';
+            tip.textContent = '👆 再点一下合上';
         }
     });
 })();
