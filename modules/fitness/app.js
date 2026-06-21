@@ -203,73 +203,66 @@
       const canvas = this.els.weightChart;
       if (!canvas || this.activeTab !== 'weight') return;
       const data = this._filtered('weight').sort((a, b) => a.date - b.date);
-      if (data.length < 2) { canvas.style.display = 'none'; return; }
-      canvas.style.display = 'block';
-
+      const ctx = canvas.getContext('2d');
       const dpr = window.devicePixelRatio || 1;
       const rect = canvas.parentElement.getBoundingClientRect();
-      canvas.width = rect.width * dpr;
-      canvas.height = 300 * dpr;
-      canvas.style.width = rect.width + 'px';
-      canvas.style.height = '300px';
-
-      const ctx = canvas.getContext('2d');
+      const W = rect.width, H = 340;
+      canvas.width = W * dpr; canvas.height = H * dpr;
+      canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
       ctx.scale(dpr, dpr);
-      const W = rect.width, H = 300;
-      const pad = { top: 20, right: 30, bottom: 40, left: 50 };
+      const pad = { top: 30, right: 40, bottom: 45, left: 55 };
       const pw = W - pad.left - pad.right, ph = H - pad.top - pad.bottom;
-
-      const weights = data.map(d => d.weight);
-      const minW = Math.floor(Math.min(...weights) - 1);
-      const maxW = Math.ceil(Math.max(...weights) + 1);
-
       const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-      ctx.clearRect(0, 0, W, H);
-      const style = {
+      const s = {
         bg: isDark ? '#1e293b' : '#ffffff',
         grid: isDark ? '#334155' : '#e5e7eb',
         text: isDark ? '#94a3b8' : '#6b7280',
         line: isDark ? '#818cf8' : '#4f46e5',
         dot: isDark ? '#a5b4fc' : '#6366f1',
       };
+      ctx.fillStyle = s.bg; ctx.fillRect(0, 0, W, H);
+      canvas.style.display = 'block';
 
-      ctx.fillStyle = style.bg; ctx.fillRect(0, 0, W, H);
+      if (data.length === 0) {
+        ctx.fillStyle = s.text; ctx.font = '14px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText('暂无体重数据，添加记录后此处显示曲线', W / 2, H / 2);
+        return;
+      }
 
-      // Grid
-      ctx.strokeStyle = style.grid; ctx.lineWidth = 0.5;
+      const weights = data.map(d => d.weight);
+      const range = Math.max(...weights) - Math.min(...weights);
+      const minW = Math.floor(Math.min(...weights) - (range < 1 ? 1 : range * 0.2));
+      const maxW = Math.ceil(Math.max(...weights) + (range < 1 ? 1 : range * 0.2));
       const ySteps = 5;
+
+      // Grid + Y axis
+      ctx.strokeStyle = s.grid; ctx.lineWidth = 0.5;
       for (let i = 0; i <= ySteps; i++) {
         const y = pad.top + (ph / ySteps) * i;
         ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
-        ctx.fillStyle = style.text; ctx.font = '11px sans-serif'; ctx.textAlign = 'right';
+        ctx.fillStyle = s.text; ctx.font = '11px sans-serif'; ctx.textAlign = 'right';
         ctx.fillText((maxW - (maxW - minW) / ySteps * i).toFixed(1), pad.left - 8, y + 4);
       }
 
+      if (data.length === 1) {
+        // Single point: show big dot centered with label
+        const cx = pad.left + pw / 2;
+        const cy = pad.top + ph / 2;
+        ctx.fillStyle = s.line; ctx.beginPath(); ctx.arc(cx, cy, 6, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = s.bg; ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = s.text; ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText(data[0].weight + ' kg', cx, cy - 14);
+        ctx.fillText(fmtDate(data[0].date), cx, H - pad.bottom + 18);
+        return;
+      }
+
       // X labels
-      ctx.textAlign = 'center';
-      const xStep = data.length > 7 ? Math.ceil(data.length / 7) : 1;
+      ctx.fillStyle = s.text; ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
+      const xStep = data.length > 8 ? Math.ceil(data.length / 8) : 1;
       for (let i = 0; i < data.length; i += xStep) {
         const x = pad.left + (pw / (data.length - 1)) * i;
         ctx.fillText(fmtDate(data[i].date).slice(5), x, H - pad.bottom + 16);
       }
-
-      // Line
-      ctx.strokeStyle = style.line; ctx.lineWidth = 2.5; ctx.lineJoin = 'round';
-      ctx.beginPath();
-      data.forEach((d, i) => {
-        const x = pad.left + (pw / (data.length - 1)) * i;
-        const y = pad.top + ph * (1 - (d.weight - minW) / (maxW - minW));
-        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-      });
-      ctx.stroke();
-
-      // Dots
-      data.forEach((d, i) => {
-        const x = pad.left + (pw / (data.length - 1)) * i;
-        const y = pad.top + ph * (1 - (d.weight - minW) / (maxW - minW));
-        ctx.fillStyle = style.dot; ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = style.bg; ctx.beginPath(); ctx.arc(x, y, 2, 0, Math.PI * 2); ctx.fill();
-      });
 
       // Area fill
       ctx.fillStyle = isDark ? 'rgba(129,140,248,0.1)' : 'rgba(79,70,229,0.08)';
@@ -280,6 +273,27 @@
         i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
       });
       ctx.lineTo(pad.left + pw, pad.top + ph); ctx.lineTo(pad.left, pad.top + ph); ctx.closePath(); ctx.fill();
+
+      // Line
+      ctx.strokeStyle = s.line; ctx.lineWidth = 2.5; ctx.lineJoin = 'round';
+      ctx.beginPath();
+      data.forEach((d, i) => {
+        const x = pad.left + (pw / (data.length - 1)) * i;
+        const y = pad.top + ph * (1 - (d.weight - minW) / (maxW - minW));
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+
+      // Dots + value labels
+      data.forEach((d, i) => {
+        const x = pad.left + (pw / (data.length - 1)) * i;
+        const y = pad.top + ph * (1 - (d.weight - minW) / (maxW - minW));
+        ctx.fillStyle = s.dot; ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = s.bg; ctx.beginPath(); ctx.arc(x, y, 2.5, 0, Math.PI * 2); ctx.fill();
+        // Value label on point
+        ctx.fillStyle = s.text; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText(d.weight.toFixed(1), x, y - 10);
+      });
     }
 
     // ---- 筛选 ----
