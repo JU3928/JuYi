@@ -236,6 +236,42 @@ input, textarea, select { font: inherit; color: inherit; }
 /* ========================== 容器 ========================== */
 .jy-container { max-width: var(--jy-content-max); margin: 0 auto; padding: 0 var(--jy-space-6); }
 
+/* ========================== 卡片入场动画 ========================== */
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.card-in { animation: cardIn 0.35s ease both; }
+
+/* ========================== 按钮涟漪 ========================== */
+@keyframes ripple {
+  to { transform: scale(4); opacity: 0; }
+}
+.jy-btn { position: relative; overflow: hidden; }
+.jy-btn .ripple {
+  position: absolute; border-radius: 50%;
+  background: rgba(255,255,255,0.35); width: 20px; height: 20px;
+  animation: ripple 0.6s linear; pointer-events: none;
+}
+
+/* ========================== Toast 通知 ========================== */
+#jy-toast-container {
+  position: fixed; top: var(--jy-space-4); right: var(--jy-space-4);
+  z-index: 9999; display: flex; flex-direction: column; gap: var(--jy-space-2);
+  pointer-events: none;
+}
+.jy-toast {
+  pointer-events: auto; padding: 0.65rem 1rem; border-radius: var(--jy-radius);
+  font-size: var(--jy-font-size-sm); font-weight: 500; color: #fff;
+  box-shadow: var(--jy-shadow-md); max-width: 360px; word-break: break-word;
+  animation: toastIn 0.3s ease, toastOut 0.3s ease 2.5s forwards;
+}
+.jy-toast--success { background: var(--jy-success); }
+.jy-toast--error   { background: var(--jy-danger); }
+.jy-toast--info    { background: var(--jy-primary); }
+@keyframes toastIn  { from { opacity: 0; transform: translateX(60px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes toastOut { to { opacity: 0; transform: translateX(60px); } }
+
 /* ========================== 响应式 ========================== */
 @media (max-width: 768px) {
   .jy-container { padding: 0 var(--jy-space-4); }

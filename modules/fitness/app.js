@@ -1,5 +1,6 @@
 ;(function () {
   'use strict';
+function toast(msg, type) { type = type || 'info'; let ct = document.getElementById('jy-toast-container'); if (!ct) { ct = document.createElement('div'); ct.id = 'jy-toast-container'; document.body.appendChild(ct); } const el = document.createElement('div'); el.className = 'jy-toast jy-toast--' + type; el.textContent = msg; ct.appendChild(el); setTimeout(function() { el.remove(); }, 3000); }  document.addEventListener('click', function(e) { const btn = e.target.closest('.jy-btn'); if (!btn) return; const rect = btn.getBoundingClientRect(); const ripple = document.createElement('span'); ripple.className = 'ripple'; ripple.style.left = (e.clientX - rect.left - 10) + 'px'; ripple.style.top = (e.clientY - rect.top - 10) + 'px'; btn.appendChild(ripple); setTimeout(function() { ripple.remove(); }, 600); });
 
   const STORE = 'fitness';
   const LS_THEME = 'jy_theme';
@@ -131,7 +132,7 @@
       const el = this.els.weightList;
       if (list.length === 0) { el.innerHTML = '<div class="jy-empty"><div class="jy-empty__icon">⚖️</div><div class="jy-empty__text">暂无体重记录</div></div>'; return; }
       el.innerHTML = list.sort((a, b) => b.date - a.date).map(r => `
-        <div class="record-item" data-id="${r.id}">
+        <div class="record-item card-in" style="animation-delay:${idx*40}ms" data-id="${r.id}">
           <div class="record-item__icon">⚖️</div>
           <div class="record-item__body"><div class="record-item__main">${r.weight} kg</div>${r.notes ? `<div class="record-item__sub">${esc(r.notes)}</div>` : ''}${this._tagBadges(r)}</div>
           <div class="record-item__right"><div class="record-item__date">${fmtDate(r.date)}</div></div>
@@ -146,7 +147,7 @@
       this.els.exerciseStatsRow.innerHTML = `<div class="exercise-stat-card"><div class="exercise-stat-card__value">${stats.count}</div><div class="exercise-stat-card__label">总次数</div></div><div class="exercise-stat-card"><div class="exercise-stat-card__value">${stats.totalMin}</div><div class="exercise-stat-card__label">总时长(分)</div></div><div class="exercise-stat-card"><div class="exercise-stat-card__value">${stats.avgIntensity}</div><div class="exercise-stat-card__label">平均强度</div></div>`;
       if (list.length === 0) { el.innerHTML = '<div class="jy-empty"><div class="jy-empty__icon">💪</div><div class="jy-empty__text">暂无运动记录</div></div>'; return; }
       el.innerHTML = list.sort((a, b) => b.date - a.date).map(r => `
-        <div class="record-item" data-id="${r.id}">
+        <div class="record-item card-in" style="animation-delay:${idx*40}ms" data-id="${r.id}">
           <div class="record-item__icon">💪</div>
           <div class="record-item__body"><div class="record-item__main">${esc(r.exerciseType || '运动')} · ${r.duration}分钟 · ${'★'.repeat(r.intensity||3)}</div>${r.notes ? `<div class="record-item__sub">${esc(r.notes)}</div>` : ''}${this._tagBadges(r)}</div>
           <div class="record-item__right"><div class="record-item__date">${fmtDate(r.date)}</div></div>
@@ -330,13 +331,13 @@
       const item = { type, date: new Date(this.els.editDate.value).getTime(), notes: this.els.editNotes.value.trim(), tags: this.els.editTags.value.split(/[,，\s]+/).map(s => s.trim()).filter(Boolean), createdAt: Date.now() };
       if (type === 'weight') {
         const w = parseFloat(this.els.editWeight.value);
-        if (isNaN(w) || w <= 0) { alert('请输入有效体重'); return; }
+        if (isNaN(w) || w <= 0) { toast('请输入有效体重','info'); return; }
         item.weight = w;
       } else {
         item.exerciseType = this.els.editExerciseType.value.trim();
         item.duration = parseInt(this.els.editDuration.value) || 0;
         item.intensity = parseInt(this.els.editIntensity.value) || 3;
-        if (!item.exerciseType) { alert('请输入运动项目'); return; }
+        if (!item.exerciseType) { toast('请输入运动项目','info'); return; }
       }
       if (id) { item.id = parseInt(id); await this.db.put(STORE, item); }
       else { await this.db.add(STORE, item); }
@@ -378,7 +379,7 @@
         await this.db.clear(STORE);
         for (const item of data.items) await this.db.add(STORE, item);
         await this.reload(); this._renderAll();
-      } catch (e) { alert('导入失败: ' + e.message); }
+      } catch (e) { toast('导入失败: ' + e.message); }
       finally { this.els.importFileInput.value = ''; }
     }
   }

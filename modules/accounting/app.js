@@ -1,5 +1,6 @@
 ;(function () {
   'use strict';
+function toast(msg, type) { type = type || 'info'; let ct = document.getElementById('jy-toast-container'); if (!ct) { ct = document.createElement('div'); ct.id = 'jy-toast-container'; document.body.appendChild(ct); } const el = document.createElement('div'); el.className = 'jy-toast jy-toast--' + type; el.textContent = msg; ct.appendChild(el); setTimeout(function() { el.remove(); }, 3000); }  document.addEventListener('click', function(e) { const btn = e.target.closest('.jy-btn'); if (!btn) return; const rect = btn.getBoundingClientRect(); const ripple = document.createElement('span'); ripple.className = 'ripple'; ripple.style.left = (e.clientX - rect.left - 10) + 'px'; ripple.style.top = (e.clientY - rect.top - 10) + 'px'; btn.appendChild(ripple); setTimeout(function() { ripple.remove(); }, 600); });
 
   const STORE = 'accounting';
   const LS_THEME = 'jy_theme';
@@ -193,10 +194,10 @@
         const icon = isIncome ? '↑' : '↓';
         const cls = isIncome ? 'record-item--income' : 'record-item--expense';
         const sign = isIncome ? '+' : '-';
-        return `<div class="record-item ${cls}" data-id="${r.id}">
-          <div class="record-item__icon">${icon}</div>
-          <div class="record-item__body"><div class="record-item__main">${esc(r.category || '未分类')}</div>${r.notes ? `<div class="record-item__sub">${esc(r.notes)}</div>` : ''}${(r.tags||[]).map(t => `<span class="jy-tag jy-text-xs">${esc(t)}</span>`).join(' ')}</div>
-          <div class="record-item__right"><div class="record-item__amount">${sign}¥${r.amount.toFixed(2)}</div><div class="record-item__date">${fmtDate(r.date)}</div></div></div>`;
+        return `<div class="record-item card-in" style="animation-delay:${idx*40}ms" ${cls}" data-id="${r.id}">
+          <div class="record-item card-in" style="animation-delay:${idx*40}ms"__icon">${icon}</div>
+          <div class="record-item card-in" style="animation-delay:${idx*40}ms"__body"><div class="record-item card-in" style="animation-delay:${idx*40}ms"__main">${esc(r.category || '未分类')}</div>${r.notes ? `<div class="record-item card-in" style="animation-delay:${idx*40}ms"__sub">${esc(r.notes)}</div>` : ''}${(r.tags||[]).map(t => `<span class="jy-tag jy-text-xs">${esc(t)}</span>`).join(' ')}</div>
+          <div class="record-item card-in" style="animation-delay:${idx*40}ms"__right"><div class="record-item card-in" style="animation-delay:${idx*40}ms"__amount">${sign}¥${r.amount.toFixed(2)}</div><div class="record-item card-in" style="animation-delay:${idx*40}ms"__date">${fmtDate(r.date)}</div></div></div>`;
       }).join('');
       this.els.recordList.querySelectorAll('.record-item').forEach(el => el.addEventListener('click', () => this._openEdit(parseInt(el.dataset.id))));
     }
@@ -261,7 +262,7 @@
       const id = this.els.editId.value;
       const type = this.els.radioIncome.checked ? 'income' : 'expense';
       const amount = parseFloat(this.els.editAmount.value);
-      if (!amount || amount <= 0) { alert('请输入有效金额'); return; }
+      if (!amount || amount <= 0) { toast('请输入有效金额'); return; }
       const item = { type, amount, category: this.els.editCategory.value, date: new Date(this.els.editDate.value).getTime(), notes: this.els.editNotes.value.trim(), tags: this.els.editTags.value.split(/[,，\s]+/).map(s => s.trim()).filter(Boolean), createdAt: Date.now() };
       if (id) { item.id = parseInt(id); await this.db.put(STORE, item); }
       else { await this.db.add(STORE, item); }
@@ -294,7 +295,7 @@
         await this.db.clear(STORE);
         for (const item of data.items) await this.db.add(STORE, item);
         await this.reload(); this._renderAll();
-      } catch (e) { alert('导入失败: ' + e.message); }
+      } catch (e) { toast('导入失败: ' + e.message); }
       finally { this.els.importFileInput.value = ''; }
     }
   }
