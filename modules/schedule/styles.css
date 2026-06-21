@@ -1,0 +1,88 @@
+/* ======================== 布局 ======================== */
+.app-layout { min-height: 100vh; }
+.main { max-width: 960px; margin: 0 auto; padding: var(--jy-space-6); }
+
+.header {
+  display: flex; align-items: center; gap: var(--jy-space-4);
+  padding-bottom: var(--jy-space-4); border-bottom: 1px solid var(--jy-border);
+  margin-bottom: var(--jy-space-6); flex-wrap: wrap;
+}
+.header__title { font-size: var(--jy-font-size-2xl); }
+.header__date { color: var(--jy-text-secondary); font-size: var(--jy-font-size-sm); }
+
+.scenario-picker { display: flex; gap: var(--jy-space-2); margin-left: auto; }
+.scenario-btn {
+  padding: 0.45rem 1rem; font-size: var(--jy-font-size-sm); font-weight: 500;
+  border: 1px solid var(--jy-border); background: var(--jy-surface);
+  border-radius: var(--jy-radius); cursor: pointer; color: var(--jy-text-secondary);
+  transition: all var(--jy-transition); white-space: nowrap;
+}
+.scenario-btn:hover { border-color: var(--jy-accent); color: var(--jy-accent); }
+.scenario-btn.active { background: var(--jy-accent); color: #fff; border-color: var(--jy-accent); }
+
+/* ======================== Timeline ======================== */
+.timeline {
+  display: flex; align-items: stretch; height: 40px; gap: 1px;
+  border-radius: var(--jy-radius-lg); overflow: hidden; margin-bottom: var(--jy-space-5);
+  border: 1px solid var(--jy-border);
+}
+.timeline__block {
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 600; color: #fff; min-width: 0;
+  transition: filter 150ms; white-space: nowrap; overflow: hidden;
+}
+.timeline__block--fixed { background: var(--jy-accent); }
+.timeline__block--elastic { background: var(--jy-warning); }
+.timeline__block--competition { background: var(--jy-danger); }
+.timeline__block--rest { background: var(--jy-bg-tertiary); color: var(--jy-text-muted); }
+
+/* ======================== Table ======================== */
+.table-wrap { overflow-x: auto; margin-bottom: var(--jy-space-4); }
+table { width: 100%; border-collapse: collapse; font-size: var(--jy-font-size-sm); }
+thead th {
+  text-align: left; padding: var(--jy-space-2) var(--jy-space-3);
+  background: var(--jy-bg-secondary); color: var(--jy-text-muted);
+  font-weight: 600; font-size: var(--jy-font-size-xs); text-transform: uppercase;
+  letter-spacing: 0.05em; position: sticky; top: 0;
+}
+tbody td { padding: var(--jy-space-2) var(--jy-space-3); border-bottom: 1px solid var(--jy-border-light); }
+tbody tr:hover { background: var(--jy-bg-secondary); }
+
+.badge-type {
+  display: inline-block; padding: 2px 8px; border-radius: 99px;
+  font-size: 10px; font-weight: 700;
+}
+.badge-type--fixed { background: var(--jy-accent-soft); color: var(--jy-accent); }
+.badge-type--elastic { background: var(--jy-warning-soft); color: #b45309; }
+.badge-type--competition { background: var(--jy-danger-soft); color: var(--jy-danger); }
+
+/* ======================== Note ======================== */
+.note {
+  padding: var(--jy-space-4); border-radius: var(--jy-radius-lg);
+  background: var(--jy-accent-soft); color: var(--jy-accent);
+  font-size: var(--jy-font-size-sm); font-weight: 500; margin-bottom: var(--jy-space-5);
+  border-left: 4px solid var(--jy-accent);
+}
+
+/* ======================== Principles ======================== */
+.principles {
+  padding: var(--jy-space-5); border-radius: var(--jy-radius-lg);
+  background: var(--jy-bg-secondary); border: 1px solid var(--jy-border);
+}
+.principles h3 { font-size: var(--jy-font-size-md); margin-bottom: var(--jy-space-3); }
+.principles ul { list-style: none; display: flex; flex-direction: column; gap: var(--jy-space-2); }
+.principles li { font-size: var(--jy-font-size-sm); color: var(--jy-text-secondary); }
+.principles strong { color: var(--jy-text-primary); }
+
+/* ======================== Theme toggle ======================== */
+.theme-btn { position: fixed; top: var(--jy-space-4); right: var(--jy-space-4); z-index: 10; }
+
+/* ======================== Responsive ======================== */
+@media (max-width: 768px) {
+  .main { padding: var(--jy-space-3); }
+  .header { flex-direction: column; align-items: flex-start; }
+  .scenario-picker { margin-left: 0; width: 100%; flex-wrap: wrap; }
+  .scenario-btn { flex: 1; text-align: center; font-size: var(--jy-font-size-xs); }
+  .timeline { height: 28px; }
+  .timeline__block { font-size: 7px; }
+}

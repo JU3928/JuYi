@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>计划表 — JuYi</title>
+  <link rel="stylesheet" href="../../shared/base.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div id="app" class="app-layout">
+  <main class="main">
+    <header class="header">
+      <h1 class="header__title">📅 计划表</h1>
+      <span class="header__date" id="todayDate"></span>
+      <div class="scenario-picker">
+        <button class="scenario-btn active" data-scenario="normal">📋 常规无比赛日</button>
+        <button class="scenario-btn" data-scenario="niuke">🏆 牛客周赛日</button>
+        <button class="scenario-btn" data-scenario="cf">💻 CF 比赛日</button>
+      </div>
+      <a href="../../index.html" class="jy-btn jy-btn--ghost jy-btn--sm">🏠 首页</a>
+    </header>
+
+    <div class="content">
+      <!-- Timeline visual -->
+      <div class="timeline" id="timeline"></div>
+
+      <!-- Table -->
+      <div class="table-wrap">
+        <table id="scheduleTable">
+          <thead>
+            <tr><th>时间</th><th>内容</th><th>类型</th><th>备注</th></tr>
+          </thead>
+          <tbody id="scheduleBody"></tbody>
+        </table>
+      </div>
+
+      <!-- Summary note -->
+      <div class="note" id="scenarioNote"></div>
+
+      <!-- Principles -->
+      <div class="principles">
+        <h3>核心原则</h3>
+        <ul>
+          <li>🛡️ <strong>固定任务</strong>（英语早/数学/408/运动）任何场景不缩短、不移动、不取消</li>
+          <li>🏃 <strong>16:00-17:00 运动</strong>永远锁定，永不删除</li>
+          <li>⏰ CF 比赛次日<strong>照常 07:00 起床</strong>，所有固定任务正常执行</li>
+          <li>😴 赛后直接入睡，不补题，不刷手机</li>
+          <li>🔢 建议每月 CF 不超过 2 次</li>
+        </ul>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
