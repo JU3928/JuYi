@@ -30,7 +30,7 @@
 
 /* ======================== 摘要卡片 ======================== */
 .summary-row { display: flex; gap: var(--jy-space-4); margin-bottom: var(--jy-space-5); }
-.summary-card { flex: 1; padding: var(--jy-space-4); background: var(--jy-surface); border: 1px solid var(--jy-border); border-radius: var(--jy-radius-lg); text-align: center; }
+.summary-card { flex: 1; padding: var(--jy-space-4); background: var(--jy-surface); border: 1px solid var(--jy-border); border-radius: var(--jy-radius-lg); text-align: center; box-shadow: var(--jy-shadow-sm); }
 .summary-card__label { font-size: var(--jy-font-size-xs); color: var(--jy-text-muted); margin-bottom: var(--jy-space-1); }
 .summary-card__value { font-size: var(--jy-font-size-2xl); font-weight: 700; }
 .summary-card--income .summary-card__value { color: var(--jy-success); }
@@ -51,9 +51,10 @@
 .record-item {
   display: flex; align-items: center; gap: var(--jy-space-3);
   padding: var(--jy-space-2) var(--jy-space-3);
-  border-bottom: 1px solid var(--jy-border-light); cursor: pointer; transition: background var(--jy-transition);
+  border-bottom: 1px solid var(--jy-border-light); cursor: pointer;
+  transition: all 0.2s ease;
 }
-.record-item:hover { background: var(--jy-bg-secondary); }
+.record-item:hover { background: var(--jy-bg-secondary); border-radius: var(--jy-radius-sm); }
 .record-item__icon { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; flex-shrink: 0; }
 .record-item--income .record-item__icon { background: var(--jy-success-soft); color: var(--jy-success); }
 .record-item--expense .record-item__icon { background: var(--jy-danger-soft); color: var(--jy-danger); }

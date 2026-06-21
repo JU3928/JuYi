@@ -41,22 +41,15 @@
     }
 
     .hub-card {
-      display: flex;
-      align-items: flex-start;
-      gap: var(--jy-space-4);
-      padding: var(--jy-space-5);
-      background: var(--jy-surface);
-      border: 1px solid var(--jy-border);
-      border-radius: var(--jy-radius-lg);
-      text-decoration: none;
-      color: inherit;
-      transition: all var(--jy-transition);
+      display: flex; align-items: flex-start; gap: var(--jy-space-4);
+      padding: var(--jy-space-5); background: var(--jy-surface);
+      border: 1px solid var(--jy-border); border-radius: var(--jy-radius-lg);
+      text-decoration: none; color: inherit;
+      transition: all 0.2s ease; box-shadow: var(--jy-shadow-sm);
     }
     .hub-card:hover {
-      border-color: var(--jy-accent);
-      box-shadow: var(--jy-shadow-md);
-      transform: translateY(-2px);
-      text-decoration: none;
+      border-color: var(--jy-primary); box-shadow: var(--jy-shadow-md);
+      transform: translateY(-2px); text-decoration: none;
     }
 
     .hub-card__icon {

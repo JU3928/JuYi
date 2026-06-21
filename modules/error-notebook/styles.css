@@ -88,10 +88,11 @@
 .card {
   background: var(--jy-surface); border: 1px solid var(--jy-border);
   border-radius: var(--jy-radius-lg); padding: var(--jy-space-4);
-  cursor: pointer; transition: all var(--jy-transition);
+  cursor: pointer; transition: all 0.2s ease;
   display: flex; flex-direction: column; gap: var(--jy-space-3); position: relative;
+  box-shadow: var(--jy-shadow-sm);
 }
-.card:hover { border-color: var(--jy-accent); box-shadow: var(--jy-shadow-md); transform: translateY(-1px); }
+.card:hover { border-color: var(--jy-primary); box-shadow: var(--jy-shadow-md); transform: translateY(-2px); }
 .card__header { display: flex; align-items: center; gap: var(--jy-space-2); }
 .card__subject {
   padding: 0.15rem 0.6rem; font-size: var(--jy-font-size-xs);

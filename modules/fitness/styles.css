@@ -47,9 +47,10 @@
   display: flex; align-items: center; gap: var(--jy-space-3);
   padding: var(--jy-space-3) var(--jy-space-4);
   background: var(--jy-surface); border: 1px solid var(--jy-border);
-  border-radius: var(--jy-radius); cursor: pointer; transition: all var(--jy-transition);
+  border-radius: var(--jy-radius-lg); cursor: pointer;
+  transition: all 0.2s ease; box-shadow: var(--jy-shadow-sm);
 }
-.record-item:hover { border-color: var(--jy-accent); }
+.record-item:hover { border-color: var(--jy-primary); box-shadow: var(--jy-shadow); transform: translateY(-1px); }
 .record-item__icon { font-size: 1.5rem; flex-shrink: 0; }
 .record-item__body { flex: 1; min-width: 0; }
 .record-item__main { font-weight: 600; font-size: var(--jy-font-size-base); }
