@@ -130,7 +130,7 @@
       const list = this._filtered('weight');
       const el = this.els.weightList;
       if (list.length === 0) { el.innerHTML = '<div class="jy-empty"><div class="jy-empty__icon">⚖️</div><div class="jy-empty__text">暂无体重记录</div></div>'; return; }
-      el.innerHTML = list.sort((a, b) => b.date - a.date).map(r => `
+      el.innerHTML = list.sort((a, b) => b.date - a.date).map((r, idx) => `
         <div class="record-item card-in" style="animation-delay:${idx*40}ms" data-id="${r.id}">
           <div class="record-item__icon">⚖️</div>
           <div class="record-item__body"><div class="record-item__main">${r.weight} kg</div>${r.notes ? `<div class="record-item__sub">${esc(r.notes)}</div>` : ''}${this._tagBadges(r)}</div>
@@ -145,7 +145,7 @@
       const stats = this._exerciseStats(list);
       this.els.exerciseStatsRow.innerHTML = `<div class="exercise-stat-card"><div class="exercise-stat-card__value">${stats.count}</div><div class="exercise-stat-card__label">总次数</div></div><div class="exercise-stat-card"><div class="exercise-stat-card__value">${stats.totalMin}</div><div class="exercise-stat-card__label">总时长(分)</div></div><div class="exercise-stat-card"><div class="exercise-stat-card__value">${stats.avgIntensity}</div><div class="exercise-stat-card__label">平均强度</div></div>`;
       if (list.length === 0) { el.innerHTML = '<div class="jy-empty"><div class="jy-empty__icon">💪</div><div class="jy-empty__text">暂无运动记录</div></div>'; return; }
-      el.innerHTML = list.sort((a, b) => b.date - a.date).map(r => `
+      el.innerHTML = list.sort((a, b) => b.date - a.date).map((r, idx) => `
         <div class="record-item card-in" style="animation-delay:${idx*40}ms" data-id="${r.id}">
           <div class="record-item__icon">💪</div>
           <div class="record-item__body"><div class="record-item__main">${esc(r.exerciseType || '运动')} · ${r.duration}分钟 · ${'★'.repeat(r.intensity||3)}</div>${r.notes ? `<div class="record-item__sub">${esc(r.notes)}</div>` : ''}${this._tagBadges(r)}</div>
@@ -330,16 +330,23 @@
       const item = { type, date: new Date(this.els.editDate.value).getTime(), notes: this.els.editNotes.value.trim(), tags: this.els.editTags.value.split(/[,，\s]+/).map(s => s.trim()).filter(Boolean), createdAt: Date.now() };
       if (type === 'weight') {
         const w = parseFloat(this.els.editWeight.value);
-        if (isNaN(w) || w <= 0) { alert('请输入有效体重','info'); return; }
+        if (isNaN(w) || w <= 0) { alert('请输入有效体重'); return; }
         item.weight = w;
       } else {
         item.exerciseType = this.els.editExerciseType.value.trim();
         item.duration = parseInt(this.els.editDuration.value) || 0;
         item.intensity = parseInt(this.els.editIntensity.value) || 3;
-        if (!item.exerciseType) { alert('请输入运动项目','info'); return; }
+        if (!item.exerciseType) { alert('请输入运动项目'); return; }
       }
-      if (id) { item.id = parseInt(id); await this.db.put(STORE, item); }
-      else { await this.db.add(STORE, item); }
+      if (id) {
+        item.id = parseInt(id); await this.db.put(STORE, item);
+      } else if (type === 'weight') {
+        const existing = this.items.find(r => r.type === 'weight' && fmtDate(r.date) === fmtDate(item.date));
+        if (existing) { item.id = existing.id; await this.db.put(STORE, item); }
+        else { await this.db.add(STORE, item); }
+      } else {
+        await this.db.add(STORE, item);
+      }
       this._closeModals();
       await this.reload();
       this._renderAll();
