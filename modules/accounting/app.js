@@ -1,6 +1,5 @@
 ;(function () {
   'use strict';
-function toast(msg, type) { type = type || 'info'; let ct = document.getElementById('jy-toast-container'); if (!ct) { ct = document.createElement('div'); ct.id = 'jy-toast-container'; document.body.appendChild(ct); } const el = document.createElement('div'); el.className = 'jy-toast jy-toast--' + type; el.textContent = msg; ct.appendChild(el); setTimeout(function() { el.remove(); }, 3000); }  document.addEventListener('click', function(e) { const btn = e.target.closest('.jy-btn'); if (!btn) return; const rect = btn.getBoundingClientRect(); const ripple = document.createElement('span'); ripple.className = 'ripple'; ripple.style.left = (e.clientX - rect.left - 10) + 'px'; ripple.style.top = (e.clientY - rect.top - 10) + 'px'; btn.appendChild(ripple); setTimeout(function() { ripple.remove(); }, 600); });
 
   const STORE = 'accounting';
   const LS_THEME = 'jy_theme';
@@ -262,7 +261,7 @@ function toast(msg, type) { type = type || 'info'; let ct = document.getElementB
       const id = this.els.editId.value;
       const type = this.els.radioIncome.checked ? 'income' : 'expense';
       const amount = parseFloat(this.els.editAmount.value);
-      if (!amount || amount <= 0) { toast('请输入有效金额'); return; }
+      if (!amount || amount <= 0) { alert('请输入有效金额'); return; }
       const item = { type, amount, category: this.els.editCategory.value, date: new Date(this.els.editDate.value).getTime(), notes: this.els.editNotes.value.trim(), tags: this.els.editTags.value.split(/[,，\s]+/).map(s => s.trim()).filter(Boolean), createdAt: Date.now() };
       if (id) { item.id = parseInt(id); await this.db.put(STORE, item); }
       else { await this.db.add(STORE, item); }
@@ -295,7 +294,7 @@ function toast(msg, type) { type = type || 'info'; let ct = document.getElementB
         await this.db.clear(STORE);
         for (const item of data.items) await this.db.add(STORE, item);
         await this.reload(); this._renderAll();
-      } catch (e) { toast('导入失败: ' + e.message); }
+      } catch (e) { alert('导入失败: ' + e.message); }
       finally { this.els.importFileInput.value = ''; }
     }
   }

@@ -1,27 +1,6 @@
 ;(function () {
   'use strict';
 
-  // ---- Toast ----
-  function toast(msg, type) {
-    type = type || 'info';
-    let ct = document.getElementById('jy-toast-container');
-    if (!ct) { ct = document.createElement('div'); ct.id = 'jy-toast-container'; document.body.appendChild(ct); }
-    const el = document.createElement('div'); el.className = 'jy-toast jy-toast--' + type; el.textContent = msg;
-    ct.appendChild(el);
-    setTimeout(() => el.remove(), 3000);
-  }
-
-  // ---- Ripple ----
-  document.addEventListener('click', function(e) {
-    const btn = e.target.closest('.jy-btn'); if (!btn) return;
-    const rect = btn.getBoundingClientRect();
-    const ripple = document.createElement('span'); ripple.className = 'ripple';
-    ripple.style.left = (e.clientX - rect.left - 10) + 'px';
-    ripple.style.top = (e.clientY - rect.top - 10) + 'px';
-    btn.appendChild(ripple);
-    setTimeout(() => ripple.remove(), 600);
-  });
-
   const DB_NAME = 'JuYiDB';
   const DB_VERSION = 2;
   const STORE = 'errorNotebook';
@@ -400,9 +379,9 @@
 
     async _startReview() {
       const subject = this._getActiveSubject();
-      if (!subject) { toast('请先在侧边栏选择一个科目','error'); return; }
+      if (!subject) { alert('请先在侧边栏选择一个科目','error'); return; }
       const items = this.items.filter(i => i.subject === subject).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
-      if (items.length === 0) { toast('该科目暂无题目，请先添加','error'); return; }
+      if (items.length === 0) { alert('该科目暂无题目，请先添加','error'); return; }
 
       let prog = this.progressMap.get(subject);
       if (!prog) {
@@ -521,14 +500,14 @@
 
     async _onResetProgress() {
       const subject = this._getActiveSubject();
-      if (!subject) { toast('请先选择一个科目','error'); return; }
+      if (!subject) { alert('请先选择一个科目','error'); return; }
       const confirmed = confirm(`确定要重置「${subject}」的复习进度吗？`);
       if (!confirmed) return;
       const prog = { subject, lastReviewedIndex: -1, lastReviewDate: '' };
       await this.db.put(PROGRESS_STORE, prog);
       this.progressMap.set(subject, prog);
       this._renderStats();
-      toast('复习进度已重置','success');
+      alert('复习进度已重置','success');
     }
 
     /* ==================== 弹窗：编辑 ==================== */
@@ -594,7 +573,7 @@
         const inp = b.querySelector('#newSubjectName');
         const name = inp.value.trim();
         if (!name) return;
-        if (this.subjects.some(s => s.name === name)) { toast('已存在','error'); return; }
+        if (this.subjects.some(s => s.name === name)) { alert('已存在','error'); return; }
         const used = new Set(this.subjects.map(s => s.color));
         const color = COLORS_PRESET.find(c => !used.has(c)) || COLORS_PRESET[0];
         this.subjects.push({ name, color });
@@ -634,7 +613,7 @@
         tags: this.els.editTags.value.split(/[,，\s]+/).map(s => s.trim()).filter(Boolean),
         source: this.els.editSource.value.trim(),
       };
-      if (!item.question.trim() && !item.answer.trim()) { toast('题目和解析至少填一项','error'); return; }
+      if (!item.question.trim() && !item.answer.trim()) { alert('题目和解析至少填一项','error'); return; }
 
       if (id) {
         const existing = await this.db.get(STORE, parseInt(id));
@@ -728,8 +707,8 @@
         await this._loadProgress();
         await this.reload();
         this._renderAll();
-        toast('导入成功！','success');
-      } catch (err) { toast('导入失败：' + err.message, 'error'); }
+        alert('导入成功！','success');
+      } catch (err) { alert('导入失败：' + err.message, 'error'); }
       finally { this.els.importFileInput.value = ''; }
     }
 
