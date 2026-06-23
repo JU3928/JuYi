@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>做题本 — JuYi</title>
+  <link rel="stylesheet" href="../../shared/base.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div id="app" class="app-layout">
+
+  <!-- 侧边栏 -->
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar__header">
+      <h1 class="sidebar__logo">📝 做题本</h1>
+      <button id="btnToggleSidebar" class="jy-btn jy-btn--icon sidebar__toggle">☰</button>
+    </div>
+    <div class="sidebar__section">
+      <span class="sidebar__section-title">📊 统计</span>
+      <div id="statsPanel" class="stats-panel"></div>
+    </div>
+    <div class="sidebar__footer">
+      <button id="btnToggleTheme" class="jy-btn jy-btn--outline jy-btn--sm sidebar__action-btn">🌙 暗色模式</button>
+      <a href="../../index.html" class="jy-btn jy-btn--ghost jy-btn--sm sidebar__action-btn" style="width:100%;justify-content:center">🏠 首页</a>
+    </div>
+  </aside>
+
+  <!-- 主区域 -->
+  <main class="main">
+
+    <!-- ====== 列表视图 ====== -->
+    <div id="listView">
+      <header class="main__toolbar">
+        <button id="btnOpenSidebar" class="jy-btn jy-btn--icon jy-show-mobile">☰</button>
+        <div class="main__toolbar-title">我的做题本</div>
+        <div class="main__toolbar-actions">
+          <button id="btnAdd" class="jy-btn jy-btn--primary">＋ 新建做题本</button>
+        </div>
+      </header>
+      <div class="panel">
+        <div id="bookList" class="book-grid"></div>
+        <div id="emptyState" class="jy-empty" style="display:none">
+          <div class="jy-empty__icon">📝</div>
+          <div class="jy-empty__text">还没有做题本，点「＋ 新建做题本」开始</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====== 答题视图 ====== -->
+    <div id="answerView" style="display:none">
+      <header class="answer-toolbar">
+        <button id="btnBackToList" class="jy-btn jy-btn--ghost jy-btn--sm">← 返回列表</button>
+        <span class="answer-toolbar__title" id="answerBookTitle"></span>
+        <span class="answer-toolbar__spacer"></span>
+        <button id="btnEditBookFromAnswer" class="jy-btn jy-btn--outline jy-btn--sm">✎ 编辑信息</button>
+      </header>
+      <div class="answer-content">
+        <div class="answer-content__questions" id="questionList"></div>
+        <aside class="answer-content__summary" id="summaryPanel">
+          <div class="summary__title">📋 答案汇总</div>
+          <div class="summary__groups" id="summaryContent"></div>
+          <button id="btnCopyAnswers" class="jy-btn jy-btn--outline jy-btn--sm" style="width:100%;margin-top:var(--jy-space-3)">📋 复制答案</button>
+          <span id="copyFeedback" class="copy-feedback">已复制到剪贴板</span>
+        </aside>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ====== 新建/编辑做题本弹窗 ====== -->
+<div id="editBookOverlay" class="jy-overlay">
+  <div class="jy-modal" style="max-width:480px">
+    <div class="jy-modal__header">
+      <span class="jy-modal__title" id="editBookModalTitle">新建做题本</span>
+      <button class="jy-btn jy-btn--icon modal-close-btn">✕</button>
+    </div>
+    <div class="jy-modal__body">
+      <form id="editBookForm">
+        <div class="jy-form-group">
+          <label class="jy-label">名称 <span style="color:var(--jy-danger)">*</span></label>
+          <input type="text" id="editBookName" class="jy-input" placeholder="例如：第一章练习题" required maxlength="100">
+        </div>
+        <div class="jy-form-group">
+          <label class="jy-label">类型</label>
+          <select id="editBookType" class="jy-select">
+            <option value="choice">🔤 选择题</option>
+            <option value="fill-blank" disabled>✍️ 填空题（即将支持）</option>
+            <option value="essay" disabled>📄 解答题（即将支持）</option>
+          </select>
+        </div>
+        <div class="jy-form-group">
+          <label class="jy-label">题目数量 <span style="color:var(--jy-danger)">*</span></label>
+          <input type="number" id="editBookQCount" class="jy-input" placeholder="正整数" min="1" max="500" required>
+          <span class="jy-form-hint" id="qcountHint" style="display:none;font-size:var(--jy-font-size-xs);color:var(--jy-text-muted);margin-top:var(--jy-space-1)">创建后不可修改</span>
+        </div>
+        <div class="jy-form-group">
+          <label class="jy-label">备注</label>
+          <input type="text" id="editBookNotes" class="jy-input" placeholder="选填">
+        </div>
+        <input type="hidden" id="editBookId">
+      </form>
+    </div>
+    <div class="jy-modal__footer">
+      <button class="jy-btn jy-btn--ghost modal-close-btn">取消</button>
+      <button id="btnSaveBook" class="jy-btn jy-btn--primary">💾 保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====== 删除确认弹窗 ====== -->
+<div id="confirmDeleteOverlay" class="jy-overlay">
+  <div class="jy-modal" style="max-width:400px">
+    <div class="jy-modal__header"><span class="jy-modal__title">确认删除</span><button class="jy-btn jy-btn--icon modal-close-btn">✕</button></div>
+    <div class="jy-modal__body">
+      <p style="text-align:center;padding:var(--jy-space-4)" id="confirmDeleteMsg">确定删除此做题本？题目答案也会一并删除。</p>
+    </div>
+    <div class="jy-modal__footer">
+      <button class="jy-btn jy-btn--ghost modal-close-btn">取消</button>
+      <button id="btnConfirmDelete" class="jy-btn jy-btn--danger">确认删除</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
