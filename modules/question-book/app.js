@@ -279,15 +279,13 @@
           </div>`;
       }
 
-      // 统计行
+      // 统计行（题目总数 + 正确率）
       let statsHTML = '';
-      if (answered > 0 || hasScore) {
+      if (hasScore) {
         statsHTML = '<div class="book-card__stats">';
-        statsHTML += `<span class="book-card__stat">📝 ${answered}/${total} 题</span>`;
-        if (hasScore) {
-          const cls = score.rate >= 0.8 ? 'is-high' : (score.rate >= 0.6 ? 'is-mid' : 'is-low');
-          statsHTML += `<span class="book-card__stat book-card__stat--score ${cls}">🎯 ${Math.round(score.rate * 100)}%</span>`;
-        }
+        statsHTML += `<span class="book-card__stat">📋 ${total} 题</span>`;
+        const cls = score.rate >= 0.8 ? 'is-high' : (score.rate >= 0.6 ? 'is-mid' : 'is-low');
+        statsHTML += `<span class="book-card__stat book-card__stat--score ${cls}">🎯 ${Math.round(score.rate * 100)}%</span>`;
         statsHTML += '</div>';
       }
 
@@ -310,7 +308,7 @@
               <span class="book-card__type book-card__type--${book.type}">${typeLabel}</span>
             </div>
             <div class="book-card__meta">
-              <span>${total} 题</span>
+              <span>📝 已答 ${answered}/${total}</span>
               <span class="book-card__meta-divider">·</span>
               <span>${fmtDate(book.createdAt)}</span>
             </div>
