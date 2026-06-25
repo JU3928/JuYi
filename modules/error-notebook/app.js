@@ -351,7 +351,12 @@
       if (this.filters.tags.size > 0) list = list.filter(i => (i.tags || []).some(t => this.filters.tags.has(t)));
       if (this.searchQuery.trim()) {
         const q = this.searchQuery.trim().toLowerCase();
-        list = list.filter(i => stripHtml(i.question).toLowerCase().includes(q));
+        list = list.filter(i => {
+          if (stripHtml(i.question).toLowerCase().includes(q)) return true;
+          if ((i.source || '').toLowerCase().includes(q)) return true;
+          if ((i.tags || []).some(t => t.toLowerCase().includes(q))) return true;
+          return false;
+        });
       }
       const [field, order] = [this.sortBy, this.sortOrder];
       list.sort((a, b) => {
