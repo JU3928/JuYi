@@ -43,7 +43,8 @@
         <div id="bookList" class="book-grid"></div>
         <div id="emptyState" class="jy-empty" style="display:none">
           <div class="jy-empty__icon">📝</div>
-          <div class="jy-empty__text">还没有做题本，点「＋ 新建做题本」开始</div>
+          <div class="jy-empty__text">还没有做题本</div>
+          <div class="jy-empty__sub">点「＋ 新建做题本」创建第一个做题本，开始刷题之旅</div>
         </div>
       </div>
     </div>
@@ -53,15 +54,36 @@
       <header class="answer-toolbar">
         <button id="btnBackToList" class="jy-btn jy-btn--ghost jy-btn--sm">← 返回列表</button>
         <span class="answer-toolbar__title" id="answerBookTitle"></span>
+        <span class="answer-toolbar__progress" id="answerProgress"></span>
         <span class="answer-toolbar__spacer"></span>
+        <span id="answerScoreBadge" class="answer-toolbar__score" style="display:none"></span>
         <button id="btnEditBookFromAnswer" class="jy-btn jy-btn--outline jy-btn--sm">✎ 编辑信息</button>
       </header>
       <div class="answer-content">
         <div class="answer-content__questions" id="questionList"></div>
         <aside class="answer-content__summary" id="summaryPanel">
-          <div class="summary__title">📋 答案汇总</div>
-          <div class="summary__groups" id="summaryContent"></div>
-          <button id="btnCopyAnswers" class="jy-btn jy-btn--outline jy-btn--sm" style="width:100%;margin-top:var(--jy-space-3)">📋 复制答案</button>
+          <div class="summary__section">
+            <div class="summary__title">📋 答案汇总</div>
+            <div class="summary__groups" id="summaryContent"></div>
+          </div>
+
+          <!-- 核对区 -->
+          <div id="checkSection" class="summary__section summary__section--check" style="display:none">
+            <div class="summary__title">📊 核对结果</div>
+            <div id="checkResults"></div>
+          </div>
+
+          <!-- 未全部答完时的提示 -->
+          <div id="checkHint" class="summary__hint">
+            <span id="checkHintText">完成所有题目后可录入正确答案</span>
+          </div>
+
+          <!-- 按钮区 -->
+          <div class="summary__actions">
+            <button id="btnOpenCheck" class="jy-btn jy-btn--primary jy-btn--sm" style="width:100%;display:none">🔍 录入正确答案</button>
+            <button id="btnRecheck" class="jy-btn jy-btn--outline jy-btn--sm" style="width:100%;display:none">🔄 重新核对</button>
+            <button id="btnCopyAnswers" class="jy-btn jy-btn--outline jy-btn--sm" style="width:100%;margin-top:var(--jy-space-2)">📋 复制我的答案</button>
+          </div>
           <span id="copyFeedback" class="copy-feedback">已复制到剪贴板</span>
         </aside>
       </div>
@@ -120,6 +142,24 @@
     <div class="jy-modal__footer">
       <button class="jy-btn jy-btn--ghost modal-close-btn">取消</button>
       <button id="btnConfirmDelete" class="jy-btn jy-btn--danger">确认删除</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====== 录入正确答案弹窗 ====== -->
+<div id="checkAnswersOverlay" class="jy-overlay">
+  <div class="jy-modal" style="max-width:680px">
+    <div class="jy-modal__header">
+      <span class="jy-modal__title">🔍 录入正确答案</span>
+      <button class="jy-btn jy-btn--icon modal-close-btn">✕</button>
+    </div>
+    <div class="jy-modal__body">
+      <p class="check-hint">请逐题选择 <strong>正确答案</strong>，用于核对你已提交的答案。未选中的题目不会参与比对。</p>
+      <div id="correctAnswersList" class="correct-answers-grid"></div>
+    </div>
+    <div class="jy-modal__footer">
+      <button class="jy-btn jy-btn--ghost modal-close-btn">取消</button>
+      <button id="btnRunCheck" class="jy-btn jy-btn--primary">🔍 开始核对</button>
     </div>
   </div>
 </div>

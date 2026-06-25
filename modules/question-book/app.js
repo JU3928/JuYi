@@ -8,6 +8,7 @@
   const LS_THEME = 'jy_theme';
 
   const TYPE_LABELS = { 'choice': '选择题', 'fill-blank': '填空题', 'essay': '解答题' };
+  const OPTIONS = ['A', 'B', 'C', 'D'];
 
   /* ================================================================
    * IndexedDB wrapper
@@ -81,9 +82,9 @@
     constructor() {
       this.db = new DB();
       this.books = [];
-      this.view = 'list';          // 'list' | 'answer'
-      this.activeBook = null;      // current book in answer view
-      this.currentAnswerRecord = null; // answer record from DB
+      this.view = 'list';
+      this.activeBook = null;
+      this.currentAnswerRecord = null;
       this.editingBookId = null;
       this.pendingDeleteBookId = null;
       this._saveTimer = null;
@@ -124,11 +125,19 @@
         btnAdd: q('#btnAdd'),
         answerView: q('#answerView'),
         answerBookTitle: q('#answerBookTitle'),
+        answerProgress: q('#answerProgress'),
+        answerScoreBadge: q('#answerScoreBadge'),
         btnBackToList: q('#btnBackToList'),
         btnEditBookFromAnswer: q('#btnEditBookFromAnswer'),
         questionList: q('#questionList'),
         summaryPanel: q('#summaryPanel'),
         summaryContent: q('#summaryContent'),
+        checkSection: q('#checkSection'),
+        checkResults: q('#checkResults'),
+        checkHint: q('#checkHint'),
+        checkHintText: q('#checkHintText'),
+        btnOpenCheck: q('#btnOpenCheck'),
+        btnRecheck: q('#btnRecheck'),
         btnCopyAnswers: q('#btnCopyAnswers'),
         copyFeedback: q('#copyFeedback'),
         editBookOverlay: q('#editBookOverlay'),
@@ -144,6 +153,9 @@
         confirmDeleteOverlay: q('#confirmDeleteOverlay'),
         confirmDeleteMsg: q('#confirmDeleteMsg'),
         btnConfirmDelete: q('#btnConfirmDelete'),
+        checkAnswersOverlay: q('#checkAnswersOverlay'),
+        correctAnswersList: q('#correctAnswersList'),
+        btnRunCheck: q('#btnRunCheck'),
       };
     }
 
@@ -160,7 +172,7 @@
       E.bookList.addEventListener('click', (e) => this._onBookListClick(e));
       E.bookList.addEventListener('contextmenu', (e) => this._onBookListContextMenu(e));
 
-      // Modals
+      // Modals (general)
       E.btnSaveBook.addEventListener('click', () => this._onSaveBook());
       E.btnConfirmDelete.addEventListener('click', () => this._confirmDeleteBook());
       document.querySelectorAll('.modal-close-btn').forEach(btn => {
@@ -180,6 +192,11 @@
       E.questionList.addEventListener('input', (e) => this._onQuestionInput(e));
       E.btnCopyAnswers.addEventListener('click', () => this._copyAnswers());
 
+      // Check flow
+      E.btnOpenCheck.addEventListener('click', () => this._openCheckModal());
+      E.btnRecheck.addEventListener('click', () => this._openCheckModal());
+      E.btnRunCheck.addEventListener('click', () => this._onRunCheck());
+
       // Auto-save
       window.addEventListener('beforeunload', () => this._persistAnswers());
       document.addEventListener('visibilitychange', () => {
@@ -188,12 +205,8 @@
     }
 
     /* ---- sidebar ---- */
-    _toggleSidebar() {
-      this.els.sidebar.classList.toggle('is-collapsed');
-    }
-    _openSidebar() {
-      this.els.sidebar.classList.remove('is-collapsed');
-    }
+    _toggleSidebar() { this.els.sidebar.classList.toggle('is-collapsed'); }
+    _openSidebar() { this.els.sidebar.classList.remove('is-collapsed'); }
     _toggleTheme() {
       const current = document.documentElement.getAttribute('data-theme');
       const next = current === 'dark' ? 'light' : 'dark';
@@ -203,15 +216,10 @@
     }
 
     /* ---- data ---- */
-    async reload() {
-      this.books = await this.db.getAll(STORE_BOOKS);
-    }
+    async reload() { this.books = await this.db.getAll(STORE_BOOKS); }
 
     /* ---- overlay helpers ---- */
-    _openOverlay(ov) {
-      ov.classList.add('is-open');
-      document.body.style.overflow = 'hidden';
-    }
+    _openOverlay(ov) { ov.classList.add('is-open'); document.body.style.overflow = 'hidden'; }
     _closeAllOverlays() {
       document.querySelectorAll('.jy-overlay').forEach(ov => ov.classList.remove('is-open'));
       document.body.style.overflow = '';
@@ -255,11 +263,32 @@
 
     _buildBookCard(book) {
       const typeLabel = TYPE_LABELS[book.type] || book.type;
-      const progress = this._getBookProgressFromAnswers(book);
+      const answerInfo = this._getBookProgressFromAnswers(book);
+      const answered = answerInfo ? answerInfo.answered : 0;
+      const total = book.questionCount;
+      const score = answerInfo ? answerInfo.score : null; // { correct, wrong, rate }
+      const hasScore = score !== null;
 
+      // 进度条
+      const pct = total > 0 ? Math.round((answered / total) * 100) : 0;
       let progressHTML = '';
-      if (progress) {
-        progressHTML = `<div class="book-card__progress">📝 已答 ${progress.answered}/${book.questionCount}</div>`;
+      if (total > 0) {
+        progressHTML = `
+          <div class="book-card__progress-bar">
+            <div class="book-card__progress-fill" style="width:${pct}%"></div>
+          </div>`;
+      }
+
+      // 统计行
+      let statsHTML = '';
+      if (answered > 0 || hasScore) {
+        statsHTML = '<div class="book-card__stats">';
+        statsHTML += `<span class="book-card__stat">📝 ${answered}/${total} 题</span>`;
+        if (hasScore) {
+          const cls = score.rate >= 0.8 ? 'is-high' : (score.rate >= 0.6 ? 'is-mid' : 'is-low');
+          statsHTML += `<span class="book-card__stat book-card__stat--score ${cls}">🎯 ${Math.round(score.rate * 100)}%</span>`;
+        }
+        statsHTML += '</div>';
       }
 
       let notesHTML = '';
@@ -268,22 +297,27 @@
         notesHTML = `<div class="book-card__notes">${esc(truncated)}</div>`;
       }
 
+      const scoreClass = hasScore ? ' book-card--has-score' : '';
+
       return `
-        <div class="book-card" data-id="${book.id}">
+        <div class="book-card${scoreClass}" data-id="${book.id}">
           <div class="book-card__actions">
             <button class="jy-btn jy-btn--icon edit-book-btn" data-id="${book.id}" title="编辑">✎</button>
           </div>
-          <div class="book-card__header">
-            <span class="book-card__name" title="${esc(book.name)}">${esc(book.name)}</span>
-            <span class="book-card__type book-card__type--${book.type}">${typeLabel}</span>
+          <div class="book-card__body">
+            <div class="book-card__header">
+              <span class="book-card__name" title="${esc(book.name)}">${esc(book.name)}</span>
+              <span class="book-card__type book-card__type--${book.type}">${typeLabel}</span>
+            </div>
+            <div class="book-card__meta">
+              <span>${total} 题</span>
+              <span class="book-card__meta-divider">·</span>
+              <span>${fmtDate(book.createdAt)}</span>
+            </div>
+            ${progressHTML}
+            ${statsHTML}
+            ${notesHTML}
           </div>
-          <div class="book-card__meta">
-            <span>${book.questionCount} 题</span>
-            <span class="book-card__meta-divider">·</span>
-            <span>${fmtDate(book.createdAt)}</span>
-          </div>
-          ${progressHTML}
-          ${notesHTML}
         </div>`;
     }
 
@@ -292,7 +326,25 @@
       if (!stored) return null;
       const answers = stored.answers || {};
       const answered = Object.values(answers).filter(v => v && v.trim()).length;
-      return { answered, total: book.questionCount };
+      const result = { answered, total: book.questionCount, score: null };
+
+      // 如果有核对结果，计算正确率
+      if (stored.correctAnswers && Object.keys(stored.correctAnswers).length > 0) {
+        const correctAnswers = stored.correctAnswers;
+        let correct = 0, wrong = 0;
+        for (let i = 1; i <= book.questionCount; i++) {
+          const userAns = (answers[i] || '').trim();
+          const correctAns = (correctAnswers[i] || '').trim();
+          if (userAns && correctAns) {
+            if (userAns === correctAns) correct++; else wrong++;
+          }
+        }
+        const checked = correct + wrong;
+        if (checked > 0) {
+          result.score = { correct, wrong, rate: correct / checked, total: checked };
+        }
+      }
+      return result;
     }
 
     async _loadAnswerCache() {
@@ -313,7 +365,6 @@
       this.els.editBookNotes.value = book ? (book.notes || '') : '';
       this.els.editBookId.value = book ? book.id : '';
 
-      // 编辑时禁用类型和数量，创建时不禁用
       this.els.editBookType.disabled = !!book;
       this.els.editBookQCount.disabled = !!book;
       this.els.qcountHint.style.display = book ? 'none' : '';
@@ -333,32 +384,21 @@
       if (!qCount || qCount < 1 || qCount > 500) { alert('请输入有效的题目数量（1-500）'); return; }
 
       if (id) {
-        // 编辑：只允许改名称和备注
         const existing = await this.db.get(STORE_BOOKS, parseInt(id, 10));
         if (!existing) { alert('做题本不存在'); return; }
         existing.name = name;
         existing.notes = notes;
         await this.db.put(STORE_BOOKS, existing);
       } else {
-        // 新建
-        const book = {
-          name, type, questionCount: qCount, notes,
-          createdAt: Date.now(),
-        };
+        const book = { name, type, questionCount: qCount, notes, createdAt: Date.now() };
         const newId = await this.db.add(STORE_BOOKS, book);
-        // 同时创建空 answer 记录
-        await this.db.add(STORE_ANSWERS, {
-          bookId: newId,
-          answers: {},
-          updatedAt: Date.now(),
-        });
+        await this.db.add(STORE_ANSWERS, { bookId: newId, answers: {}, updatedAt: Date.now() });
       }
 
       this._closeAllOverlays();
       await this.reload();
       await this._loadAnswerCache();
 
-      // 如果在答题页编辑，同步更新 activeBook 引用
       if (this.view === 'answer' && this.activeBook) {
         const updated = this.books.find(b => b.id === this.activeBook.id);
         if (updated) {
@@ -386,7 +426,6 @@
     async _confirmDeleteBook() {
       if (!this.pendingDeleteBookId) return;
       const bookId = this.pendingDeleteBookId;
-      // 查找并删除 answer 记录
       const answerRec = await this.db.getByIndex(STORE_ANSWERS, 'bookId', bookId);
       if (answerRec) await this.db.delete(STORE_ANSWERS, answerRec.id);
       await this.db.delete(STORE_BOOKS, bookId);
@@ -397,9 +436,7 @@
       this._renderAll();
     }
 
-    /* ---- list click (enter answer or edit) ---- */
     _onBookListClick(e) {
-      // 编辑按钮
       const editBtn = e.target.closest('.edit-book-btn');
       if (editBtn) {
         e.stopPropagation();
@@ -408,8 +445,6 @@
         if (book) this._openEditBookModal(book);
         return;
       }
-
-      // 卡片点击 → 进入答题
       const card = e.target.closest('.book-card');
       if (!card) return;
       const bookId = parseInt(card.dataset.id, 10);
@@ -424,15 +459,11 @@
       this.activeBook = book;
       this.view = 'answer';
 
-      // 加载该做题本的答案记录
       const answerRec = await this.db.getByIndex(STORE_ANSWERS, 'bookId', book.id);
       this.currentAnswerRecord = answerRec || {
-        bookId: book.id,
-        answers: {},
-        updatedAt: Date.now(),
+        bookId: book.id, answers: {}, updatedAt: Date.now(),
       };
 
-      // 显示/隐藏
       this.els.listView.style.display = 'none';
       this.els.emptyState.style.display = 'none';
       this.els.answerView.style.display = '';
@@ -444,20 +475,64 @@
     _renderAnswerPage() {
       this._renderQuestions();
       this._renderSummary();
+      this._updateAnswerToolbar();
+    }
+
+    _updateAnswerToolbar() {
+      const book = this.activeBook;
+      if (!book) return;
+      const answers = this.currentAnswerRecord.answers || {};
+      const answered = Object.values(answers).filter(v => v && v.trim()).length;
+      this.els.answerProgress.textContent = answered + '/' + book.questionCount + ' 已答';
+
+      // 正确率徽章
+      if (this._isChecked() && book.type === 'choice') {
+        const stats = this._getCheckStats();
+        if (stats) {
+          const cls = stats.rate >= 0.8 ? 'is-high' : (stats.rate >= 0.6 ? 'is-mid' : 'is-low');
+          this.els.answerScoreBadge.style.display = '';
+          this.els.answerScoreBadge.textContent = '🎯 ' + Math.round(stats.rate * 100) + '%';
+          this.els.answerScoreBadge.className = 'answer-toolbar__score book-card__stat--score ' + cls;
+        }
+      } else {
+        this.els.answerScoreBadge.style.display = 'none';
+      }
     }
 
     _renderQuestions() {
       const book = this.activeBook;
       if (!book) return;
       const answers = this.currentAnswerRecord.answers || {};
+      const isChecked = this._isChecked();
+      const correctAnswers = this.currentAnswerRecord.correctAnswers || {};
       let html = '';
 
       for (let i = 1; i <= book.questionCount; i++) {
         const val = (answers[i] || '').toString();
-        const answeredClass = val ? ' is-answered' : '';
+        let answeredClass = val ? ' is-answered' : '';
+
+        // 核对后状态
+        let checkClass = '';
+        let resultIcon = '';
+        let correctAnswerDisplay = '';
+        if (isChecked && book.type === 'choice') {
+          checkClass = ' is-checked';
+          const userAns = val.trim();
+          const correctAns = (correctAnswers[i] || '').trim();
+          if (userAns && correctAns) {
+            if (userAns === correctAns) {
+              checkClass += ' is-correct';
+              resultIcon = ' ✓';
+            } else {
+              checkClass += ' is-wrong';
+              resultIcon = ' ✗';
+              correctAnswerDisplay = `<span class="question-item__correct-answer">→ ${esc(correctAns)}</span>`;
+            }
+          }
+        }
 
         if (book.type === 'choice') {
-          html += this._buildChoiceQuestion(i, val, answeredClass);
+          html += this._buildChoiceQuestion(i, val, answeredClass + checkClass, resultIcon, correctAnswerDisplay);
         } else if (book.type === 'fill-blank') {
           html += this._buildFillBlankQuestion(i, val, answeredClass);
         } else if (book.type === 'essay') {
@@ -468,23 +543,24 @@
       this.els.questionList.innerHTML = html;
     }
 
-    _buildChoiceQuestion(num, currentVal, answeredClass) {
-      const options = ['A', 'B', 'C', 'D'].map(letter => {
+    _buildChoiceQuestion(num, currentVal, extraClasses, resultIcon, correctAnswerDisplay) {
+      const optionsHTML = OPTIONS.map(letter => {
         const sel = currentVal === letter ? ' is-selected' : '';
         return `<button class="question-option${sel}" data-q="${num}" data-val="${letter}">${letter}</button>`;
       }).join('');
 
       return `
-        <div class="question-item${answeredClass}" data-q="${num}">
-          <span class="question-item__num">${num}</span>
-          <div class="question-options">${options}</div>
+        <div class="question-item${extraClasses}" data-q="${num}">
+          <span class="question-item__num-badge">${num}${resultIcon}</span>
+          <div class="question-options">${optionsHTML}</div>
+          ${correctAnswerDisplay}
         </div>`;
     }
 
     _buildFillBlankQuestion(num, val, answeredClass) {
       return `
         <div class="question-item${answeredClass}" data-q="${num}">
-          <span class="question-item__num">${num}</span>
+          <span class="question-item__num-badge">${num}</span>
           <input class="jy-input" data-q="${num}" value="${escAttr(val)}" placeholder="输入答案...">
         </div>`;
     }
@@ -492,7 +568,7 @@
     _buildEssayQuestion(num, val, answeredClass) {
       return `
         <div class="question-item${answeredClass}" data-q="${num}">
-          <span class="question-item__num">${num}</span>
+          <span class="question-item__num-badge">${num}</span>
           <textarea class="jy-input" data-q="${num}" rows="3" placeholder="输入解答...">${esc(val)}</textarea>
         </div>`;
     }
@@ -501,20 +577,32 @@
     _onQuestionOptionClick(e) {
       const btn = e.target.closest('.question-option');
       if (!btn) return;
+
+      // 核对后锁定，提示用户
+      if (this._isChecked() && this.activeBook.type === 'choice') {
+        alert('已核对完成。如需修改答案，请先点击「重新核对」并重新录入正确答案。');
+        return;
+      }
+
       const qNum = btn.dataset.q;
       const val = btn.dataset.val;
 
-      // 更新内存
       this.currentAnswerRecord.answers[qNum] = val;
 
-      // 更新按钮选中状态
+      // 清除旧核对结果（答案改了，需要重新核对）
+      if (this.currentAnswerRecord.correctAnswers) {
+        delete this.currentAnswerRecord.correctAnswers;
+        delete this.currentAnswerRecord.checkedAt;
+      }
+
       const item = btn.closest('.question-item');
       item.querySelectorAll('.question-option').forEach(b => b.classList.remove('is-selected'));
       btn.classList.add('is-selected');
       item.classList.add('is-answered');
 
-      // 更新汇总 + 触发保存
       this._renderSummary();
+      this._renderQuestions(); // 完全重新渲染以清除核对状态
+      this._updateAnswerToolbar();
       this._scheduleSave();
     }
 
@@ -526,7 +614,12 @@
 
       this.currentAnswerRecord.answers[qNum] = val;
 
-      // 更新 answered 状态
+      // 清除旧核对结果
+      if (this.currentAnswerRecord.correctAnswers) {
+        delete this.currentAnswerRecord.correctAnswers;
+        delete this.currentAnswerRecord.checkedAt;
+      }
+
       const item = input.closest('.question-item');
       if (item) {
         if (val.trim()) item.classList.add('is-answered');
@@ -534,6 +627,7 @@
       }
 
       this._renderSummary();
+      this._updateAnswerToolbar();
       this._scheduleSave();
     }
 
@@ -554,21 +648,140 @@
           const id = await this.db.add(STORE_ANSWERS, this.currentAnswerRecord);
           this.currentAnswerRecord.id = id;
         }
-      } catch (err) {
-        // Silently fail — IndexedDB may be closing
-      }
+      } catch (err) { /* silent */ }
     }
 
-    /* ---- summary panel ---- */
+    /* ================================================================
+     * CHECK (核对)
+     * ================================================================ */
+    _isAllAnswered() {
+      const book = this.activeBook;
+      if (!book) return false;
+      const answers = this.currentAnswerRecord.answers || {};
+      for (let i = 1; i <= book.questionCount; i++) {
+        if (!answers[i] || !answers[i].trim()) return false;
+      }
+      return book.questionCount > 0;
+    }
+
+    _isChecked() {
+      if (!this.currentAnswerRecord) return false;
+      const ca = this.currentAnswerRecord.correctAnswers;
+      return ca && Object.keys(ca).length > 0;
+    }
+
+    _getCheckStats() {
+      const book = this.activeBook;
+      if (!book || !this._isChecked()) return null;
+      const answers = this.currentAnswerRecord.answers || {};
+      const correctAnswers = this.currentAnswerRecord.correctAnswers || {};
+      let correct = 0, wrong = 0;
+      const wrongNums = [];
+      for (let i = 1; i <= book.questionCount; i++) {
+        const userAns = (answers[i] || '').trim();
+        const correctAns = (correctAnswers[i] || '').trim();
+        if (userAns && correctAns) {
+          if (userAns === correctAns) correct++;
+          else { wrong++; wrongNums.push(i); }
+        }
+      }
+      const total = correct + wrong;
+      return total > 0 ? { correct, wrong, rate: correct / total, total, wrongNums } : null;
+    }
+
+    _openCheckModal() {
+      const book = this.activeBook;
+      if (!book) return;
+      const existingCorrect = this.currentAnswerRecord.correctAnswers || {};
+
+      let html = '';
+      for (let i = 1; i <= book.questionCount; i++) {
+        const preSelected = existingCorrect[i] || '';
+        const optsHTML = OPTIONS.map(letter => {
+          const sel = preSelected === letter ? ' is-selected' : '';
+          return `<button class="question-option${sel}" data-q="${i}" data-val="${letter}">${letter}</button>`;
+        }).join('');
+        html += `
+          <div class="correct-answer-row" data-q="${i}">
+            <div class="correct-answer-row__num">${i}</div>
+            <div class="question-options">${optsHTML}</div>
+          </div>`;
+      }
+
+      this.els.correctAnswersList.innerHTML = html;
+      // 绑定弹窗内的选项点击
+      this.els.correctAnswersList.querySelectorAll('.question-option').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const row = btn.closest('.correct-answer-row');
+          row.querySelectorAll('.question-option').forEach(b => b.classList.remove('is-selected'));
+          btn.classList.add('is-selected');
+        });
+      });
+
+      this._openOverlay(this.els.checkAnswersOverlay);
+    }
+
+    async _onRunCheck() {
+      const correctAnswers = {};
+      this.els.correctAnswersList.querySelectorAll('.correct-answer-row').forEach(row => {
+        const qNum = row.dataset.q;
+        const selected = row.querySelector('.question-option.is-selected');
+        if (selected) correctAnswers[qNum] = selected.dataset.val;
+      });
+
+      if (Object.keys(correctAnswers).length === 0) {
+        alert('请至少选择一题的正确答案');
+        return;
+      }
+
+      this.currentAnswerRecord.correctAnswers = correctAnswers;
+      this.currentAnswerRecord.checkedAt = Date.now();
+      await this._persistAnswers();
+
+      this._closeAllOverlays();
+      this._renderQuestions();
+      this._renderSummary();
+      this._updateAnswerToolbar();
+    }
+
+    /* ================================================================
+     * SUMMARY PANEL
+     * ================================================================ */
     _renderSummary() {
       const book = this.activeBook;
       if (!book) return;
       const answers = this.currentAnswerRecord.answers || {};
 
+      // 渲染答案汇总
       if (book.type === 'choice') {
         this._renderChoiceSummary(book, answers);
       } else {
         this._renderTextSummary(book, answers);
+      }
+
+      // 渲染核对区域
+      this._renderCheckSection();
+
+      // 按钮可见性
+      const allAnswered = this._isAllAnswered();
+      const isChecked = this._isChecked();
+
+      if (book.type === 'choice') {
+        if (isChecked) {
+          this.els.btnOpenCheck.style.display = 'none';
+          this.els.btnRecheck.style.display = '';
+          this.els.checkHint.style.display = 'none';
+        } else if (allAnswered) {
+          this.els.btnOpenCheck.style.display = '';
+          this.els.btnRecheck.style.display = 'none';
+          this.els.checkHint.style.display = 'none';
+        } else {
+          this.els.btnOpenCheck.style.display = 'none';
+          this.els.btnRecheck.style.display = 'none';
+          this.els.checkHint.style.display = '';
+          const remaining = book.questionCount - Object.values(answers).filter(v => v && v.trim()).length;
+          this.els.checkHintText.textContent = `还有 ${remaining} 题未答，完成所有题目后可录入正确答案`;
+        }
       }
     }
 
@@ -589,8 +802,6 @@
     _renderTextSummary(book, answers) {
       const answered = Object.values(answers).filter(v => v && v.trim()).length;
       let html = `<div class="summary__stat">已答 <strong>${answered}</strong> / ${book.questionCount} 题</div>`;
-
-      // Show answered questions as a list
       if (answered > 0) {
         html += '<div class="summary__text-list" style="margin-top:var(--jy-space-3)">';
         for (let i = 1; i <= book.questionCount; i++) {
@@ -601,8 +812,66 @@
         }
         html += '</div>';
       }
-
       this.els.summaryContent.innerHTML = html;
+    }
+
+    _renderCheckSection() {
+      const book = this.activeBook;
+      if (!book || book.type !== 'choice') {
+        this.els.checkSection.style.display = 'none';
+        return;
+      }
+
+      const stats = this._getCheckStats();
+      if (!stats) {
+        this.els.checkSection.style.display = 'none';
+        return;
+      }
+
+      this.els.checkSection.style.display = '';
+
+      const rate = stats.rate;
+      const ratePct = Math.round(rate * 100);
+      const cls = rate >= 0.8 ? '--high' : (rate >= 0.6 ? '--mid' : '--low');
+
+      let html = '';
+
+      // 正确率大数字 + 进度条
+      html += `<div class="score-display">
+        <div class="score-display__value score-display__value${cls}">${ratePct}%</div>
+        <div class="score-display__label">正确率</div>
+        <div class="progress-bar" style="margin-top:var(--jy-space-3)">
+          <div class="progress-bar__fill progress-bar__fill${cls}" style="width:${ratePct}%"></div>
+        </div>
+      </div>`;
+
+      // 统计行
+      html += `<div class="check-stat-row">
+        <div class="check-stat-row__item">
+          <div class="check-stat-row__value check-stat-row__value--correct">${stats.correct}</div>
+          <div class="check-stat-row__label">✓ 正确</div>
+        </div>
+        <div class="check-stat-row__item">
+          <div class="check-stat-row__value check-stat-row__value--wrong">${stats.wrong}</div>
+          <div class="check-stat-row__label">✗ 错误</div>
+        </div>
+        <div class="check-stat-row__item">
+          <div class="check-stat-row__value">${stats.total}</div>
+          <div class="check-stat-row__label">已核对</div>
+        </div>
+      </div>`;
+
+      // 错题列表或全对
+      if (stats.wrong === 0 && stats.correct > 0) {
+        html += `<div class="perfect-badge">🎉 全部正确！</div>`;
+      } else if (stats.wrongNums.length > 0) {
+        html += `<div style="margin-top:var(--jy-space-3)">
+          <div style="font-size:var(--jy-font-size-sm);color:var(--jy-text-muted);margin-bottom:var(--jy-space-1)">❌ 错题序号</div>
+          <div class="wrong-list">${stats.wrongNums.map(n => `<span class="wrong-tag">#${n}</span>`).join('')}</div>
+        </div>`;
+      }
+
+      this.els.checkResults.innerHTML = html;
     }
 
     /* ---- copy answers ---- */
@@ -613,14 +882,12 @@
 
       let text;
       if (book.type === 'choice') {
-        // 完整连续字符串
         let full = '';
         for (let i = 1; i <= book.questionCount; i++) {
           full += answers[i] || '_';
         }
         text = full;
       } else {
-        // 文本列表
         const lines = [];
         for (let i = 1; i <= book.questionCount; i++) {
           const val = answers[i];
@@ -631,20 +898,14 @@
 
       try {
         await navigator.clipboard.writeText(text);
-        this.els.copyFeedback.classList.add('is-visible');
-        setTimeout(() => this.els.copyFeedback.classList.remove('is-visible'), 1800);
       } catch (err) {
-        // Fallback for non-HTTPS
         const ta = document.createElement('textarea');
-        ta.value = text;
-        ta.style.position = 'fixed'; ta.style.opacity = '0';
-        document.body.appendChild(ta);
-        ta.select();
-        document.execCommand('copy');
-        document.body.removeChild(ta);
-        this.els.copyFeedback.classList.add('is-visible');
-        setTimeout(() => this.els.copyFeedback.classList.remove('is-visible'), 1800);
+        ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select();
+        document.execCommand('copy'); document.body.removeChild(ta);
       }
+      this.els.copyFeedback.classList.add('is-visible');
+      setTimeout(() => this.els.copyFeedback.classList.remove('is-visible'), 1800);
     }
 
     /* ---- back to list ---- */
@@ -671,7 +932,6 @@
       console.error('做题本初始化失败', err);
       alert('做题本初始化失败，请刷新重试');
     });
-    // Expose for debugging
     window._questionBookApp = app;
   });
 
