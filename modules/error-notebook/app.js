@@ -314,7 +314,7 @@
         if (cnt === 0) continue;
         const prog = this.progressMap.get(subj.name);
         const done = prog ? prog.lastReviewedIndex + 1 : 0;
-        h += `<div class="stats-panel__row"><span style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:${subj.color};display:inline-block"></span>${esc(subj.name)}</span><span>${cnt}题 / 复习${done}</span></div>`;
+        h += `<div class="stats-panel__row"><span style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:${subj.color};display:inline-block"></span>${esc(subj.name)}</span><span>复习${done} / ${cnt}题</span></div>`;
       }
       h += '</div>';
       p.innerHTML = h;
