@@ -198,6 +198,17 @@
           <div id="rPlatformCards" class="br-platform-cards"></div>
         </div>
         <div class="jy-form-group">
+          <label class="jy-label">战绩截图</label>
+          <div class="br-screenshot-area">
+            <input type="file" id="rScreenshotFile" accept="image/*" style="display:none">
+            <div id="rScreenshotPreview" class="br-screenshot-preview" style="display:none">
+              <img id="rScreenshotImg" src="" alt="预览">
+              <button id="btnRemoveScreenshot" class="br-screenshot-remove" title="移除截图">✕</button>
+            </div>
+            <button id="btnPickScreenshot" class="jy-btn jy-btn--outline jy-btn--sm" style="width:100%">🖼️ 选择截图</button>
+          </div>
+        </div>
+        <div class="jy-form-group">
           <label class="jy-label">Rating 分值 <span style="color:var(--jy-danger)">*</span></label>
           <input type="number" id="rRatingValue" class="jy-input" placeholder="如 1500" min="1" required>
         </div>
@@ -256,6 +267,14 @@
       <button class="jy-btn jy-btn--ghost modal-close-btn">取消</button>
       <button id="btnConfirmDelete" class="jy-btn jy-btn--danger">确认删除</button>
     </div>
+  </div>
+</div>
+
+<!-- ====== 截图查看灯箱 ====== -->
+<div id="lightboxOverlay" class="jy-overlay br-lightbox-overlay" style="cursor:pointer">
+  <div class="br-lightbox-wrap">
+    <img id="lightboxImg" src="" alt="战绩截图" class="br-lightbox-img">
+    <button class="br-lightbox-close" title="关闭">✕</button>
   </div>
 </div>
 

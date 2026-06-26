@@ -110,6 +110,7 @@
       this._chartPoints = [];
       // Edit state
       this._selectedPlatform = 'leetcode';
+      this._screenshotData = null; // base64 data URL or null
       this._pendingDelete = null;
     }
 
@@ -173,7 +174,11 @@
         btnSaveTemplate: $('#btnSaveTemplate'),
         // Rating modal
         rOverlay: $('#rOverlay'), rDate: $('#rDate'), rPlatformCards: $('#rPlatformCards'),
+        rScreenshotFile: $('#rScreenshotFile'), rScreenshotPreview: $('#rScreenshotPreview'),
+        rScreenshotImg: $('#rScreenshotImg'), btnPickScreenshot: $('#btnPickScreenshot'),
+        btnRemoveScreenshot: $('#btnRemoveScreenshot'),
         rRatingValue: $('#rRatingValue'), btnSaveRating: $('#btnSaveRating'),
+        lightboxOverlay: $('#lightboxOverlay'), lightboxImg: $('#lightboxImg'),
         // Manage ratings
         mrOverlay: $('#mrOverlay'), mrList: $('#mrList'),
         // Link template modal
@@ -227,9 +232,18 @@
       });
       document.addEventListener('keydown', (e) => { if (e.key === 'Escape') this._closeAllOverlays(); });
 
+      // Screenshot
+      E.btnPickScreenshot.addEventListener('click', () => E.rScreenshotFile.click());
+      E.rScreenshotFile.addEventListener('change', () => this._onScreenshotPicked());
+      E.btnRemoveScreenshot.addEventListener('click', () => this._removeScreenshot());
+      // Lightbox
+      E.lightboxOverlay.addEventListener('click', () => this._closeLightbox());
+      E.lightboxImg.addEventListener('click', (e) => e.stopPropagation());
+
       // Chart
       E.ratingChart.addEventListener('mousemove', (e) => this._onChartHover(e));
       E.ratingChart.addEventListener('mouseleave', () => { E.chartTooltip.style.display = 'none'; });
+      E.ratingChart.addEventListener('click', (e) => this._onChartClick(e));
       window.addEventListener('resize', () => { if (window._battleReportApp) this._drawChart(); });
     }
 
@@ -356,7 +370,10 @@
           const cy = toY(d[0].rating);
           ctx.fillStyle = sr.color; ctx.beginPath(); ctx.arc(cx, cy, 5, 0, Math.PI * 2); ctx.fill();
           ctx.fillStyle = s.bg; ctx.beginPath(); ctx.arc(cx, cy, 2.5, 0, Math.PI * 2); ctx.fill();
-          this._chartPoints.push({ x: cx, y: cy, platform: sr.key, rating: d[0].rating, date: d[0].date });
+          if (d[0].screenshot) {
+            ctx.strokeStyle = sr.color; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cx, cy, 7, 0, Math.PI * 2); ctx.stroke();
+          }
+          this._chartPoints.push({ x: cx, y: cy, platform: sr.key, rating: d[0].rating, date: d[0].date, screenshot: d[0].screenshot || null });
           return;
         }
 
@@ -378,7 +395,10 @@
           const x = toX(pt.date), y = toY(pt.rating);
           ctx.fillStyle = sr.color; ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fill();
           ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x, y, 2, 0, Math.PI * 2); ctx.fill();
-          this._chartPoints.push({ x, y, platform: sr.key, rating: pt.rating, date: pt.date });
+          if (pt.screenshot) {
+            ctx.strokeStyle = sr.color; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI * 2); ctx.stroke();
+          }
+          this._chartPoints.push({ x, y, platform: sr.key, rating: pt.rating, date: pt.date, screenshot: pt.screenshot || null });
         });
       });
 
@@ -407,12 +427,28 @@
       const tt = this.els.chartTooltip;
       if (nearest) {
         const plat = PLATFORMS.find(p => p.key === nearest.platform);
-        tt.innerHTML = `<strong style="color:${plat.color}">${plat.label}</strong> ${fmtDate(nearest.date)}<br>Rating: <strong>${nearest.rating}</strong>`;
+        tt.innerHTML = `<strong style="color:${plat.color}">${plat.label}</strong> ${fmtDate(nearest.date)}<br>Rating: <strong>${nearest.rating}</strong>${nearest.screenshot ? ' 🖼️' : ''}`;
         tt.style.display = 'block';
         tt.style.left = Math.min(nearest.x + 12, rect.width - 150) + 'px';
         tt.style.top = Math.max(nearest.y - 45, 5) + 'px';
+        if (nearest.screenshot) this.els.ratingChart.style.cursor = 'pointer';
+        else this.els.ratingChart.style.cursor = 'crosshair';
       } else {
         tt.style.display = 'none';
+        this.els.ratingChart.style.cursor = 'crosshair';
+      }
+    }
+
+    _onChartClick(e) {
+      if (!this._chartPoints || this._chartPoints.length === 0) return;
+      const rect = e.target.getBoundingClientRect();
+      const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+      for (const pt of this._chartPoints) {
+        const dx = pt.x - mx, dy = pt.y - my;
+        if (Math.sqrt(dx * dx + dy * dy) < 20 && pt.screenshot) {
+          this._openLightbox(pt.screenshot);
+          return;
+        }
       }
     }
 
@@ -421,6 +457,11 @@
       this.els.rDate.value = new Date().toISOString().slice(0, 10);
       this.els.rRatingValue.value = '';
       this._selectedPlatform = 'leetcode';
+      // Reset screenshot
+      this._screenshotData = null;
+      this.els.rScreenshotFile.value = '';
+      this.els.rScreenshotPreview.style.display = 'none';
+      this.els.btnPickScreenshot.style.display = '';
       this.els.rPlatformCards.innerHTML = PLATFORMS.map(p => `
         <div class="br-platform-card${p.key === 'leetcode' ? ' is-selected' : ''}" data-platform="${p.key}">
           <div class="br-platform-card__name" style="color:${p.color}">${p.label}</div>
@@ -439,14 +480,47 @@
     async _saveRating() {
       const rating = parseInt(this.els.rRatingValue.value);
       if (isNaN(rating) || rating <= 0) { alert('请输入有效的 Rating 值'); return; }
-      await this.db.add(STORE_RATINGS, {
+      const rec = {
         platform: this._selectedPlatform,
         date: new Date(this.els.rDate.value).getTime(),
         rating, createdAt: Date.now()
-      });
+      };
+      if (this._screenshotData) rec.screenshot = this._screenshotData;
+      await this.db.add(STORE_RATINGS, rec);
       this._closeAllOverlays();
       await this.reload();
       this._drawChart();
+    }
+
+    /* ---- Screenshot ---- */
+    _onScreenshotPicked() {
+      const file = this.els.rScreenshotFile.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        this._screenshotData = reader.result;
+        this.els.rScreenshotImg.src = reader.result;
+        this.els.rScreenshotPreview.style.display = 'inline-block';
+        this.els.btnPickScreenshot.style.display = 'none';
+      };
+      reader.readAsDataURL(file);
+    }
+
+    _removeScreenshot() {
+      this._screenshotData = null;
+      this.els.rScreenshotFile.value = '';
+      this.els.rScreenshotPreview.style.display = 'none';
+      this.els.btnPickScreenshot.style.display = '';
+    }
+
+    _openLightbox(src) {
+      this.els.lightboxImg.src = src;
+      this._openOverlay(this.els.lightboxOverlay);
+    }
+
+    _closeLightbox() {
+      this.els.lightboxOverlay.classList.remove('is-open');
+      document.body.style.overflow = '';
     }
 
     _openManageRatingsModal() {
@@ -454,17 +528,24 @@
       if (list.length === 0) {
         this.els.mrList.innerHTML = '<div class="jy-empty"><div class="jy-empty__text">暂无记录</div></div>';
       } else {
-        this.els.mrList.innerHTML = `<table class="jy-table"><thead><tr><th>平台</th><th>日期</th><th>Rating</th><th>操作</th></tr></thead><tbody>
+        this.els.mrList.innerHTML = `<table class="jy-table"><thead><tr><th>平台</th><th>日期</th><th>Rating</th><th>截图</th><th>操作</th></tr></thead><tbody>
           ${list.map(r => {
             const p = PLATFORMS.find(x => x.key === r.platform) || { label: r.platform, color: '#999' };
+            const ssHTML = r.screenshot
+              ? `<img src="${r.screenshot}" class="br-screenshot-thumb" data-screenshot="${escAttr(r.screenshot)}" title="点击查看大图">`
+              : '<span style="color:var(--jy-text-muted);font-size:var(--jy-font-size-xs)">—</span>';
             return `<tr>
               <td><span style="color:${p.color};font-weight:600">${p.label}</span></td>
               <td>${fmtDate(r.date)}</td>
               <td><strong>${r.rating}</strong></td>
+              <td>${ssHTML}</td>
               <td><button class="jy-btn jy-btn--danger jy-btn--sm del-rating-btn" data-id="${r.id}">删除</button></td>
             </tr>`;
           }).join('')}
         </tbody></table>`;
+        this.els.mrList.querySelectorAll('.br-screenshot-thumb').forEach(img => {
+          img.addEventListener('click', () => this._openLightbox(img.dataset.screenshot));
+        });
         this.els.mrList.querySelectorAll('.del-rating-btn').forEach(btn => {
           btn.addEventListener('click', () => this._requestDelete(STORE_RATINGS, parseInt(btn.dataset.id)));
         });
