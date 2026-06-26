@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>战报板 — JuYi</title>
+  <link rel="stylesheet" href="../../shared/base.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div id="br-app" class="br-app">
+
+  <!-- 顶部工具栏 -->
+  <header class="br-toolbar">
+    <h1 class="br-toolbar__title">⚔️ 战报板</h1>
+    <div class="br-toolbar__spacer"></div>
+    <button id="btnToggleTheme" class="jy-btn jy-btn--outline jy-btn--sm">🌙 暗色模式</button>
+    <a href="../../index.html" class="jy-btn jy-btn--ghost jy-btn--sm">🏠 首页</a>
+  </header>
+
+  <!-- 主滚动区域 -->
+  <main class="br-main">
+
+    <!-- ====== 区域一：Rating 仪表盘 ====== -->
+    <section class="br-section br-section--chart">
+      <div class="br-chart-header">
+        <h2 class="br-section__title">📊 Rating 趋势</h2>
+        <div class="br-legend" id="chartLegend">
+          <span class="br-legend__item" id="legendLeetcode"><span class="br-legend__dot" style="background:#3b82f6"></span>LeetCode</span>
+          <span class="br-legend__item" id="legendNowcoder"><span class="br-legend__dot" style="background:#10b981"></span>NowCoder</span>
+          <span class="br-legend__item" id="legendCodeforces"><span class="br-legend__dot" style="background:#f97316"></span>Codeforces</span>
+        </div>
+        <div class="br-chart-header__actions">
+          <button id="btnAddRating" class="jy-btn jy-btn--primary jy-btn--sm">＋ 记录 Rating</button>
+          <button id="btnManageRatings" class="jy-btn jy-btn--outline jy-btn--sm">⚙ 管理记录</button>
+        </div>
+      </div>
+      <div class="br-chart-wrap">
+        <canvas id="ratingChart"></canvas>
+        <div id="chartTooltip" class="br-chart-tooltip"></div>
+        <div id="chartEmpty" class="br-chart-empty">
+          <div class="jy-empty__icon">📊</div>
+          <div class="jy-empty__text">暂无 Rating 数据</div>
+          <div class="jy-empty__sub">点击「＋ 记录 Rating」添加第一场比赛记录</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ====== 区域二+三：题目 + 模板（左右分栏） ====== -->
+    <section class="br-section br-section--split">
+      <div class="br-split-content">
+
+        <!-- 左侧：题目列表 -->
+        <div class="br-split__main">
+          <div class="br-questions-header">
+            <h2 class="br-section__title">📝 题库</h2>
+            <div class="search-box">
+              <span class="search-box__icon">🔍</span>
+              <input id="searchInput" type="text" class="search-box__input" placeholder="搜索题号/题名...">
+              <button id="btnClearSearch" class="search-box__clear" style="display:none">✕</button>
+            </div>
+            <select id="sortSelect" class="jy-select" style="width:auto">
+              <option value="createdAt-desc">最新录入</option>
+              <option value="createdAt-asc">最早录入</option>
+              <option value="number-asc">题号升序</option>
+              <option value="number-desc">题号降序</option>
+            </select>
+            <span id="questionCount" style="font-size:var(--jy-font-size-sm);color:var(--jy-text-muted);white-space:nowrap"></span>
+            <button id="btnAddQuestion" class="jy-btn jy-btn--primary jy-btn--sm">＋ 录入题目</button>
+          </div>
+          <!-- 标签筛选 -->
+          <div id="tagFilterBar" class="br-filter-bar"></div>
+          <!-- 题目网格 -->
+          <div id="questionGrid" class="br-question-grid"></div>
+          <div id="questionEmpty" class="jy-empty" style="display:none">
+            <div class="jy-empty__icon">📝</div>
+            <div class="jy-empty__text">暂无题目</div>
+            <div class="jy-empty__sub">点击「＋ 录入题目」开始归档</div>
+          </div>
+        </div>
+
+        <!-- 右侧：模板库 -->
+        <aside class="br-split__side">
+          <div class="br-templates-header">
+            <h2 class="br-section__title">📋 模板库</h2>
+            <button id="btnAddTemplate" class="jy-btn jy-btn--primary jy-btn--sm">＋ 新建模板</button>
+          </div>
+          <div id="templateList" class="br-template-list"></div>
+          <div id="templateEmpty" class="jy-empty" style="display:none">
+            <div class="jy-empty__icon">📋</div>
+            <div class="jy-empty__text">暂无模板</div>
+            <div class="jy-empty__sub">点击「＋ 新建模板」沉淀算法模板</div>
+          </div>
+        </aside>
+
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ====== 题目录入/编辑弹窗 ====== -->
+<div id="qOverlay" class="jy-overlay">
+  <div class="jy-modal" style="max-width:600px">
+    <div class="jy-modal__header">
+      <span class="jy-modal__title" id="qModalTitle">录入题目</span>
+      <button class="jy-btn jy-btn--icon modal-close-btn">✕</button>
+    </div>
+    <div class="jy-modal__body">
+      <form id="qForm">
+        <div class="form-row">
+          <div class="jy-form-group" style="flex:1">
+            <label class="jy-label">题号</label>
+            <input type="text" id="qNumber" class="jy-input" placeholder="如 1">
+          </div>
+          <div class="jy-form-group" style="flex:2">
+            <label class="jy-label">题名 <span style="color:var(--jy-danger)">*</span></label>
+            <input type="text" id="qTitle" class="jy-input" placeholder="如 两数之和" required>
+          </div>
+        </div>
+        <div class="jy-form-group">
+          <label class="jy-label">题目链接</label>
+          <input type="url" id="qUrl" class="jy-input" placeholder="https://leetcode.cn/problems/...">
+        </div>
+        <div class="jy-form-group">
+          <label class="jy-label">算法标签</label>
+          <div id="qTagList" class="br-tag-pool"></div>
+        </div>
+        <div class="jy-form-group" id="qTemplateGroup">
+          <label class="jy-label">关联模板</label>
+          <div id="qTemplateList" class="br-checkbox-list"></div>
+        </div>
+        <input type="hidden" id="qId">
+      </form>
+    </div>
+    <div class="jy-modal__footer">
+      <button class="jy-btn jy-btn--ghost modal-close-btn">取消</button>
+      <button id="btnSaveQuestion" class="jy-btn jy-btn--primary">💾 保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====== 模板新建/编辑弹窗 ====== -->
+<div id="tOverlay" class="jy-overlay">
+  <div class="jy-modal" style="max-width:600px">
+    <div class="jy-modal__header">
+      <span class="jy-modal__title" id="tModalTitle">新建模板</span>
+      <button class="jy-btn jy-btn--icon modal-close-btn">✕</button>
+    </div>
+    <div class="jy-modal__body">
+      <form id="tForm">
+        <div class="jy-form-group">
+          <label class="jy-label">模板名称 <span style="color:var(--jy-danger)">*</span></label>
+          <input type="text" id="tName" class="jy-input" placeholder="如 整数二分查找模板" required>
+        </div>
+        <div class="jy-form-group">
+          <label class="jy-label">算法标签</label>
+          <div id="tTagList" class="br-tag-pool"></div>
+        </div>
+        <div class="jy-form-group">
+          <label class="jy-label">核心思路 / 适用场景</label>
+          <textarea id="tDescription" class="jy-input" rows="2" placeholder="描述模板的核心思想和适用场景"></textarea>
+        </div>
+        <div class="jy-form-group">
+          <label class="jy-label">代码模板</label>
+          <textarea id="tCode" class="jy-input jy-input--code" rows="6" placeholder="粘贴代码模板（保留缩进）" spellcheck="false"></textarea>
+        </div>
+        <div class="jy-form-group">
+          <label class="jy-label">复杂度</label>
+          <input type="text" id="tComplexity" class="jy-input" placeholder="如 O(log n)">
+        </div>
+        <input type="hidden" id="tId">
+      </form>
+    </div>
+    <div class="jy-modal__footer">
+      <button class="jy-btn jy-btn--ghost modal-close-btn">取消</button>
+      <button id="btnSaveTemplate" class="jy-btn jy-btn--primary">💾 保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====== Rating 录入弹窗 ====== -->
+<div id="rOverlay" class="jy-overlay">
+  <div class="jy-modal" style="max-width:480px">
+    <div class="jy-modal__header">
+      <span class="jy-modal__title">记录 Rating</span>
+      <button class="jy-btn jy-btn--icon modal-close-btn">✕</button>
+    </div>
+    <div class="jy-modal__body">
+      <form id="rForm">
+        <div class="jy-form-group">
+          <label class="jy-label">日期</label>
+          <input type="date" id="rDate" class="jy-input" required>
+        </div>
+        <div class="jy-form-group">
+          <label class="jy-label">平台</label>
+          <div id="rPlatformCards" class="br-platform-cards"></div>
+        </div>
+        <div class="jy-form-group">
+          <label class="jy-label">Rating 分值 <span style="color:var(--jy-danger)">*</span></label>
+          <input type="number" id="rRatingValue" class="jy-input" placeholder="如 1500" min="1" required>
+        </div>
+      </form>
+    </div>
+    <div class="jy-modal__footer">
+      <button class="jy-btn jy-btn--ghost modal-close-btn">取消</button>
+      <button id="btnSaveRating" class="jy-btn jy-btn--primary">💾 保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====== Rating 管理弹窗 ====== -->
+<div id="mrOverlay" class="jy-overlay">
+  <div class="jy-modal" style="max-width:640px">
+    <div class="jy-modal__header">
+      <span class="jy-modal__title">管理 Rating 记录</span>
+      <button class="jy-btn jy-btn--icon modal-close-btn">✕</button>
+    </div>
+    <div class="jy-modal__body">
+      <div id="mrList" class="br-manage-list"></div>
+    </div>
+    <div class="jy-modal__footer">
+      <button class="jy-btn jy-btn--ghost modal-close-btn">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====== 关联模板弹窗 ====== -->
+<div id="linkOverlay" class="jy-overlay">
+  <div class="jy-modal" style="max-width:500px">
+    <div class="jy-modal__header">
+      <span class="jy-modal__title">🔗 关联模板</span>
+      <button class="jy-btn jy-btn--icon modal-close-btn">✕</button>
+    </div>
+    <div class="jy-modal__body">
+      <p style="font-size:var(--jy-font-size-sm);color:var(--jy-text-muted);margin-bottom:var(--jy-space-3)">勾选与该题关联的算法模板（多选）</p>
+      <div id="linkTemplateList" class="br-checkbox-list"></div>
+      <input type="hidden" id="linkQuestionId">
+    </div>
+    <div class="jy-modal__footer">
+      <button class="jy-btn jy-btn--ghost modal-close-btn">取消</button>
+      <button id="btnSaveLink" class="jy-btn jy-btn--primary">💾 保存关联</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====== 删除确认弹窗 ====== -->
+<div id="confirmOverlay" class="jy-overlay">
+  <div class="jy-modal" style="max-width:400px">
+    <div class="jy-modal__header"><span class="jy-modal__title">确认删除</span><button class="jy-btn jy-btn--icon modal-close-btn">✕</button></div>
+    <div class="jy-modal__body">
+      <p style="text-align:center;padding:var(--jy-space-4)" id="confirmMsg">确定删除？</p>
+    </div>
+    <div class="jy-modal__footer">
+      <button class="jy-btn jy-btn--ghost modal-close-btn">取消</button>
+      <button id="btnConfirmDelete" class="jy-btn jy-btn--danger">确认删除</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
