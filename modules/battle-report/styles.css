@@ -83,7 +83,7 @@
 
 /* 右侧：模板 */
 .br-split__side {
-  width: 360px; flex-shrink: 0; overflow-y: auto;
+  width: 420px; flex-shrink: 0; overflow-y: auto;
   border-left: 1px solid var(--jy-border);
   background: var(--jy-bg-secondary);
   padding: var(--jy-space-4);
@@ -200,12 +200,11 @@
 }
 [data-theme="light"] .br-tcard__code pre { background: #f0f0f3; color: #1a1a2e; }
 .br-tcard__code .copy-code-btn {
-  position: absolute; top: 4px; right: 4px; font-size: 10px;
-  padding: 2px 6px; background: rgba(0,0,0,0.45); color: #cdd6f4; border: none;
-  border-radius: var(--jy-radius-sm); cursor: pointer; opacity: 0; transition: opacity 0.15s;
+  position: absolute; top: 4px; right: 4px; font-size: 11px;
+  padding: 3px 8px; background: rgba(0,0,0,0.5); color: #cdd6f4; border: none;
+  border-radius: var(--jy-radius-sm); cursor: pointer; opacity: 0.7; transition: opacity 0.15s;
 }
-.br-tcard__code:hover .copy-code-btn { opacity: 1; }
-.br-tcard__code .copy-code-btn:hover { background: rgba(0,0,0,0.65); }
+.br-tcard__code .copy-code-btn:hover { opacity: 1; background: rgba(0,0,0,0.7); }
 .br-tcard__complexity { font-size: var(--jy-font-size-xs); color: var(--jy-text-muted); margin-bottom: var(--jy-space-1); }
 .br-tcard__linked { font-size: var(--jy-font-size-xs); color: var(--jy-text-muted); margin-top: var(--jy-space-2); padding-top: var(--jy-space-2); border-top: 1px solid var(--jy-border-light); }
 .br-tcard__linked a { color: var(--jy-primary); cursor: pointer; text-decoration: none; margin-right: var(--jy-space-1); }
@@ -326,7 +325,7 @@
 /* ======================== 响应式 ======================== */
 @media (max-width: 960px) {
   .br-split-content { flex-direction: column; }
-  .br-split__side { width: 100%; height: auto; max-height: 50vh; border-left: none; border-top: 2px solid var(--jy-border); }
+  .br-split__side { width: 100% !important; height: auto; max-height: 50vh; border-left: none; border-top: 2px solid var(--jy-border); }
   .br-main { padding: var(--jy-space-3) var(--jy-space-4); }
   .br-toolbar { padding: var(--jy-space-3) var(--jy-space-4); }
 }
