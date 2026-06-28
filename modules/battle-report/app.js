@@ -170,7 +170,8 @@
         // Template modal
         tOverlay: $('#tOverlay'), tModalTitle: $('#tModalTitle'),
         tId: $('#tId'), tName: $('#tName'), tTagList: $('#tTagList'),
-        tDescription: $('#tDescription'), tCode: $('#tCode'), tComplexity: $('#tComplexity'),
+        tDescription: $('#tDescription'), tCode: $('#tCode'), tCodeGutter: $('#tCodeGutter'),
+        tComplexity: $('#tComplexity'),
         btnSaveTemplate: $('#btnSaveTemplate'),
         // Rating modal
         rOverlay: $('#rOverlay'), rDate: $('#rDate'), rPlatformCards: $('#rPlatformCards'),
@@ -215,6 +216,10 @@
       // Templates
       E.btnAddTemplate.addEventListener('click', () => this._openTemplateModal(null));
       E.btnSaveTemplate.addEventListener('click', () => this._saveTemplate());
+      // Code editor
+      E.tCode.addEventListener('input', () => this._updateLineNumbers());
+      E.tCode.addEventListener('keydown', (e) => this._onCodeKeydown(e));
+      E.tCode.addEventListener('scroll', () => this._syncCodeScroll());
       E.templateList.addEventListener('click', (e) => this._onTemplateListClick(e));
 
       // Link template
@@ -752,7 +757,7 @@
           </div>
           ${tagsHTML ? `<div class="br-tcard__tags">${tagsHTML}</div>` : ''}
           ${item.description ? `<div class="br-tcard__desc">${esc(item.description)}</div>` : ''}
-          ${item.code ? `<div class="br-tcard__code"><pre><code>${esc(item.code)}</code></pre></div>` : ''}
+          ${item.code ? `<div class="br-tcard__code"><pre><code>${esc(item.code)}</code></pre><button class="copy-code-btn jy-btn jy-btn--ghost jy-btn--sm" data-code="${escAttr(item.code)}" title="复制代码">📋 复制</button></div>` : ''}
           ${item.complexity ? `<div class="br-tcard__complexity">⏱ ${esc(item.complexity)}</div>` : ''}
           ${linkedHTML}
         </div>`;
@@ -761,8 +766,48 @@
     _onTemplateListClick(e) {
       const editBtn = e.target.closest('.edit-t-btn');
       const delBtn = e.target.closest('.delete-t-btn');
+      const copyBtn = e.target.closest('.copy-code-btn');
       if (editBtn) { e.stopPropagation(); this._openTemplateModal(parseInt(editBtn.dataset.id)); return; }
       if (delBtn) { e.stopPropagation(); this._requestDelete(STORE_TEMPLATES, parseInt(delBtn.dataset.id)); return; }
+      if (copyBtn) { e.stopPropagation(); this._copyCode(copyBtn.dataset.code); return; }
+    }
+
+    _copyCode(code) {
+      navigator.clipboard.writeText(code).then(() => {
+        // brief feedback via button text swap
+      }).catch(() => {
+        const ta = document.createElement('textarea'); ta.value = code;
+        ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select();
+        document.execCommand('copy'); document.body.removeChild(ta);
+      });
+    }
+
+    /* ---- Code editor helpers ---- */
+    _updateLineNumbers() {
+      const textarea = this.els.tCode;
+      const gutter = this.els.tCodeGutter;
+      const lines = textarea.value.split('\n').length;
+      const curLines = (gutter.textContent.match(/\n/g) || []).length + 1;
+      if (curLines === lines && lines > 0 && gutter.children.length === lines) return;
+      let html = '';
+      for (let i = 1; i <= Math.max(lines, 1); i++) html += `<span>${i}</span>\n`;
+      gutter.innerHTML = html;
+    }
+
+    _onCodeKeydown(e) {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        const ta = e.target;
+        const start = ta.selectionStart, end = ta.selectionEnd;
+        ta.value = ta.value.substring(0, start) + '    ' + ta.value.substring(end);
+        ta.selectionStart = ta.selectionEnd = start + 4;
+        this._updateLineNumbers();
+      }
+    }
+
+    _syncCodeScroll() {
+      this.els.tCodeGutter.scrollTop = this.els.tCode.scrollTop;
     }
 
     _openTemplateModal(id) {
@@ -781,6 +826,7 @@
         el.addEventListener('click', () => el.classList.toggle('is-active'));
       });
       this._openOverlay(this.els.tOverlay);
+      setTimeout(() => this._updateLineNumbers(), 50);
       if (!item) setTimeout(() => this.els.tName.focus(), 150);
     }
 

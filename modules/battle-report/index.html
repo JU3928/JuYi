@@ -164,7 +164,10 @@
         </div>
         <div class="jy-form-group">
           <label class="jy-label">代码模板</label>
-          <textarea id="tCode" class="jy-input jy-input--code" rows="6" placeholder="粘贴代码模板（保留缩进）" spellcheck="false"></textarea>
+          <div class="br-code-editor">
+            <div class="br-code-editor__gutter" id="tCodeGutter"></div>
+            <textarea id="tCode" class="br-code-editor__textarea" rows="10" placeholder="粘贴代码模板（保留缩进）" spellcheck="false"></textarea>
+          </div>
         </div>
         <div class="jy-form-group">
           <label class="jy-label">复杂度</label>
