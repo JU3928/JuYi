@@ -140,16 +140,16 @@
 
 /* ---- 复习卡片 ---- */
 .review-card {
-  width: 100%; max-width: 720px;
+  width: 100%; max-width: 900px;
   background: var(--jy-surface); border: 1px solid var(--jy-border);
-  border-radius: var(--jy-radius-xl); padding: var(--jy-space-8);
+  border-radius: var(--jy-radius-xl); padding: var(--jy-space-10);
   box-shadow: var(--jy-shadow-md);
 }
 .review-card__question {
-  font-size: var(--jy-font-size-lg); line-height: 1.9;
-  padding: var(--jy-space-6); background: var(--jy-bg);
+  font-size: var(--jy-font-size-xl); line-height: 2;
+  padding: var(--jy-space-8); background: var(--jy-bg);
   border: 1px solid var(--jy-border-light); border-radius: var(--jy-radius);
-  min-height: 120px; word-break: break-word; margin-bottom: var(--jy-space-4);
+  min-height: 200px; word-break: break-word; margin-bottom: var(--jy-space-5);
 }
 .review-card__question img {
   max-width: 100%; max-height: 480px; border-radius: var(--jy-radius-sm);
