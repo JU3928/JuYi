@@ -196,7 +196,7 @@
   padding: var(--jy-space-2) var(--jy-space-3); font-family: "JetBrains Mono","SF Mono","Consolas","Courier New",monospace;
   font-size: 12px; line-height: 1.6; margin: 0;
   white-space: pre-wrap; word-break: break-all;
-  max-height: 150px; overflow-y: auto; color: #cdd6f4;
+  max-height: 200px; overflow-y: auto; color: #cdd6f4;
 }
 [data-theme="light"] .br-tcard__code pre { background: #f0f0f3; color: #1a1a2e; }
 .br-tcard__code .copy-code-btn {
@@ -256,17 +256,17 @@
   border-right: 1px solid #313244;
   font-family: "JetBrains Mono", "SF Mono", "Consolas", "Courier New", monospace;
   font-size: 13px; line-height: 1.65; color: #6c7086; text-align: right;
-  user-select: none; white-space: pre;
+  user-select: none; white-space: pre; align-self: stretch;
 }
 .br-code-editor__gutter span { display: block; padding-right: 10px; }
 
 .br-code-editor__textarea {
-  flex: 1; min-height: 260px; max-height: 400px;
+  flex: 1; min-height: 120px;
   padding: var(--jy-space-3) var(--jy-space-4);
-  border: none; outline: none; resize: vertical;
+  border: none; outline: none; resize: none; overflow-y: hidden;
   font-family: "JetBrains Mono", "SF Mono", "Consolas", "Courier New", monospace;
   font-size: 13px; line-height: 1.65; color: #cdd6f4;
-  background: #1e1e2e; tab-size: 4; white-space: pre; overflow: auto;
+  background: #1e1e2e; tab-size: 4; white-space: pre;
 }
 .br-code-editor__textarea::placeholder { color: #6c7086; }
 .br-code-editor__textarea::-webkit-scrollbar { width: 8px; height: 8px; }

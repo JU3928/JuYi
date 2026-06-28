@@ -787,12 +787,18 @@
     _updateLineNumbers() {
       const textarea = this.els.tCode;
       const gutter = this.els.tCodeGutter;
-      const lines = textarea.value.split('\n').length;
+      const lines = Math.max(textarea.value.split('\n').length, 1);
       const curLines = (gutter.textContent.match(/\n/g) || []).length + 1;
-      if (curLines === lines && lines > 0 && gutter.children.length === lines) return;
-      let html = '';
-      for (let i = 1; i <= Math.max(lines, 1); i++) html += `<span>${i}</span>\n`;
-      gutter.innerHTML = html;
+      if (curLines !== lines && gutter.children.length !== lines) {
+        let html = '';
+        for (let i = 1; i <= lines; i++) html += `<span>${i}</span>\n`;
+        gutter.innerHTML = html;
+      }
+      // Auto-resize textarea to fit content (cap at 500px, scroll beyond)
+      textarea.style.height = 'auto';
+      const h = Math.min(Math.max(textarea.scrollHeight, 120), 500);
+      textarea.style.height = h + 'px';
+      textarea.style.overflowY = textarea.scrollHeight > 500 ? 'auto' : 'hidden';
     }
 
     _onCodeKeydown(e) {
@@ -808,6 +814,7 @@
 
     _syncCodeScroll() {
       this.els.tCodeGutter.scrollTop = this.els.tCode.scrollTop;
+      this.els.tCodeGutter.style.height = this.els.tCode.style.height;
     }
 
     _openTemplateModal(id) {
