@@ -103,6 +103,7 @@
 .br-qcard__number { font-weight: 700; font-size: var(--jy-font-size-lg); color: var(--jy-primary); }
 .br-qcard__actions { display: flex; gap: 2px; opacity: 0; transition: opacity 0.15s; }
 .br-qcard:hover .br-qcard__actions { opacity: 1; }
+.br-tcard:hover .br-qcard__actions { opacity: 1; }
 .br-qcard__actions .jy-btn--icon { width: 28px; height: 28px; font-size: 0.7rem; }
 
 .br-qcard__title { font-weight: 600; font-size: var(--jy-font-size-base); }
