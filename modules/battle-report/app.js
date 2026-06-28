@@ -810,6 +810,11 @@
         ta.selectionStart = ta.selectionEnd = start + 4;
         this._updateLineNumbers();
       }
+      // Prevent Enter from submitting the form, let it create newline normally
+      if (e.key === 'Enter') {
+        e.stopPropagation();
+        setTimeout(() => this._updateLineNumbers(), 10);
+      }
     }
 
     _syncCodeScroll() {
