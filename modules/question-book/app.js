@@ -323,18 +323,32 @@
       const stored = this._answerCache && this._answerCache[book.id];
       if (!stored) return null;
       const answers = stored.answers || {};
-      const answered = Object.values(answers).filter(v => v && v.trim()).length;
-      const result = { answered, total: book.questionCount, score: null };
+      const subCounts = stored.subCounts || {};
+      // 统计总答题格数（含子题）
+      let totalSlots = 0, answeredSlots = 0;
+      for (let i = 1; i <= book.questionCount; i++) {
+        const sc = subCounts[i] || 1;
+        for (let j = 1; j <= sc; j++) {
+          totalSlots++;
+          const key = sc > 1 ? (i + '.' + j) : i.toString();
+          if (answers[key] && answers[key].trim()) answeredSlots++;
+        }
+      }
+      const result = { answered: answeredSlots, total: book.questionCount, score: null };
 
       // 如果有核对结果，计算正确率
       if (stored.correctAnswers && Object.keys(stored.correctAnswers).length > 0) {
         const correctAnswers = stored.correctAnswers;
         let correct = 0, wrong = 0;
         for (let i = 1; i <= book.questionCount; i++) {
-          const userAns = (answers[i] || '').trim();
-          const correctAns = (correctAnswers[i] || '').trim();
-          if (userAns && correctAns) {
-            if (userAns === correctAns) correct++; else wrong++;
+          const sc = subCounts[i] || 1;
+          for (let j = 1; j <= sc; j++) {
+            const key = sc > 1 ? (i + '.' + j) : i.toString();
+            const userAns = (answers[key] || '').trim();
+            const correctAns = (correctAnswers[key] || '').trim();
+            if (userAns && correctAns) {
+              if (userAns === correctAns) correct++; else wrong++;
+            }
           }
         }
         const checked = correct + wrong;
@@ -461,6 +475,8 @@
       this.currentAnswerRecord = answerRec || {
         bookId: book.id, answers: {}, updatedAt: Date.now(),
       };
+      // 初始化子题计数
+      if (!this.currentAnswerRecord.subCounts) this.currentAnswerRecord.subCounts = {};
 
       this.els.listView.style.display = 'none';
       this.els.emptyState.style.display = 'none';
@@ -480,8 +496,18 @@
       const book = this.activeBook;
       if (!book) return;
       const answers = this.currentAnswerRecord.answers || {};
-      const answered = Object.values(answers).filter(v => v && v.trim()).length;
-      this.els.answerProgress.textContent = answered + '/' + book.questionCount + ' 已答';
+      const subCounts = this.currentAnswerRecord.subCounts || {};
+      // 计算总答题格数（含子题）
+      let totalSlots = 0, answeredSlots = 0;
+      for (let i = 1; i <= book.questionCount; i++) {
+        const sc = subCounts[i] || 1;
+        for (let j = 1; j <= sc; j++) {
+          totalSlots++;
+          const key = sc > 1 ? (i + '.' + j) : i.toString();
+          if (answers[key] && answers[key].trim()) answeredSlots++;
+        }
+      }
+      this.els.answerProgress.textContent = answeredSlots + '/' + totalSlots + ' 已答';
 
       // 正确率徽章
       if (this._isChecked() && book.type === 'choice') {
@@ -501,78 +527,114 @@
       const book = this.activeBook;
       if (!book) return;
       const answers = this.currentAnswerRecord.answers || {};
+      const subCounts = this.currentAnswerRecord.subCounts || {};
       const isChecked = this._isChecked();
       const correctAnswers = this.currentAnswerRecord.correctAnswers || {};
       let html = '';
 
+      // 展平：每道主题目按 subCounts 产生多个子题行
       for (let i = 1; i <= book.questionCount; i++) {
-        const val = (answers[i] || '').toString();
-        let answeredClass = val ? ' is-answered' : '';
-
-        // 核对后状态
-        let checkClass = '';
-        let resultIcon = '';
-        let correctAnswerDisplay = '';
-        if (isChecked && book.type === 'choice') {
-          checkClass = ' is-checked';
-          const userAns = val.trim();
-          const correctAns = (correctAnswers[i] || '').trim();
-          if (userAns && correctAns) {
-            if (userAns === correctAns) {
-              checkClass += ' is-correct';
-              resultIcon = ' ✓';
-            } else {
-              checkClass += ' is-wrong';
-              resultIcon = ' ✗';
-              correctAnswerDisplay = `<span class="question-item__correct-answer">→ ${esc(correctAns)}</span>`;
-            }
+        const sc = subCounts[i] || 1;
+        if (sc <= 1) {
+          html += this._renderSingleQuestion(i, i.toString(), answers, isChecked, correctAnswers, book);
+        } else {
+          for (let j = 1; j <= sc; j++) {
+            const key = i + '.' + j;
+            html += this._renderSingleQuestion(i, key, answers, isChecked, correctAnswers, book, sc);
           }
-        }
-
-        if (book.type === 'choice') {
-          html += this._buildChoiceQuestion(i, val, answeredClass + checkClass, resultIcon, correctAnswerDisplay);
-        } else if (book.type === 'fill-blank') {
-          html += this._buildFillBlankQuestion(i, val, answeredClass);
-        } else if (book.type === 'essay') {
-          html += this._buildEssayQuestion(i, val, answeredClass);
         }
       }
 
       this.els.questionList.innerHTML = html;
     }
 
-    _buildChoiceQuestion(num, currentVal, extraClasses, resultIcon, correctAnswerDisplay) {
+    _renderSingleQuestion(mainNum, key, answers, isChecked, correctAnswers, book, subCount) {
+      const val = (answers[key] || '').toString();
+      let classes = val ? ' is-answered' : '';
+      let checkClass = '';
+      let resultIcon = '';
+      let correctAnswerDisplay = '';
+
+      if (isChecked && book.type === 'choice') {
+        checkClass = ' is-checked';
+        const userAns = val.trim();
+        const correctAns = (correctAnswers[key] || '').trim();
+        if (userAns && correctAns) {
+          if (userAns === correctAns) {
+            checkClass += ' is-correct';
+            resultIcon = ' ✓';
+          } else {
+            checkClass += ' is-wrong';
+            resultIcon = ' ✗';
+            correctAnswerDisplay = `<span class="question-item__correct-answer">→ ${esc(correctAns)}</span>`;
+          }
+        }
+      }
+
+      // 子题管理按钮（只在第一个子题行上显示，且是非核对状态）
+      let subActions = '';
+      if (book.type === 'choice' && !isChecked && key.indexOf('.') === -1) {
+        subActions = `<button class="sub-add-btn jy-btn jy-btn--icon" data-q="${mainNum}" title="增加小空">＋</button>`;
+      }
+      if (book.type === 'choice' && !isChecked && subCount && subCount > 1 && key === mainNum + '.' + subCount) {
+        subActions = `<button class="sub-remove-btn jy-btn jy-btn--icon" data-q="${mainNum}" title="移除末空">－</button>`;
+        // 如果只有一空则也显示+
+        if (subCount === 1) subActions = '';
+      }
+
+      const label = key.indexOf('.') > -1 ? key : key.toString();
+      const displayLabel = label;
+
+      if (book.type === 'choice') {
+        return this._buildChoiceQuestion(mainNum, key, val, classes + checkClass, resultIcon, correctAnswerDisplay, displayLabel, subActions);
+      } else if (book.type === 'fill-blank') {
+        return this._buildFillBlankQuestion(mainNum, key, val, classes);
+      } else {
+        return this._buildEssayQuestion(mainNum, key, val, classes);
+      }
+    }
+
+    _buildChoiceQuestion(mainNum, key, currentVal, extraClasses, resultIcon, correctAnswerDisplay, displayLabel, subActions) {
       const optionsHTML = OPTIONS.map(letter => {
         const sel = currentVal === letter ? ' is-selected' : '';
-        return `<button class="question-option${sel}" data-q="${num}" data-val="${letter}">${letter}</button>`;
+        return `<button class="question-option${sel}" data-q="${key}" data-val="${letter}">${letter}</button>`;
       }).join('');
 
       return `
-        <div class="question-item${extraClasses}" data-q="${num}">
-          <span class="question-item__num-badge">${num}${resultIcon}</span>
+        <div class="question-item${extraClasses}" data-q="${mainNum}" data-key="${key}">
+          <span class="question-item__num-badge">${displayLabel || key}${resultIcon}</span>
           <div class="question-options">${optionsHTML}</div>
           ${correctAnswerDisplay}
+          ${subActions}
         </div>`;
     }
 
-    _buildFillBlankQuestion(num, val, answeredClass) {
+    _buildFillBlankQuestion(mainNum, key, val, answeredClass) {
+      const label = key.indexOf('.') > -1 ? key : key.toString();
       return `
-        <div class="question-item${answeredClass}" data-q="${num}">
-          <span class="question-item__num-badge">${num}</span>
-          <input class="jy-input" data-q="${num}" value="${escAttr(val)}" placeholder="输入答案...">
+        <div class="question-item${answeredClass}" data-q="${mainNum}" data-key="${key}">
+          <span class="question-item__num-badge">${label}</span>
+          <input class="jy-input" data-q="${key}" value="${escAttr(val)}" placeholder="输入答案...">
         </div>`;
     }
 
-    _buildEssayQuestion(num, val, answeredClass) {
+    _buildEssayQuestion(mainNum, key, val, answeredClass) {
+      const label = key.indexOf('.') > -1 ? key : key.toString();
       return `
-        <div class="question-item${answeredClass}" data-q="${num}">
-          <span class="question-item__num-badge">${num}</span>
-          <textarea class="jy-input" data-q="${num}" rows="3" placeholder="输入解答...">${esc(val)}</textarea>
+        <div class="question-item${answeredClass}" data-q="${mainNum}" data-key="${key}">
+          <span class="question-item__num-badge">${label}</span>
+          <textarea class="jy-input" data-q="${key}" rows="3" placeholder="输入解答...">${esc(val)}</textarea>
         </div>`;
     }
 
     /* ---- answer interactions ---- */
     _onQuestionOptionClick(e) {
+      // 子题添加/移除按钮
+      const subAdd = e.target.closest('.sub-add-btn');
+      const subRemove = e.target.closest('.sub-remove-btn');
+      if (subAdd) { e.stopPropagation(); this._addSubQuestion(parseInt(subAdd.dataset.q)); return; }
+      if (subRemove) { e.stopPropagation(); this._removeSubQuestion(parseInt(subRemove.dataset.q)); return; }
+
       const btn = e.target.closest('.question-option');
       if (!btn) return;
 
@@ -600,6 +662,43 @@
 
       this._renderSummary();
       this._renderQuestions(); // 完全重新渲染以清除核对状态
+      this._updateAnswerToolbar();
+      this._scheduleSave();
+    }
+
+    /* ---- 子题管理 ---- */
+    _addSubQuestion(qNum) {
+      const sc = this.currentAnswerRecord.subCounts || {};
+      sc[qNum] = (sc[qNum] || 1) + 1;
+      this.currentAnswerRecord.subCounts = sc;
+      // 清除相关核对结果
+      if (this.currentAnswerRecord.correctAnswers) {
+        delete this.currentAnswerRecord.correctAnswers;
+        delete this.currentAnswerRecord.checkedAt;
+      }
+      this._renderQuestions();
+      this._renderSummary();
+      this._updateAnswerToolbar();
+      this._scheduleSave();
+    }
+
+    _removeSubQuestion(qNum) {
+      const sc = this.currentAnswerRecord.subCounts || {};
+      const cur = sc[qNum] || 1;
+      if (cur <= 1) return; // 不能少于1
+      if (cur === 2) { delete sc[qNum]; } // 恢复默认
+      else { sc[qNum] = cur - 1; }
+      this.currentAnswerRecord.subCounts = sc;
+      // 删除多余的子题答案
+      const answers = this.currentAnswerRecord.answers || {};
+      delete answers[qNum + '.' + cur];
+      // 清除核对结果
+      if (this.currentAnswerRecord.correctAnswers) {
+        delete this.currentAnswerRecord.correctAnswers;
+        delete this.currentAnswerRecord.checkedAt;
+      }
+      this._renderQuestions();
+      this._renderSummary();
       this._updateAnswerToolbar();
       this._scheduleSave();
     }
@@ -656,8 +755,13 @@
       const book = this.activeBook;
       if (!book) return false;
       const answers = this.currentAnswerRecord.answers || {};
+      const subCounts = this.currentAnswerRecord.subCounts || {};
       for (let i = 1; i <= book.questionCount; i++) {
-        if (!answers[i] || !answers[i].trim()) return false;
+        const sc = subCounts[i] || 1;
+        for (let j = 1; j <= sc; j++) {
+          const key = sc > 1 ? (i + '.' + j) : i.toString();
+          if (!answers[key] || !answers[key].trim()) return false;
+        }
       }
       return book.questionCount > 0;
     }
@@ -673,14 +777,19 @@
       if (!book || !this._isChecked()) return null;
       const answers = this.currentAnswerRecord.answers || {};
       const correctAnswers = this.currentAnswerRecord.correctAnswers || {};
+      const subCounts = this.currentAnswerRecord.subCounts || {};
       let correct = 0, wrong = 0;
       const wrongNums = [];
       for (let i = 1; i <= book.questionCount; i++) {
-        const userAns = (answers[i] || '').trim();
-        const correctAns = (correctAnswers[i] || '').trim();
-        if (userAns && correctAns) {
-          if (userAns === correctAns) correct++;
-          else { wrong++; wrongNums.push(i); }
+        const sc = subCounts[i] || 1;
+        for (let j = 1; j <= sc; j++) {
+          const key = sc > 1 ? (i + '.' + j) : i.toString();
+          const userAns = (answers[key] || '').trim();
+          const correctAns = (correctAnswers[key] || '').trim();
+          if (userAns && correctAns) {
+            if (userAns === correctAns) correct++;
+            else { wrong++; wrongNums.push(sc > 1 ? key : i); }
+          }
         }
       }
       const total = correct + wrong;
@@ -691,19 +800,37 @@
       const book = this.activeBook;
       if (!book) return;
       const existingCorrect = this.currentAnswerRecord.correctAnswers || {};
+      const subCounts = this.currentAnswerRecord.subCounts || {};
 
       let html = '';
       for (let i = 1; i <= book.questionCount; i++) {
-        const preSelected = existingCorrect[i] || '';
-        const optsHTML = OPTIONS.map(letter => {
-          const sel = preSelected === letter ? ' is-selected' : '';
-          return `<button class="question-option${sel}" data-q="${i}" data-val="${letter}">${letter}</button>`;
-        }).join('');
-        html += `
-          <div class="correct-answer-row" data-q="${i}">
-            <div class="correct-answer-row__num">${i}</div>
-            <div class="question-options">${optsHTML}</div>
-          </div>`;
+        const sc = subCounts[i] || 1;
+        if (sc <= 1) {
+          const preSelected = existingCorrect[i] || '';
+          const optsHTML = OPTIONS.map(letter => {
+            const sel = preSelected === letter ? ' is-selected' : '';
+            return `<button class="question-option${sel}" data-q="${i}" data-val="${letter}">${letter}</button>`;
+          }).join('');
+          html += `
+            <div class="correct-answer-row" data-q="${i}">
+              <div class="correct-answer-row__num">${i}</div>
+              <div class="question-options">${optsHTML}</div>
+            </div>`;
+        } else {
+          for (let j = 1; j <= sc; j++) {
+            const key = i + '.' + j;
+            const preSelected = existingCorrect[key] || '';
+            const optsHTML = OPTIONS.map(letter => {
+              const sel = preSelected === letter ? ' is-selected' : '';
+              return `<button class="question-option${sel}" data-q="${key}" data-val="${letter}">${letter}</button>`;
+            }).join('');
+            html += `
+              <div class="correct-answer-row" data-q="${key}">
+                <div class="correct-answer-row__num">${key}</div>
+                <div class="question-options">${optsHTML}</div>
+              </div>`;
+          }
+        }
       }
 
       this.els.correctAnswersList.innerHTML = html;
@@ -777,20 +904,42 @@
           this.els.btnOpenCheck.style.display = 'none';
           this.els.btnRecheck.style.display = 'none';
           this.els.checkHint.style.display = '';
-          const remaining = book.questionCount - Object.values(answers).filter(v => v && v.trim()).length;
-          this.els.checkHintText.textContent = `还有 ${remaining} 题未答，完成所有题目后可录入正确答案`;
+          // 统计总答题格数（含子题）
+          let totalSlots = 0, filledSlots = 0;
+          for (let i = 1; i <= book.questionCount; i++) {
+            const sc = subCounts[i] || 1;
+            for (let j = 1; j <= sc; j++) {
+              totalSlots++;
+              const key = sc > 1 ? (i + '.' + j) : i.toString();
+              if (answers[key] && answers[key].trim()) filledSlots++;
+            }
+          }
+          const remaining = totalSlots - filledSlots;
+          this.els.checkHintText.textContent = `还有 ${remaining} 个空未答，完成所有题目后可录入正确答案`;
         }
       }
     }
 
     _renderChoiceSummary(book, answers) {
+      const subCounts = this.currentAnswerRecord.subCounts || {};
       let html = '';
       for (let start = 1; start <= book.questionCount; start += 5) {
         const end = Math.min(start + 4, book.questionCount);
         let groupStr = '';
         for (let i = start; i <= end; i++) {
-          const a = answers[i];
-          groupStr += (a && a.trim()) ? `<strong>${esc(a)}</strong>` : '<span class="summary__filler">_</span>';
+          const sc = subCounts[i] || 1;
+          if (sc <= 1) {
+            const a = answers[i];
+            groupStr += (a && a.trim()) ? `<strong>${esc(a)}</strong>` : '<span class="summary__filler">_</span>';
+          } else {
+            // 子题用 / 拼起来
+            const parts = [];
+            for (let j = 1; j <= sc; j++) {
+              const a = answers[i + '.' + j];
+              parts.push((a && a.trim()) ? `<strong>${esc(a)}</strong>` : '<span class="summary__filler">_</span>');
+            }
+            groupStr += parts.join('<span style="color:var(--jy-text-muted)">/</span>');
+          }
         }
         html += `<div class="summary__group">${start}-${end}: ${groupStr}</div>`;
       }
@@ -878,18 +1027,32 @@
       if (!book) return;
       const answers = this.currentAnswerRecord.answers || {};
 
+      const subCounts = this.currentAnswerRecord.subCounts || {};
       let text;
       if (book.type === 'choice') {
         let full = '';
         for (let i = 1; i <= book.questionCount; i++) {
-          full += answers[i] || '_';
+          const sc = subCounts[i] || 1;
+          if (sc <= 1) {
+            full += answers[i] || '_';
+          } else {
+            for (let j = 1; j <= sc; j++) {
+              full += answers[i + '.' + j] || '_';
+            }
+          }
         }
         text = full;
       } else {
         const lines = [];
         for (let i = 1; i <= book.questionCount; i++) {
-          const val = answers[i];
-          lines.push(`${i}. ${val || '(未答)'}`);
+          const sc = subCounts[i] || 1;
+          if (sc <= 1) {
+            lines.push(`${i}. ${answers[i] || '(未答)'}`);
+          } else {
+            for (let j = 1; j <= sc; j++) {
+              lines.push(`${i}.${j}. ${answers[i + '.' + j] || '(未答)'}`);
+            }
+          }
         }
         text = lines.join('\n');
       }

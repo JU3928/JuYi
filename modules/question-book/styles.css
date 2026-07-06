@@ -224,6 +224,18 @@
   box-shadow: 0 2px 8px rgba(79,93,228,0.35);
   animation: optionPulse 0.3s ease;
 }
+
+/* 子题 +/- 按钮 */
+.sub-add-btn, .sub-remove-btn {
+  width: 24px; height: 24px; font-size: 14px; font-weight: 700;
+  border-radius: 50%; margin-left: var(--jy-space-2);
+  border: 1px dashed var(--jy-border) !important;
+  background: var(--jy-bg-tertiary) !important;
+  color: var(--jy-text-secondary) !important;
+  transition: all var(--jy-transition);
+}
+.sub-add-btn:hover { border-color: var(--jy-primary) !important; color: var(--jy-primary) !important; background: var(--jy-primary-soft) !important; }
+.sub-remove-btn:hover { border-color: var(--jy-danger) !important; color: var(--jy-danger) !important; background: var(--jy-danger-soft) !important; }
 @keyframes optionPulse {
   0% { transform: scale(1); }
   50% { transform: scale(1.1); }
