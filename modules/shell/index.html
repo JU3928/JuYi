@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>拾贝 — JuYi</title>
+  <link rel="stylesheet" href="../../shared/base.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="app-layout">
+
+  <!-- ====== 顶栏 ====== -->
+  <header class="topbar">
+    <h1 class="topbar__logo">🐚 拾贝</h1>
+    <span class="topbar__subtitle">知识卡片 · 每日美言</span>
+    <div class="topbar__spacer"></div>
+    <button id="btnImport" class="jy-btn jy-btn--outline jy-btn--sm">📥 导入</button>
+    <button id="btnExport" class="jy-btn jy-btn--outline jy-btn--sm">📤 导出</button>
+    <input type="file" id="importFile" accept=".json" style="display:none">
+    <button id="btnToggleTheme" class="jy-btn jy-btn--outline jy-btn--sm">🌙 暗色模式</button>
+    <a href="../../index.html" class="jy-btn jy-btn--ghost jy-btn--sm">🏠 首页</a>
+  </header>
+
+  <!-- ====== 主内容 ====== -->
+  <main class="main">
+
+    <!-- ====== 每日美言区 ====== -->
+    <section id="dailySection" class="daily-card">
+      <div class="daily-card__left">
+        <div class="daily-card__label">📖 今日拾贝 · <span id="dailyDate"></span></div>
+        <blockquote class="daily-card__en" id="dailyEn"></blockquote>
+        <p class="daily-card__zh" id="dailyZh"></p>
+        <div class="daily-card__actions">
+          <span class="daily-card__theme" id="dailyTheme"></span>
+          <button id="btnRefreshQuote" class="jy-btn jy-btn--outline jy-btn--sm">🔄 换一句</button>
+          <button id="btnCollectQuote" class="jy-btn jy-btn--primary jy-btn--sm">⭐ 收藏为卡片</button>
+        </div>
+      </div>
+      <div class="daily-card__right" aria-hidden="true">🐚</div>
+    </section>
+
+    <!-- ====== 工具栏 ====== -->
+    <div class="toolbar">
+      <div class="search-box">
+        <span class="search-box__icon">🔍</span>
+        <input id="searchInput" type="text" class="search-box__input" placeholder="搜索标题或内容...">
+        <button id="btnClearSearch" class="search-box__clear" style="display:none">✕</button>
+      </div>
+      <div class="toolbar__filters">
+        <span class="toolbar__label">分类：</span>
+        <div id="categoryFilter" class="filter-chips"></div>
+      </div>
+      <div class="toolbar__right">
+        <select id="sortSelect" class="jy-select" style="width:auto">
+          <option value="newest">最新优先</option>
+          <option value="oldest">最旧优先</option>
+        </select>
+        <span id="cardCount" class="toolbar__count"></span>
+        <button id="btnAdd" class="jy-btn jy-btn--primary">＋ 新建卡片</button>
+      </div>
+    </div>
+
+    <!-- ====== 标签筛选 ====== -->
+    <div class="tag-filter-bar" id="tagFilter">
+      <span class="toolbar__label">标签：</span>
+    </div>
+
+    <!-- ====== 卡片网格 ====== -->
+    <div class="card-grid" id="cardGrid"></div>
+    <div id="emptyState" class="jy-empty">
+      <div class="jy-empty__icon">🐚</div>
+      <div class="jy-empty__text">还没有知识卡片</div>
+      <div class="jy-empty__sub">点击「＋ 新建卡片」开始记录，或等待每日美言自动推送</div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ====== 新建/编辑卡片弹窗 ====== -->
+<div id="editOverlay" class="jy-overlay modal-close-target">
+  <div class="jy-modal" style="max-width:680px">
+    <div class="jy-modal__header">
+      <span class="jy-modal__title" id="editModalTitle">新建卡片</span>
+      <button class="jy-btn jy-btn--icon modal-close-btn">✕</button>
+    </div>
+    <div class="jy-modal__body">
+      <form id="editForm" onsubmit="return false">
+        <div class="jy-form-group">
+          <label class="jy-label">标题 <span style="color:var(--jy-danger)">*</span></label>
+          <input type="text" id="editTitle" class="jy-input" placeholder="例如：泰勒展开公式" required maxlength="200">
+        </div>
+        <div class="jy-form-group">
+          <label class="jy-label">正文内容 <span class="jy-form-hint">（支持 Ctrl+V 粘贴截图）</span></label>
+          <div id="editContent" class="rich-editor" contenteditable="true" placeholder="在此输入内容，可粘贴图片..."></div>
+        </div>
+        <div class="form-row">
+          <div class="jy-form-group" style="flex:1">
+            <label class="jy-label">分类</label>
+            <input type="text" id="editCategory" class="jy-input" placeholder="如 数学公式 / 408专业课 / 英语美言" list="categoryList">
+            <datalist id="categoryList">
+              <option value="数学公式">
+              <option value="408专业课">
+              <option value="英语美言">
+            </datalist>
+          </div>
+          <div class="jy-form-group" style="flex:1">
+            <label class="jy-label">标签</label>
+            <input type="text" id="editTags" class="jy-input" placeholder="多个标签用逗号分隔，如 高数,积分">
+          </div>
+        </div>
+        <input type="hidden" id="editId">
+      </form>
+    </div>
+    <div class="jy-modal__footer">
+      <button class="jy-btn jy-btn--ghost modal-close-btn">取消</button>
+      <button id="btnSave" class="jy-btn jy-btn--primary">💾 保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====== 删除确认弹窗 ====== -->
+<div id="deleteOverlay" class="jy-overlay modal-close-target">
+  <div class="jy-modal" style="max-width:400px">
+    <div class="jy-modal__header">
+      <span class="jy-modal__title">确认删除</span>
+      <button class="jy-btn jy-btn--icon modal-close-btn">✕</button>
+    </div>
+    <div class="jy-modal__body">
+      <p style="text-align:center;padding:var(--jy-space-4)" id="deleteMsg"></p>
+    </div>
+    <div class="jy-modal__footer">
+      <button class="jy-btn jy-btn--ghost modal-close-btn">取消</button>
+      <button id="btnConfirmDelete" class="jy-btn jy-btn--danger">确认删除</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====== 卡片详情弹窗 ====== -->
+<div id="detailOverlay" class="jy-overlay modal-close-target">
+  <div class="jy-modal" style="max-width:680px">
+    <div class="jy-modal__header">
+      <span class="jy-modal__title" id="detailTitle">卡片详情</span>
+      <button class="jy-btn jy-btn--icon modal-close-btn">✕</button>
+    </div>
+    <div class="jy-modal__body">
+      <div class="detail-meta" id="detailMeta"></div>
+      <div class="detail-content" id="detailContent"></div>
+    </div>
+    <div class="jy-modal__footer">
+      <button class="jy-btn jy-btn--ghost modal-close-btn">关闭</button>
+      <button id="btnDetailDelete" class="jy-btn jy-btn--danger jy-btn--sm">🗑 删除</button>
+      <button id="btnDetailEdit" class="jy-btn jy-btn--primary jy-btn--sm">✎ 编辑</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
