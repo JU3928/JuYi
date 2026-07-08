@@ -2,7 +2,7 @@
   'use strict';
 
   const DB_NAME = 'JuYiShell';
-  const DB_VERSION = 1;
+  const DB_VERSION = 2;
   const STORE = 'cards';
   const LS_DAILY = 'shell_daily_quote';
   const LS_USED = 'shell_used_quotes';
@@ -185,15 +185,35 @@
 
       // Open IndexedDB — non-critical for daily quote display
       try {
-        await this.db.open(DB_NAME, DB_VERSION, {
-          [STORE]: { keyPath: 'id', autoIncrement: true, indexes: [{ name: 'byCategory', keyPath: 'category' }, { name: 'byCreatedAt', keyPath: 'createdAt' }] }
-        });
+        await this._openDB();
         this._dbReady = true;
-        await this._loadCards();
       } catch (e) {
-        console.warn('拾贝：IndexedDB 不可用，卡片数据无法持久化', e);
-        this._dbReady = false;
-        this.cards = [];
+        console.error('拾贝：IndexedDB 首次打开失败，尝试删库重建...', e);
+        // Try to recover: delete and recreate the database
+        try {
+          await new Promise(function (resolve, reject) {
+            var delReq = indexedDB.deleteDatabase(DB_NAME);
+            delReq.onsuccess = function () { resolve(); };
+            delReq.onerror = function () { reject(delReq.error); };
+            delReq.onblocked = function () { console.warn('拾贝：删库被阻塞，请关闭其他标签页后刷新'); reject(new Error('blocked')); };
+          });
+          await this._openDB();
+          this._dbReady = true;
+          console.log('拾贝：删库重建成功');
+        } catch (e2) {
+          console.error('拾贝：IndexedDB 重建也失败', e2);
+          this._dbReady = false;
+        }
+      }
+
+      // Load cards (only if DB is ready)
+      if (this._dbReady) {
+        try {
+          await this._loadCards();
+        } catch (e) {
+          console.error('拾贝：加载卡片失败', e);
+          this.cards = [];
+        }
       }
 
       // Daily quote — only needs localStorage, works even without IndexedDB
@@ -329,6 +349,12 @@
     }
 
     /* ---- Data ---- */
+    async _openDB() {
+      await this.db.open(DB_NAME, DB_VERSION, {
+        [STORE]: { keyPath: 'id', autoIncrement: true, indexes: [{ name: 'byCategory', keyPath: 'category' }, { name: 'byCreatedAt', keyPath: 'createdAt' }] }
+      });
+    }
+
     async _loadCards() {
       this.cards = await this.db.getAll(STORE) || [];
     }
