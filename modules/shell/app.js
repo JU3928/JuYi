@@ -534,15 +534,15 @@
       if (!title) { alert('请输入标题'); return; }
 
       var card = {
-        id: this.editingId || undefined,
         title: title,
         content: content || '<p></p>',
         category: category || '未分类',
         tags: tags,
-        source: this.editingId ? (this.cards.find(function (c) { return c.id === self.editingId; }) || {}).source || 'manual' : 'manual'
+        source: 'manual'
       };
 
       if (this.editingId) {
+        card.id = this.editingId;
         var existing = this.cards.find(function (c) { return c.id === self.editingId; });
         if (existing) {
           card.createdAt = existing.createdAt;
