@@ -174,6 +174,7 @@
       this.editingId = null;
       this.pendingDeleteId = null;
       this.dailyQuote = null;
+      this._dbReady = false;
     }
 
     /* ---- lifecycle ---- */
@@ -181,11 +182,29 @@
       this._restoreTheme();
       this._cacheDom();
       this._bindEvents();
-      await this.db.open(DB_NAME, DB_VERSION, {
-        [STORE]: { keyPath: 'id', autoIncrement: true, indexes: [{ name: 'byCategory', keyPath: 'category' }, { name: 'byCreatedAt', keyPath: 'createdAt' }] }
-      });
-      await this._loadCards();
-      await this._loadDailyQuote();
+
+      // Open IndexedDB — non-critical for daily quote display
+      try {
+        await this.db.open(DB_NAME, DB_VERSION, {
+          [STORE]: { keyPath: 'id', autoIncrement: true, indexes: [{ name: 'byCategory', keyPath: 'category' }, { name: 'byCreatedAt', keyPath: 'createdAt' }] }
+        });
+        this._dbReady = true;
+        await this._loadCards();
+      } catch (e) {
+        console.warn('拾贝：IndexedDB 不可用，卡片数据无法持久化', e);
+        this._dbReady = false;
+        this.cards = [];
+      }
+
+      // Daily quote — only needs localStorage, works even without IndexedDB
+      try {
+        await this._loadDailyQuote();
+      } catch (e) {
+        console.warn('拾贝：每日美言加载失败', e);
+        this.dailyQuote = null;
+      }
+
+      // Always render the UI regardless of init errors
       this.render();
     }
 
@@ -375,25 +394,37 @@
 
     async _collectQuote() {
       if (!this.dailyQuote) return;
-      var card = {
-        title: this.dailyQuote.english,
-        content: '<p>' + esc(this.dailyQuote.chinese) + '</p>',
-        category: '英语美言',
-        tags: [this.dailyQuote.theme, '每日精选'],
-        source: 'daily',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-      await this._saveCard(card);
-      // Visual feedback
-      this.$btnCollect.textContent = '✅ 已收藏';
+      if (!this._dbReady) {
+        alert('数据存储不可用，无法收藏。请检查浏览器是否开启了无痕模式或禁用了网站数据存储。');
+        return;
+      }
       this.$btnCollect.disabled = true;
-      setTimeout(function () {
-        var btn = document.getElementById('btnCollectQuote');
-        if (btn) { btn.textContent = '⭐ 收藏为卡片'; btn.disabled = false; }
-      }, 2000);
-      this.renderCards();
-      this.renderFilters();
+      this.$btnCollect.textContent = '⏳ 收藏中...';
+      try {
+        var card = {
+          title: this.dailyQuote.english,
+          content: '<p>' + esc(this.dailyQuote.chinese) + '</p>',
+          category: '英语美言',
+          tags: [this.dailyQuote.theme, '每日精选'],
+          source: 'daily',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        await this._saveCard(card);
+        // Visual feedback
+        this.$btnCollect.textContent = '✅ 已收藏';
+        setTimeout(function () {
+          var btn = document.getElementById('btnCollectQuote');
+          if (btn) { btn.textContent = '⭐ 收藏为卡片'; btn.disabled = false; }
+        }, 2000);
+        this.renderCards();
+        this.renderFilters();
+      } catch (e) {
+        console.error('收藏失败', e);
+        alert('收藏失败：' + (e.message || '未知错误'));
+        this.$btnCollect.textContent = '⭐ 收藏为卡片';
+        this.$btnCollect.disabled = false;
+      }
     }
 
     /* ---- Paste image handler ---- */
@@ -451,6 +482,7 @@
     }
 
     _handleSave() {
+      if (!this._dbReady) { alert('数据存储不可用，无法保存。'); return; }
       var self = this;
       var title = this.$editTitle.value.trim();
       var content = this.$editContent.innerHTML.trim();
@@ -486,6 +518,7 @@
     }
 
     _handleDelete() {
+      if (!this._dbReady) { alert('数据存储不可用，无法删除。'); return; }
       var self = this;
       if (this.pendingDeleteId == null) return;
       this._deleteCard(this.pendingDeleteId).then(function () {
@@ -544,6 +577,7 @@
     }
 
     _handleImport(input) {
+      if (!this._dbReady) { alert('数据存储不可用，无法导入。'); input.value = ''; return; }
       var self = this;
       var file = input.files[0];
       if (!file) return;
@@ -578,7 +612,13 @@
     }
 
     renderDailyQuote() {
-      if (!this.dailyQuote) return;
+      if (!this.dailyQuote) {
+        this.$dailyEn.textContent = '正在生成今日美言...';
+        this.$dailyZh.textContent = '首次加载请稍候，如长时间无响应请点击下方「换一句」';
+        this.$dailyTheme.textContent = '加载中';
+        this.$dailyDate.textContent = todayKey();
+        return;
+      }
       this.$dailyEn.textContent = this.dailyQuote.english;
       this.$dailyZh.textContent = this.dailyQuote.chinese;
       this.$dailyTheme.textContent = this.dailyQuote.theme;
