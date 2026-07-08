@@ -183,37 +183,24 @@
       this._cacheDom();
       this._bindEvents();
 
-      // Open IndexedDB — non-critical for daily quote display
-      try {
-        await this._openDB();
-        this._dbReady = true;
-      } catch (e) {
-        console.error('拾贝：IndexedDB 首次打开失败，尝试删库重建...', e);
-        // Try to recover: delete and recreate the database
-        try {
-          await new Promise(function (resolve, reject) {
-            var delReq = indexedDB.deleteDatabase(DB_NAME);
-            delReq.onsuccess = function () { resolve(); };
-            delReq.onerror = function () { reject(delReq.error); };
-            delReq.onblocked = function () { console.warn('拾贝：删库被阻塞，请关闭其他标签页后刷新'); reject(new Error('blocked')); };
-          });
-          await this._openDB();
-          this._dbReady = true;
-          console.log('拾贝：删库重建成功');
-        } catch (e2) {
-          console.error('拾贝：IndexedDB 重建也失败', e2);
-          this._dbReady = false;
+      // Open IndexedDB — try primary name first, then fallback
+      this._dbReady = await this._tryOpenDB(DB_NAME);
+      if (!this._dbReady) {
+        // Primary DB failed — try fallback name to bypass any corruption
+        var fallbackName = DB_NAME + '_v2';
+        console.warn('拾贝：主数据库打开失败，尝试备用库 ' + fallbackName);
+        this._dbReady = await this._tryOpenDB(fallbackName);
+        if (this._dbReady) {
+          // Store the active DB name for later use
+          this._activeDBName = fallbackName;
         }
+      } else {
+        this._activeDBName = DB_NAME;
       }
 
-      // Load cards (only if DB is ready)
-      if (this._dbReady) {
-        try {
-          await this._loadCards();
-        } catch (e) {
-          console.error('拾贝：加载卡片失败', e);
-          this.cards = [];
-        }
+      // Show storage warning if completely unavailable
+      if (!this._dbReady) {
+        this._showStorageWarning();
       }
 
       // Daily quote — only needs localStorage, works even without IndexedDB
@@ -309,8 +296,8 @@
       this.$importFile.addEventListener('change', function () { self._handleImport(this); });
       this.$btnExport.addEventListener('click', function () { self._handleExport(); });
 
-      // Global: close modals
-      d.addEventListener('click', function (e) {
+      // Global: close modals (click overlay background or X button)
+      document.addEventListener('click', function (e) {
         if (e.target.classList.contains('jy-overlay') && e.target.classList.contains('modal-close-target')) {
           e.target.classList.remove('is-open');
         }
@@ -326,7 +313,7 @@
       });
 
       // Theme toggle
-      var btnTheme = d.getElementById('btnToggleTheme');
+      var btnTheme = document.getElementById('btnToggleTheme');
       if (btnTheme) {
         btnTheme.addEventListener('click', function () { self._toggleTheme(); });
       }
@@ -349,10 +336,38 @@
     }
 
     /* ---- Data ---- */
-    async _openDB() {
-      await this.db.open(DB_NAME, DB_VERSION, {
-        [STORE]: { keyPath: 'id', autoIncrement: true, indexes: [{ name: 'byCategory', keyPath: 'category' }, { name: 'byCreatedAt', keyPath: 'createdAt' }] }
+    async _tryOpenDB(name) {
+      try {
+        await this.db.open(name, DB_VERSION, {
+          [STORE]: { keyPath: 'id', autoIncrement: true, indexes: [{ name: 'byCategory', keyPath: 'category' }, { name: 'byCreatedAt', keyPath: 'createdAt' }] }
+        });
+        this.cards = await this.db.getAll(STORE) || [];
+        console.log('拾贝：数据库 ' + name + ' 就绪，' + this.cards.length + ' 张卡片');
+        return true;
+      } catch (e) {
+        console.error('拾贝：数据库 ' + name + ' 打开失败', e);
+        return false;
+      }
+    }
+
+    _showStorageWarning() {
+      // Show a dismissible warning banner at the top of the card grid
+      var banner = document.createElement('div');
+      banner.className = 'storage-warning';
+      banner.innerHTML = '<span>⚠️ 浏览器数据存储不可用，卡片无法保存。请检查是否开启无痕模式或禁用了网站数据。</span><button class="storage-warning__close">✕</button>';
+      this.$cardGrid.parentNode.insertBefore(banner, this.$cardGrid);
+      banner.querySelector('.storage-warning__close').addEventListener('click', function () {
+        banner.remove();
       });
+      // Also disable action buttons that need DB
+      this.$btnAdd.disabled = true;
+      this.$btnAdd.title = '存储不可用';
+      this.$btnCollect.disabled = true;
+      this.$btnCollect.title = '存储不可用';
+      this.$btnImport.disabled = true;
+      this.$btnImport.title = '存储不可用';
+      this.$btnExport.disabled = true;
+      this.$btnExport.title = '存储不可用';
     }
 
     async _loadCards() {

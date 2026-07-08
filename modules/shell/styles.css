@@ -402,6 +402,38 @@
   margin: 0.5rem 0;
 }
 
+/* ======================== 存储警告横幅 ======================== */
+.storage-warning {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--jy-space-3);
+  padding: var(--jy-space-3) var(--jy-space-4);
+  margin-bottom: var(--jy-space-4);
+  background: var(--jy-warning-soft);
+  border: 1px solid var(--jy-warning);
+  border-radius: var(--jy-radius);
+  font-size: var(--jy-font-size-sm);
+  color: #92400e;
+  line-height: 1.5;
+}
+[data-theme="dark"] .storage-warning {
+  background: #3b2e0a;
+  border-color: #f59e0b;
+  color: #fcd34d;
+}
+.storage-warning__close {
+  background: none;
+  border: none;
+  font-size: var(--jy-font-size-md);
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.6;
+  padding: 0 var(--jy-space-1);
+  flex-shrink: 0;
+}
+.storage-warning__close:hover { opacity: 1; }
+
 /* ======================== 响应式 ======================== */
 @media (max-width: 768px) {
   .topbar {
