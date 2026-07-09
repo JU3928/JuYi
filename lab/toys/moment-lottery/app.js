@@ -629,11 +629,11 @@
     self._running = true;
     // Create long strip with repeated avatars
     var triple = avatars.concat(avatars).concat(avatars);
-    var html = '<div class="ml-marquee" id="marqueeStrip">';
-    triple.forEach(function (a, i) { html += '<div class="ml-marquee-avatar" data-idx="' + (i % avatars.length) + '"><img src="' + a.dataURL + '" alt=""></div>'; });
-    html += '</div>';
-    self.stage.innerHTML = html;
+    self.stage.innerHTML = '<div class="ml-marquee-wrap"><div class="ml-marquee-strip" id="marqueeStrip"></div></div>';
     var strip = document.getElementById('marqueeStrip');
+    var html = '';
+    triple.forEach(function (a, i) { html += '<div class="ml-marquee-item" data-idx="' + (i % avatars.length) + '"><img src="' + a.dataURL + '" alt=""></div>'; });
+    strip.innerHTML = html;
     var itemW = 96; // 80 + 16 gap
     var startTime = Date.now();
 
@@ -654,7 +654,7 @@
           winners.push(Object.assign({}, avatars[ri], { index: ri }));
         }
         // Highlight
-        var mAvatars = strip.querySelectorAll('.ml-marquee-avatar');
+        var mAvatars = strip.querySelectorAll('.ml-marquee-item');
         mAvatars.forEach(function (a) { a.classList.remove('is-winner'); });
         if (onReveal) onReveal(winners);
         return;
@@ -817,6 +817,7 @@
 
   App.prototype._bindEvents = function () {
     var self = this;
+    var d = document;
 
     // File upload
     this.$fileInput.addEventListener('change', function () {
@@ -1020,21 +1021,21 @@
     this.$avatarCount.textContent = pool.length;
 
     if (pool.length === 0) {
-      this.$avatarGrid.innerHTML = '<div class="ml-avatar-empty">暂无头像，上传截图后点击「自动识别」或手动框选</div>';
+      this.$avatarGrid.innerHTML = '<div class="ml-empty">暂无头像<br><small>上传截图后点击「自动识别」或手动框选</small></div>';
       return;
     }
 
     var html = '';
     pool.forEach(function (a, i) {
-      html += '<div class="ml-avatar-card" data-pool-idx="' + i + '">' +
+      html += '<div class="ml-avatar-item" data-pool-idx="' + i + '">' +
         '<img src="' + a.dataURL + '" alt="">' +
-        '<button class="ml-avatar-card__delete" data-pool-idx="' + i + '" title="删除">✕</button>' +
+        '<button class="ml-avatar-item__del" data-pool-idx="' + i + '" title="删除">✕</button>' +
       '</div>';
     });
     this.$avatarGrid.innerHTML = html;
 
     // Bind delete
-    this.$avatarGrid.querySelectorAll('.ml-avatar-card__delete').forEach(function (btn) {
+    this.$avatarGrid.querySelectorAll('.ml-avatar-item__del').forEach(function (btn) {
       btn.addEventListener('click', function (e) {
         e.stopPropagation();
         self.canvasMgr.removeDetection(parseInt(this.dataset.poolIdx));
@@ -1077,7 +1078,7 @@
     if (!winners || winners.length === 0) return;
     var html = '';
     winners.forEach(function (w, i) {
-      html += '<div class="ml-result-avatar"><img src="' + w.dataURL + '" alt=""><div class="ml-result-avatar__label">中奖 #' + (i+1) + '</div></div>';
+      html += '<div class="ml-result-item"><img src="' + w.dataURL + '" alt=""><div class="ml-result-item__label">中奖 #' + (i+1) + '</div></div>';
     });
     this.$resultGrid.innerHTML = html;
     this.$resultOverlay.classList.add('is-open');
@@ -1130,13 +1131,13 @@
   App.prototype._renderHistory = function () {
     this.$historyCount.textContent = this.history.length;
     if (this.history.length === 0) {
-      this.$historyBody.innerHTML = '<div class="ml-history-empty">暂无抽奖记录</div>';
+      this.$historyBody.innerHTML = '<div class="ml-empty">暂无抽奖记录</div>';
       return;
     }
     var html = '';
     this.history.forEach(function (r) {
       var avatarsHtml = (r.avatars || []).slice(0, 10).map(function (a) { return '<img src="' + a + '" alt="">'; }).join('');
-      html += '<div class="ml-history-item"><span>🎉 ' + (r.count || 1) + '人中奖</span><div class="ml-history-item__avatars">' + avatarsHtml + '</div><span class="ml-history-item__time">' + fmtDate(r.date) + '</span></div>';
+      html += '<div class="ml-history-item"><span>🎉 ' + (r.count || 1) + '人中奖</span><div class="ml-history-item__imgs">' + avatarsHtml + '</div><span class="ml-history-item__time">' + fmtDate(r.date) + '</span></div>';
     });
     this.$historyBody.innerHTML = html;
   };
