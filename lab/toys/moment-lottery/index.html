@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>朋友圈点赞抽奖器 — JuYi 实验室</title>
+  <link rel="stylesheet" href="../../../../shared/base.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="ml-app">
+
+  <!-- ====== 顶栏 ====== -->
+  <header class="ml-topbar">
+    <h1 class="ml-topbar__title">🎰 朋友圈点赞抽奖器</h1>
+    <span class="ml-topbar__sub">自动提取头像 · 随机抽奖</span>
+    <div class="ml-topbar__spacer"></div>
+
+    <!-- 模式切换 -->
+    <label class="ml-mode-switch" title="开启OpenCV高级检测（按需加载CDN资源）">
+      <input type="checkbox" id="toggleOpenCV">
+      <span class="ml-mode-switch__slider"></span>
+      <span class="ml-mode-switch__label">OpenCV 高级</span>
+    </label>
+
+    <button id="btnLoadDemo" class="jy-btn jy-btn--outline jy-btn--sm">📷 加载示例</button>
+    <label class="jy-btn jy-btn--primary jy-btn--sm" style="cursor:pointer">
+      📤 上传截图
+      <input type="file" id="fileInput" accept="image/*" style="display:none">
+    </label>
+    <button id="btnToggleTheme" class="jy-btn jy-btn--ghost jy-btn--sm">🌙</button>
+    <a href="../../../index.html" class="jy-btn jy-btn--ghost jy-btn--sm">🏠</a>
+  </header>
+
+  <!-- ====== 主体 ====== -->
+  <div class="ml-body">
+
+    <!-- 左侧：画布区 -->
+    <div class="ml-canvas-panel">
+      <div class="ml-canvas-toolbar">
+        <button id="btnAutoDetect" class="jy-btn jy-btn--primary jy-btn--sm">🔍 自动识别头像</button>
+        <button id="btnClearAll" class="jy-btn jy-btn--outline jy-btn--sm">✕ 清空选区</button>
+        <span class="ml-hint">或拖拽框选手动添加</span>
+        <span class="ml-canvas-toolbar__right">
+          <button id="btnZoomIn" class="jy-btn jy-btn--ghost jy-btn--icon">＋</button>
+          <button id="btnZoomOut" class="jy-btn jy-btn--ghost jy-btn--icon">−</button>
+          <button id="btnZoomFit" class="jy-btn jy-btn--ghost jy-btn--sm">适应</button>
+        </span>
+      </div>
+      <div class="ml-canvas-wrap" id="canvasWrap">
+        <canvas id="mainCanvas"></canvas>
+        <div class="ml-canvas-placeholder" id="canvasPlaceholder">
+          <div class="ml-canvas-placeholder__icon">📷</div>
+          <div>点击「上传截图」或「加载示例」开始</div>
+        </div>
+      </div>
+      <!-- 检测状态浮层 -->
+      <div class="ml-detect-status" id="detectStatus" style="display:none">
+        <span id="detectStatusText"></span>
+      </div>
+    </div>
+
+    <!-- 右侧：头像池 + 抽奖控制 -->
+    <aside class="ml-sidebar">
+      <!-- 头像池 -->
+      <div class="ml-panel">
+        <div class="ml-panel__header">
+          <h3>🖼️ 头像池 <span id="avatarCount" class="ml-panel__count">0</span></h3>
+          <button id="btnClearPool" class="jy-btn jy-btn--ghost jy-btn--sm" style="font-size:var(--jy-font-size-xs)">清空</button>
+        </div>
+        <div class="ml-avatar-grid" id="avatarGrid">
+          <div class="ml-avatar-empty">暂无头像，上传截图后点击「自动识别」或手动框选</div>
+        </div>
+      </div>
+
+      <!-- 抽奖控制 -->
+      <div class="ml-panel">
+        <div class="ml-panel__header"><h3>🎯 抽奖配置</h3></div>
+        <div class="ml-config">
+          <div class="ml-config__row">
+            <label>抽取人数</label>
+            <input type="number" id="drawCount" class="jy-input" value="1" min="1" max="50" style="width:80px">
+          </div>
+          <div class="ml-config__row">
+            <label>动画类型</label>
+            <select id="animType" class="jy-select" style="width:auto">
+              <option value="jump">🎪 跳动头像框</option>
+              <option value="marquee">🏃 横向跑马灯</option>
+              <option value="wheel">🎡 环形转盘</option>
+            </select>
+          </div>
+          <div class="ml-config__row">
+            <label>动画时长(秒)</label>
+            <input type="number" id="animDuration" class="jy-input" value="3" min="1" max="10" style="width:80px">
+          </div>
+          <div class="ml-config__row">
+            <label class="ml-checkbox-label">
+              <input type="checkbox" id="allowRepeat" checked> 允许重复中奖
+            </label>
+          </div>
+          <div class="ml-config__row">
+            <label class="ml-checkbox-label">
+              <input type="checkbox" id="showParticles" checked> 粒子特效
+            </label>
+          </div>
+        </div>
+        <button id="btnStartLottery" class="jy-btn jy-btn--primary" style="width:100%;font-size:var(--jy-font-size-lg);padding:var(--jy-space-3);margin-top:var(--jy-space-2)">
+          🎰 开始抽奖
+        </button>
+      </div>
+
+      <!-- 导入导出 -->
+      <div class="ml-panel">
+        <div class="ml-panel__header"><h3>💾 数据管理</h3></div>
+        <div style="display:flex;gap:var(--jy-space-2)">
+          <button id="btnExport" class="jy-btn jy-btn--outline jy-btn--sm" style="flex:1">📤 导出</button>
+          <button id="btnImport" class="jy-btn jy-btn--outline jy-btn--sm" style="flex:1">📥 导入</button>
+          <input type="file" id="importFile" accept=".json" style="display:none">
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ====== 历史记录 ====== -->
+  <div class="ml-history" id="historyPanel">
+    <div class="ml-history__header" id="historyToggle">
+      <h3>📋 抽奖历史 <span id="historyCount" class="ml-panel__count">0</span></h3>
+      <span class="ml-history__arrow">▼</span>
+    </div>
+    <div class="ml-history__body" id="historyBody">
+      <div class="ml-history-empty">暂无抽奖记录</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ====== 抽奖动画叠加层 ====== -->
+<div class="ml-lottery-overlay" id="lotteryOverlay" style="display:none">
+  <div class="ml-lottery-stage" id="lotteryStage"></div>
+  <div class="ml-lottery-controls">
+    <button id="btnReveal" class="jy-btn jy-btn--primary jy-btn--lg">🎉 揭晓结果</button>
+    <button id="btnCancelLottery" class="jy-btn jy-btn--ghost jy-btn--lg">取消</button>
+  </div>
+</div>
+
+<!-- ====== 结果展示弹窗 ====== -->
+<div class="jy-overlay modal-close-target" id="resultOverlay">
+  <div class="jy-modal" style="max-width:600px">
+    <div class="jy-modal__header">
+      <span class="jy-modal__title">🎉 抽奖结果</span>
+      <button class="jy-btn jy-btn--icon modal-close-btn">✕</button>
+    </div>
+    <div class="jy-modal__body">
+      <div class="ml-result-grid" id="resultGrid"></div>
+    </div>
+    <div class="jy-modal__footer">
+      <button class="jy-btn jy-btn--ghost modal-close-btn">关闭</button>
+      <button id="btnReroll" class="jy-btn jy-btn--primary">🎰 再来一局</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

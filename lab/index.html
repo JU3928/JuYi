@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>实验室 — JuYi</title>
+  <link rel="stylesheet" href="../shared/base.css">
+  <style>
+    .lab-hub { min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:var(--jy-space-6); }
+    .lab-hub__title { font-size:var(--jy-font-size-2xl); font-weight:700; margin-bottom:var(--jy-space-1); }
+    .lab-hub__subtitle { color:var(--jy-text-secondary); margin-bottom:var(--jy-space-8); }
+    .lab-hub__toys { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:var(--jy-space-4); width:100%; max-width:700px; }
+    .toy-card { display:flex; align-items:flex-start; gap:var(--jy-space-4); padding:var(--jy-space-5); background:var(--jy-surface); border:1px solid var(--jy-border); border-radius:var(--jy-radius-lg); text-decoration:none; color:inherit; transition:all .2s; box-shadow:var(--jy-shadow-sm); }
+    .toy-card:hover { border-color:var(--jy-primary); box-shadow:var(--jy-shadow-md); transform:translateY(-2px); }
+    .toy-card__icon { font-size:2.5rem; flex-shrink:0; width:56px; height:56px; display:flex; align-items:center; justify-content:center; background:var(--jy-bg-secondary); border-radius:var(--jy-radius-lg); }
+    .toy-card__info h3 { font-size:var(--jy-font-size-lg); font-weight:600; margin-bottom:var(--jy-space-1); }
+    .toy-card__info p { font-size:var(--jy-font-size-sm); color:var(--jy-text-secondary); line-height:1.5; }
+    .toy-card__badge { display:inline-block; padding:.1rem .45rem; font-size:var(--jy-font-size-xs); font-weight:600; border-radius:99px; background:var(--jy-success-soft); color:var(--jy-success); margin-top:var(--jy-space-2); }
+    .lab-hub__back { margin-top:var(--jy-space-6); color:var(--jy-text-muted); font-size:var(--jy-font-size-sm); }
+    .theme-toggle { position:fixed; top:var(--jy-space-4); right:var(--jy-space-4); }
+  </style>
+</head>
+<body>
+  <button id="themeToggle" class="jy-btn jy-btn--ghost jy-btn--icon theme-toggle" title="切换暗色模式">🌙</button>
+  <main class="lab-hub">
+    <div class="lab-hub__title">🧪 实验室</div>
+    <p class="lab-hub__subtitle">实验性小工具，好玩为主</p>
+    <div class="lab-hub__toys">
+      <a href="toys/moment-lottery/index.html" class="toy-card">
+        <div class="toy-card__icon">🎰</div>
+        <div class="toy-card__info">
+          <h3>朋友圈点赞抽奖器</h3>
+          <p>截图自动提取头像 · 双模式检测 · Canvas抽奖动画</p>
+          <span class="toy-card__badge">新</span>
+        </div>
+      </a>
+    </div>
+    <a href="../index.html" class="lab-hub__back">← 返回 JuYi 首页</a>
+  </main>
+  <script>
+    (function(){
+      var t=document.getElementById('themeToggle');
+      if(localStorage.getItem('jy_theme')==='dark'){document.documentElement.setAttribute('data-theme','dark');t.textContent='☀️';}
+      t.addEventListener('click',function(){var c=document.documentElement.getAttribute('data-theme'),n=c==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',n);localStorage.setItem('jy_theme',n);t.textContent=n==='dark'?'☀️':'🌙';});
+    })();
+  </script>
+</body>
+</html>
