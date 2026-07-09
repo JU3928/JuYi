@@ -9,50 +9,103 @@
 </head>
 <body>
 
-<div id="app" class="app-layout">
-  <main class="main">
-    <header class="header">
-      <h1 class="header__title">📅 计划表</h1>
-      <span class="header__date" id="todayDate"></span>
-      <div class="scenario-picker">
-        <button class="scenario-btn active" data-scenario="normal">📋 常规</button>
-        <button class="scenario-btn" data-scenario="niuke">🏆 牛客</button>
-        <button class="scenario-btn" data-scenario="cf">💻 CF</button>
-        <button class="scenario-btn" data-scenario="double">⚡ 双赛</button>
-      </div>
-      <a href="../../index.html" class="jy-btn jy-btn--ghost jy-btn--sm">🏠 首页</a>
-    </header>
+<div class="app-layout">
 
-    <div class="content">
-      <!-- Timeline visual -->
+  <!-- ====== 顶栏 ====== -->
+  <header class="topbar">
+    <h1 class="topbar__title">📅 计划表</h1>
+    <span class="topbar__date" id="todayDate"></span>
+    <div class="topbar__spacer"></div>
+    <div class="scenario-picker">
+      <button class="scenario-btn active" data-scenario="normal">📋 常规日</button>
+      <button class="scenario-btn" data-scenario="niuke">🏆 牛客周赛日</button>
+    </div>
+    <a href="../../index.html" class="jy-btn jy-btn--ghost jy-btn--sm">🏠 首页</a>
+  </header>
+
+  <!-- ====== 主体：双栏布局 ====== -->
+  <div class="main-body">
+
+    <!-- ====== 左侧：时间表 ====== -->
+    <div class="main-left">
+
+      <!-- 视图状态 -->
+      <div class="view-state">
+        <span class="view-state__label">📅 <span id="viewDateLabel">今日</span></span>
+        <span id="readOnlyBadge" class="view-state__badge" style="display:none">🔒 只读 — 不可修改</span>
+        <button id="btnBackToday" class="jy-btn jy-btn--outline jy-btn--sm" style="display:none">🔙 返回今日</button>
+      </div>
+
+      <!-- 快捷操作 -->
+      <div class="quick-bar">
+        <button id="btnCheckAll" class="quick-link">✅ 一键勾选今日所有固定任务</button>
+      </div>
+
+      <!-- 时间线可视化 -->
       <div class="timeline" id="timeline"></div>
 
-      <!-- Table -->
+      <!-- 明细表格 -->
       <div class="table-wrap">
         <table id="scheduleTable">
           <thead>
-            <tr><th>时间</th><th>内容</th><th>类型</th><th>备注</th></tr>
+            <tr><th class="th-check">☑</th><th>时间</th><th>内容</th><th>类型</th><th>备注</th></tr>
           </thead>
           <tbody id="scheduleBody"></tbody>
         </table>
       </div>
 
-      <!-- Summary note -->
-      <div class="note" id="scenarioNote"></div>
+      <!-- 场景说明 -->
+      <div class="scenario-note" id="scenarioNote"></div>
 
-      <!-- Principles -->
+      <!-- 核心原则 -->
       <div class="principles">
         <h3>核心原则</h3>
         <ul>
-          <li>🛡️ <strong>固定任务</strong>（英语早/数学/408/运动）任何场景不缩短、不移动、不取消</li>
+          <li>🛡️ <strong>固定任务</strong>（英语早/数学/408/英语阅读/运动）任何场景不缩短、不移动、不取消</li>
           <li>🏃 <strong>16:00-17:00 运动</strong>永远锁定，永不删除</li>
-          <li>⏰ CF 比赛次日<strong>照常 07:00 起床</strong>，所有固定任务正常执行</li>
-          <li>😴 赛后直接入睡，不补题，不刷手机</li>
-          <li>🔢 建议每月 CF 不超过 2 次</li>
+          <li>📖 <strong>15:30-16:00 英语阅读</strong>为固定任务，绝不可压缩</li>
+          <li>🔢 建议每月牛客比赛 2-3 次，保持手感即可</li>
         </ul>
       </div>
     </div>
-  </main>
+
+    <!-- ====== 右侧：日历 & 统计 ====== -->
+    <aside class="main-right">
+
+      <!-- 完成率 -->
+      <div class="stat-card stat-card--rate">
+        <div class="stat-card__label">今日完成率</div>
+        <div class="stat-card__value" id="statsBar">--%</div>
+        <div class="stat-card__sub">固定任务：<strong id="fixedSub">0/0</strong></div>
+      </div>
+
+      <!-- 连续打卡 -->
+      <div class="stat-card stat-card--streak" id="streakBadge">
+        📌 今天开始打卡吧
+      </div>
+
+      <!-- 动态鸡汤 -->
+      <div class="stat-card stat-card--motivation" id="motivation">
+        ☀️ 新的一天，从第一项任务开始吧！
+      </div>
+
+      <!-- 日历 -->
+      <div class="calendar-card">
+        <div class="calendar__nav">
+          <button id="btnPrevMonth" class="calendar__nav-btn">◀</button>
+          <span class="calendar__title" id="calendarTitle"></span>
+          <button id="btnNextMonth" class="calendar__nav-btn">▶</button>
+        </div>
+        <div class="calendar__grid" id="calendarGrid"></div>
+        <div class="calendar__diligence">
+          本月勤奋指数：<strong id="diligence">--%</strong>
+          <span class="diligence-hint">（完成率≥80%的天数占比）</span>
+        </div>
+      </div>
+
+    </aside>
+
+  </div>
 </div>
 
 <script src="app.js"></script>
