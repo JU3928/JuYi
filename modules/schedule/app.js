@@ -243,19 +243,18 @@
         self._renderCalendar();
       });
 
-      // Theme toggle (inject button)
-      var tb = document.createElement('button');
-      tb.className = 'jy-btn jy-btn--ghost jy-btn--icon theme-btn';
-      tb.setAttribute('aria-label', '切换暗色模式');
-      var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-      tb.textContent = isDark ? '☀️' : '🌙';
-      tb.addEventListener('click', function () {
-        var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-        document.documentElement.setAttribute('data-theme', next);
-        localStorage.setItem(LS_THEME, next);
-        tb.textContent = next === 'dark' ? '☀️' : '🌙';
-      });
-      document.body.appendChild(tb);
+      // Theme toggle (use existing button in topbar)
+      var tb = document.getElementById('btnToggleTheme');
+      if (tb) {
+        var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        tb.textContent = isDark ? '☀️' : '🌙';
+        tb.addEventListener('click', function () {
+          var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+          document.documentElement.setAttribute('data-theme', next);
+          localStorage.setItem(LS_THEME, next);
+          tb.textContent = next === 'dark' ? '☀️' : '🌙';
+        });
+      }
     }
 
     /* ---- Persistence ---- */

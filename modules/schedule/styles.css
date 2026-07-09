@@ -390,14 +390,6 @@ tr.is-dimmed .td-content { color: var(--jy-text-muted); }
   margin-top: var(--jy-space-1);
 }
 
-/* ======================== Theme toggle ======================== */
-.theme-btn {
-  position: fixed;
-  top: var(--jy-space-4);
-  right: var(--jy-space-4);
-  z-index: 200;
-}
-
 /* ======================== Responsive ======================== */
 @media (max-width: 900px) {
   .main-body { flex-direction: column; }
