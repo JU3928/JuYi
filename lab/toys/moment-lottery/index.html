@@ -86,13 +86,13 @@
     <aside class="ml-sidebar">
 
       <!-- 头像池 -->
-      <div class="ml-card">
-        <div class="ml-card__header">
+      <div class="ml-panel">
+        <div class="ml-panel__header">
           <h3>🖼️ 头像池</h3>
           <span class="ml-badge" id="avatarCount">0</span>
           <button id="btnClearPool" class="ml-link-btn">清空</button>
         </div>
-        <div class="ml-card__body">
+        <div class="ml-panel__body">
           <div class="ml-avatar-grid" id="avatarGrid">
             <div class="ml-empty">暂无头像<br><small>点击「自动识别」或拖拽框选</small></div>
           </div>
@@ -100,11 +100,11 @@
       </div>
 
       <!-- 抽奖配置 -->
-      <div class="ml-card ml-card--accent">
-        <div class="ml-card__header">
+      <div class="ml-panel">
+        <div class="ml-panel__header">
           <h3>🎯 抽奖配置</h3>
         </div>
-        <div class="ml-card__body">
+        <div class="ml-panel__body">
           <div class="ml-config">
             <div class="ml-config__row">
               <label>抽取人数</label>
@@ -127,19 +127,18 @@
               <label class="ml-check"><input type="checkbox" id="showParticles" checked> ✨ 粒子特效</label>
             </div>
           </div>
-          <button id="btnStartLottery" class="ml-lottery-btn">
-            <span class="ml-lottery-btn__icon">🎰</span>
-            <span class="ml-lottery-btn__text">开始抽奖</span>
+          <button id="btnStartLottery" class="jy-btn jy-btn--primary" style="width:100%;padding:var(--jy-space-3);font-size:var(--jy-font-size-lg);font-weight:700;margin-top:var(--jy-space-3)">
+            🎰 开始抽奖
           </button>
         </div>
       </div>
 
       <!-- 数据管理 -->
-      <div class="ml-card">
-        <div class="ml-card__header">
+      <div class="ml-panel">
+        <div class="ml-panel__header">
           <h3>💾 数据</h3>
         </div>
-        <div class="ml-card__body">
+        <div class="ml-panel__body">
           <div class="ml-data-btns">
             <button id="btnExport" class="jy-btn jy-btn--outline jy-btn--sm">📤 导出备份</button>
             <button id="btnImport" class="jy-btn jy-btn--outline jy-btn--sm">📥 导入恢复</button>
@@ -167,9 +166,8 @@
 <div class="ml-overlay" id="lotteryOverlay" style="display:none">
   <div class="ml-stage" id="lotteryStage"></div>
   <div class="ml-stage-actions">
-    <button id="btnReveal" class="ml-lottery-btn ml-lottery-btn--reveal">
-      <span class="ml-lottery-btn__icon">🎉</span>
-      <span class="ml-lottery-btn__text">揭晓结果</span>
+    <button id="btnReveal" class="jy-btn jy-btn--primary jy-btn--lg" style="font-size:var(--jy-font-size-lg);font-weight:700;padding:var(--jy-space-3) var(--jy-space-8)">
+      🎉 揭晓结果
     </button>
     <button id="btnCancelLottery" class="jy-btn jy-btn--ghost jy-btn--lg" style="color:#fff">取消</button>
   </div>
