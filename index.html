@@ -97,6 +97,48 @@
       color: var(--jy-text-muted);
     }
 
+    .hub__sys {
+      margin-top: var(--jy-space-6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--jy-space-2);
+      flex-wrap: wrap;
+      padding: var(--jy-space-4);
+      border: 1px dashed var(--jy-border);
+      border-radius: var(--jy-radius-lg);
+      max-width: 700px;
+      width: 100%;
+    }
+    .hub__sys-label {
+      font-size: var(--jy-font-size-sm);
+      font-weight: 600;
+      color: var(--jy-text-secondary);
+      margin-right: var(--jy-space-2);
+    }
+    .hub__sys-hint {
+      width: 100%;
+      text-align: center;
+      font-size: var(--jy-font-size-xs);
+      color: var(--jy-text-muted);
+      margin-top: var(--jy-space-1);
+    }
+    .hub__sys-toast {
+      position: fixed;
+      bottom: var(--jy-space-6);
+      left: 50%;
+      transform: translateX(-50%);
+      padding: var(--jy-space-3) var(--jy-space-6);
+      border-radius: 99px;
+      font-size: var(--jy-font-size-sm);
+      font-weight: 600;
+      z-index: 999;
+      animation: toastIn .3s ease;
+    }
+    .hub__sys-toast--ok { background: var(--jy-success); color: #fff; }
+    .hub__sys-toast--err { background: var(--jy-danger); color: #fff; }
+    @keyframes toastIn { from { opacity:0; transform:translateX(-50%) translateY(10px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
+
     .hub__footer {
       margin-top: var(--jy-space-8);
       text-align: center;
@@ -176,6 +218,14 @@
       </a>
     </div>
 
+    <div class="hub__sys">
+      <span class="hub__sys-label">⚙ 系统数据</span>
+      <button id="btnExportAll" class="jy-btn jy-btn--outline jy-btn--sm">📦 一键导出全部</button>
+      <button id="btnImportAll" class="jy-btn jy-btn--outline jy-btn--sm">📥 一键导入</button>
+      <span class="hub__sys-hint">导出所有模块数据为一个备份文件，换设备时一次恢复</span>
+      <input type="file" id="sysImportFile" accept=".json" style="display:none">
+    </div>
+
     <div class="hub__footer">
       <a href="lab/index.html" style="color:var(--jy-text-muted);text-decoration:none;font-size:var(--jy-font-size-sm)">🧪 实验室 — 更多实验性小工具</a>
     </div>
@@ -197,6 +247,211 @@
       document.documentElement.setAttribute('data-theme', next);
       localStorage.setItem('jy_theme', next);
       toggle.textContent = next === 'dark' ? '☀️' : '🌙';
+    });
+    // ========== 系统数据打包 / 解析 ==========
+
+    /** Known IndexedDB names used by modules */
+    var SYS_DB_NAMES = [
+      'JuYiDB',           // 错题本
+      'JuYiShell',        // 拾贝
+      'JuYiShell_v2',     // 拾贝（备用库）
+      'JuYiFitness',      // 健身
+      'JuYiQuestionBook', // 做题本
+      'JuYiBattleReport', // 战报板
+      'JuYiLabLottery'    // 抽奖器
+    ];
+
+    /** localStorage keys to include (prefix match) */
+    var SYS_LS_PREFIXES = [
+      'jy_error_notebook_',
+      'shell_daily_quote',
+      'shell_used_quotes',
+      'jy_sched_'
+    ];
+
+    /** Open an IndexedDB and read all stores → { storeName: [items] } */
+    function sysReadDB(name) {
+      return new Promise(function (resolve) {
+        var req = indexedDB.open(name);
+        req.onsuccess = function (e) {
+          var db = e.target.result;
+          var stores = {};
+          var names = Array.from(db.objectStoreNames);
+          if (names.length === 0) { db.close(); resolve(null); return; }
+          var remaining = names.length;
+          names.forEach(function (sn) {
+            try {
+              var tx = db.transaction(sn, 'readonly');
+              var store = tx.objectStore(sn);
+              var getAll = store.getAll();
+              getAll.onsuccess = function () { stores[sn] = getAll.result; remaining--; if (remaining === 0) { db.close(); resolve(stores); } };
+              getAll.onerror = function () { remaining--; if (remaining === 0) { db.close(); resolve(stores); } };
+            } catch (err) { remaining--; if (remaining === 0) { db.close(); resolve(stores); } }
+          });
+        };
+        req.onerror = function () { resolve(null); };
+      });
+    }
+
+    /** Write data to an IndexedDB — creates/recreates stores as needed */
+    function sysWriteDB(name, stores) {
+      return new Promise(function (resolve) {
+        // Delete existing DB first
+        var delReq = indexedDB.deleteDatabase(name);
+        delReq.onsuccess = function () {
+          // Determine version based on number of stores (simple heuristic)
+          var version = Object.keys(stores).length || 1;
+          var req = indexedDB.open(name, version);
+          req.onupgradeneeded = function (e) {
+            var db = e.target.result;
+            Object.keys(stores).forEach(function (sn) {
+              if (!db.objectStoreNames.contains(sn)) {
+                db.createObjectStore(sn, { keyPath: 'id', autoIncrement: true });
+              }
+            });
+          };
+          req.onsuccess = function (e) {
+            var db = e.target.result;
+            var storeNames = Object.keys(stores);
+            if (storeNames.length === 0) { db.close(); resolve(); return; }
+            var remaining = storeNames.length;
+            storeNames.forEach(function (sn) {
+              var items = stores[sn];
+              if (!items || items.length === 0) { remaining--; if (remaining === 0) { db.close(); resolve(); } return; }
+              var tx = db.transaction(sn, 'readwrite');
+              var store = tx.objectStore(sn);
+              var count = items.length;
+              items.forEach(function (item) { store.add(item); });
+              tx.oncomplete = function () { remaining--; if (remaining === 0) { db.close(); resolve(); } };
+              tx.onerror = function () { remaining--; if (remaining === 0) { db.close(); resolve(); } };
+            });
+          };
+          req.onerror = function () { resolve(); };
+        };
+        delReq.onerror = function () {
+          // Can't delete — try opening and clearing
+          var req2 = indexedDB.open(name);
+          req2.onsuccess = function (e) {
+            var db = e.target.result;
+            var storeNames = Array.from(db.objectStoreNames);
+            var remaining = storeNames.length;
+            if (remaining === 0) { db.close(); resolve(); return; }
+            storeNames.forEach(function (sn) {
+              var tx = db.transaction(sn, 'readwrite');
+              tx.objectStore(sn).clear();
+              tx.oncomplete = function () { remaining--; if (remaining === 0) { db.close(); resolve(); } };
+            });
+          };
+          req2.onerror = function () { resolve(); };
+        };
+      });
+    }
+
+    /** Show a toast message */
+    function sysToast(msg, type) {
+      var el = document.createElement('div');
+      el.className = 'hub__sys-toast hub__sys-toast--' + type;
+      el.textContent = msg;
+      document.body.appendChild(el);
+      setTimeout(function () { el.remove(); }, 3000);
+    }
+
+    /** EXPORT ALL */
+    document.getElementById('btnExportAll').addEventListener('click', function () {
+      var btn = this;
+      btn.disabled = true;
+      btn.textContent = '⏳ 读取中...';
+
+      var result = { _format: 'JuYiSysBackup/1', exportedAt: new Date().toISOString(), indexedDB: {}, localStorage: {} };
+
+      // Step 1: read all IndexedDBs
+      var dbPromises = SYS_DB_NAMES.map(function (name) {
+        return sysReadDB(name).then(function (stores) {
+          if (stores) result.indexedDB[name] = stores;
+        });
+      });
+
+      Promise.all(dbPromises).then(function () {
+        // Step 2: collect localStorage
+        var allKeys = Object.keys(localStorage);
+        SYS_LS_PREFIXES.forEach(function (prefix) {
+          allKeys.forEach(function (k) {
+            if (k.indexOf(prefix) === 0) {
+              result.localStorage[k] = localStorage.getItem(k);
+            }
+          });
+        });
+
+        // Step 3: download
+        var json = JSON.stringify(result, null, 2);
+        var blob = new Blob([json], { type: 'application/json' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'JuYi-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+        a.click();
+        URL.revokeObjectURL(url);
+
+        var dbCount = Object.keys(result.indexedDB).length;
+        var lsCount = Object.keys(result.localStorage).length;
+        sysToast('✅ 导出成功：' + dbCount + ' 个数据库 + ' + lsCount + ' 条配置', 'ok');
+        btn.disabled = false;
+        btn.textContent = '📦 一键导出全部';
+      }).catch(function (err) {
+        sysToast('导出失败：' + err.message, 'err');
+        btn.disabled = false;
+        btn.textContent = '📦 一键导出全部';
+      });
+    });
+
+    /** IMPORT ALL */
+    document.getElementById('btnImportAll').addEventListener('click', function () {
+      document.getElementById('sysImportFile').click();
+    });
+
+    document.getElementById('sysImportFile').addEventListener('change', function () {
+      var file = this.files[0];
+      if (!file) return;
+      var btn = document.getElementById('btnImportAll');
+      btn.disabled = true;
+      btn.textContent = '⏳ 导入中...';
+
+      var reader = new FileReader();
+      reader.onload = function (e) {
+        try {
+          var data = JSON.parse(e.target.result);
+          if (data._format !== 'JuYiSysBackup/1') { throw new Error('文件格式不正确，请选择 JuYi 系统备份文件'); }
+
+          // Step 1: restore IndexedDB
+          var dbNames = Object.keys(data.indexedDB || {});
+          var dbPromises = dbNames.map(function (name) {
+            return sysWriteDB(name, data.indexedDB[name]);
+          });
+
+          Promise.all(dbPromises).then(function () {
+            // Step 2: restore localStorage
+            var ls = data.localStorage || {};
+            Object.keys(ls).forEach(function (k) {
+              localStorage.setItem(k, ls[k]);
+            });
+
+            sysToast('✅ 导入成功！刷新各模块页面即可看到恢复的数据', 'ok');
+            btn.disabled = false;
+            btn.textContent = '📥 一键导入';
+          }).catch(function (err) {
+            sysToast('导入失败：' + err.message, 'err');
+            btn.disabled = false;
+            btn.textContent = '📥 一键导入';
+          });
+
+        } catch (err) {
+          sysToast('导入失败：' + err.message, 'err');
+          btn.disabled = false;
+          btn.textContent = '📥 一键导入';
+        }
+      };
+      reader.readAsText(file);
+      this.value = '';
     });
   </script>
 </body>
