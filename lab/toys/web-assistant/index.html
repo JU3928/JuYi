@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>网页助手 — JuYi 实验室</title>
+  <link rel="stylesheet" href="../../../shared/base.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="wa-app">
+
+  <!-- ====== 顶栏 ====== -->
+  <header class="wa-topbar">
+    <div class="wa-topbar__brand">
+      <span class="wa-topbar__icon">🌐</span>
+      <div>
+        <h1 class="wa-topbar__title">网页助手</h1>
+        <span class="wa-topbar__sub">剪藏 · 搜藏 · 本地文库</span>
+      </div>
+    </div>
+    <div class="wa-topbar__tabs">
+      <button class="wa-tab active" data-tab="clip">🔖 剪藏</button>
+      <button class="wa-tab" data-tab="search">🔍 搜藏</button>
+      <button class="wa-tab" data-tab="lib">📚 文库</button>
+    </div>
+    <div class="wa-topbar__right">
+      <button id="btnToggleSettings" class="jy-btn jy-btn--ghost jy-btn--sm">⚙</button>
+      <button id="btnToggleTheme" class="jy-btn jy-btn--ghost jy-btn--sm">🌙</button>
+      <a href="../../../index.html" class="jy-btn jy-btn--ghost jy-btn--sm">🧪</a>
+      <a href="../../../../index.html" class="jy-btn jy-btn--ghost jy-btn--sm">🏠</a>
+    </div>
+  </header>
+
+  <!-- ====== 设置面板 ====== -->
+  <div class="wa-settings" id="settingsPanel">
+    <div class="wa-settings__body">
+      <label class="jy-label">Firecrawl API Key</label>
+      <div class="wa-settings__row">
+        <input type="password" id="apiKeyInput" class="jy-input" placeholder="已保存 (fc-6736...)" style="flex:1">
+        <button id="btnSaveKey" class="jy-btn jy-btn--primary jy-btn--sm">保存</button>
+      </div>
+      <span class="jy-form-hint">Key 仅存储在浏览器本地，不上传任何服务器</span>
+    </div>
+  </div>
+
+  <!-- ====== 主体 ====== -->
+  <div class="wa-body">
+
+    <!-- 剪藏模式 -->
+    <div id="tabClip" class="wa-tab-content">
+      <div class="wa-input-row">
+        <input type="url" id="urlInput" class="wa-input" placeholder="粘贴网页 URL，如 https://example.com/article">
+        <button id="btnScrape" class="jy-btn jy-btn--primary">🔖 剪藏</button>
+      </div>
+    </div>
+
+    <!-- 搜藏模式 -->
+    <div id="tabSearch" class="wa-tab-content" style="display:none">
+      <div class="wa-input-row">
+        <input type="text" id="queryInput" class="wa-input" placeholder="输入搜索关键词">
+        <select id="searchLimit" class="jy-select" style="width:auto">
+          <option value="3">3 篇</option>
+          <option value="5" selected>5 篇</option>
+          <option value="8">8 篇</option>
+        </select>
+        <button id="btnSearchSave" class="jy-btn jy-btn--primary">🔍 搜索并收藏</button>
+      </div>
+    </div>
+
+    <!-- 文库模式 -->
+    <div id="tabLib" class="wa-tab-content" style="display:none">
+      <div class="wa-input-row">
+        <input type="text" id="libSearch" class="wa-input" placeholder="全文搜索已收藏文章...">
+        <button id="btnExportAll" class="jy-btn jy-btn--outline jy-btn--sm">📤 导出全部</button>
+        <button id="btnClearAll" class="jy-btn jy-btn--danger jy-btn--sm">清空</button>
+      </div>
+      <div class="wa-tag-row" id="libTagFilter"></div>
+    </div>
+
+    <!-- 状态栏 -->
+    <div class="wa-status" id="statusBar">
+      <span id="statusText"></span>
+    </div>
+
+    <!-- 文章列表 -->
+    <div class="wa-article-grid" id="articleList">
+      <div class="jy-empty">
+        <div class="jy-empty__icon">🌐</div>
+        <div class="jy-empty__text">网页助手就绪</div>
+        <div class="jy-empty__sub">剪藏或搜藏后文章会出现在这里 · 已收藏 <strong id="articleCount">0</strong> 篇</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ====== 文章详情弹窗 ====== -->
+<div class="jy-overlay modal-close-target" id="detailOverlay">
+  <div class="jy-modal" style="max-width:780px;max-height:85vh">
+    <div class="jy-modal__header">
+      <span class="jy-modal__title" id="detailTitle"></span>
+      <button class="jy-btn jy-btn--icon modal-close-btn">✕</button>
+    </div>
+    <div class="jy-modal__body">
+      <div class="wa-detail-meta" id="detailMeta"></div>
+      <div class="wa-detail-content" id="detailContent"></div>
+    </div>
+    <div class="jy-modal__footer">
+      <button class="jy-btn jy-btn--ghost modal-close-btn">关闭</button>
+      <button id="btnDetailDelete" class="jy-btn jy-btn--danger jy-btn--sm">🗑 删除</button>
+      <button id="btnDetailExport" class="jy-btn jy-btn--primary jy-btn--sm">📤 导出 MD</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
