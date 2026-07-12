@@ -778,7 +778,7 @@
   function stripHtml(html) { if (!html) return ''; const d = document.createElement('div'); d.innerHTML = html; d.querySelectorAll('img').forEach(img => img.replaceWith(' [图片] ')); return d.textContent || ''; }
   function sanitizeHTML(html) { if (!html) return ''; return html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '').replace(/on\w+\s*=\s*"[^"]*"/gi, '').replace(/on\w+\s*=\s*'[^']*'/gi, ''); }
   function esc(str) { if (!str) return ''; const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
-  function escAttr(str) { return str.replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
+  function escAttr(str) { if (!str) return ''; return String(str).replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
   function fmtDate(ts, withTime) { if (!ts) return ''; const d = new Date(ts); const pad = n => String(n).padStart(2, '0'); const ds = `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())}`; return withTime ? `${ds} ${pad(d.getHours())}:${pad(d.getMinutes())}` : ds; }
 
   /* ================================================================

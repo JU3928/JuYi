@@ -307,7 +307,7 @@
       this.els.editModalTitle.textContent = item ? '编辑记录' : '添加记录';
       this.els.editId.value = item ? item.id : '';
       this.els.editType.value = item ? item.type : this.activeTab === 'exercise' ? 'exercise' : 'weight';
-      this.els.editDate.value = item ? toDateStr(item.date) : toDateStr(Date.now());
+      this.els.editDate.value = fmtDate(item ? item.date : Date.now());
       this.els.editWeight.value = item && item.type === 'weight' ? item.weight : '';
       this.els.editExerciseType.value = item && item.type === 'exercise' ? (item.exerciseType || '') : '';
       this.els.editDuration.value = item && item.type === 'exercise' ? (item.duration || '') : '';
@@ -392,9 +392,8 @@
 
   // ---- 工具 ----
   function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
-  function escAttr(s) { return (s || '').replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
+  function escAttr(s) { return (s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
   function fmtDate(ts) { if (!ts) return ''; const d = new Date(ts); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
-  function toDateStr(ts) { return fmtDate(ts); }
 
   document.addEventListener('DOMContentLoaded', () => {
     const app = new FitnessApp();
@@ -407,6 +406,6 @@
         const item = e.target.closest('.record-item');
         if (item) { e.preventDefault(); app.pendingDeleteId = parseInt(item.dataset.id); app._openOverlay(app.els.confirmOverlay); }
       });
-    });
+    }).catch(function (err) { console.error('Fitness init error:', err); });
   });
 })();

@@ -194,7 +194,7 @@
         <div class="hub-card__icon">📅</div>
         <div class="hub-card__info">
           <h3>计划表</h3>
-          <p>三种场景 · 固定/弹性/比赛 · 时间线可视化</p>
+          <p>打卡签到 · 可视化日历 · 连续徽章 · 完成率统计</p>
           <span class="hub-card__badge">✅</span>
         </div>
       </a>
@@ -340,6 +340,7 @@
               var tx = db.transaction(sn, 'readwrite');
               tx.objectStore(sn).clear();
               tx.oncomplete = function () { remaining--; if (remaining === 0) { db.close(); resolve(); } };
+              tx.onerror = function () { remaining--; if (remaining === 0) { db.close(); resolve(); } };
             });
           };
           req2.onerror = function () { resolve(); };

@@ -879,7 +879,7 @@
       this._closeAllOverlays();
       await this.reload();
       // If deleting from manage ratings modal, re-render it
-      if (this.els.mrOverlay.classList.contains('is-open')) this._openManageRatingsModal();
+      if (this.els.mrOverlay && this.els.mrOverlay.classList.contains('is-open')) this._openManageRatingsModal();
       this._renderAll();
     }
   }
