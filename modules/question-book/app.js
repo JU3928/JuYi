@@ -477,6 +477,8 @@
       };
       // 初始化子题计数
       if (!this.currentAnswerRecord.subCounts) this.currentAnswerRecord.subCounts = {};
+      // 初始化标记
+      if (!this.currentAnswerRecord.marks) this.currentAnswerRecord.marks = {};
 
       this.els.listView.style.display = 'none';
       this.els.emptyState.style.display = 'none';
@@ -595,16 +597,21 @@
     }
 
     _buildChoiceQuestion(mainNum, key, currentVal, extraClasses, resultIcon, correctAnswerDisplay, displayLabel, subActions) {
+      const marks = this.currentAnswerRecord.marks || {};
+      const isMarked = marks[mainNum];
+      const markIcon = isMarked ? '⭐' : '☆';
+      const markClass = isMarked ? ' is-marked' : '';
       const optionsHTML = OPTIONS.map(letter => {
         const sel = currentVal === letter ? ' is-selected' : '';
         return `<button class="question-option${sel}" data-q="${key}" data-val="${letter}">${letter}</button>`;
       }).join('');
 
       return `
-        <div class="question-item${extraClasses}" data-q="${mainNum}" data-key="${key}">
+        <div class="question-item${extraClasses}${markClass}" data-q="${mainNum}" data-key="${key}">
           <span class="question-item__num-badge">${displayLabel || key}${resultIcon}</span>
           <div class="question-options">${optionsHTML}</div>
           ${correctAnswerDisplay}
+          <button class="mark-btn jy-btn jy-btn--ghost jy-btn--icon" data-mark="${mainNum}" title="${isMarked ? '取消标记' : '标记此题'}">${markIcon}</button>
           ${subActions}
         </div>`;
     }
@@ -629,6 +636,10 @@
 
     /* ---- answer interactions ---- */
     _onQuestionOptionClick(e) {
+      // 标记按钮
+      const markBtn = e.target.closest('.mark-btn');
+      if (markBtn) { e.stopPropagation(); this._toggleMark(parseInt(markBtn.dataset.mark)); return; }
+
       // 子题添加/移除按钮
       const subAdd = e.target.closest('.sub-add-btn');
       const subRemove = e.target.closest('.sub-remove-btn');
@@ -667,6 +678,17 @@
     }
 
     /* ---- 子题管理 ---- */
+    _toggleMark(qNum) {
+      if (!this.currentAnswerRecord.marks) this.currentAnswerRecord.marks = {};
+      if (this.currentAnswerRecord.marks[qNum]) {
+        delete this.currentAnswerRecord.marks[qNum];
+      } else {
+        this.currentAnswerRecord.marks[qNum] = true;
+      }
+      this._scheduleSave();
+      this._renderQuestions();
+    }
+
     _addSubQuestion(qNum) {
       const sc = this.currentAnswerRecord.subCounts || {};
       sc[qNum] = (sc[qNum] || 1) + 1;

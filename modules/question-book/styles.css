@@ -176,6 +176,24 @@
 }
 [data-theme="dark"] .question-item.is-correct { background: rgba(16,185,129,0.12); }
 
+/* 标记 */
+.question-item.is-marked {
+  border-left: 3px solid var(--jy-warning);
+  background: var(--jy-warning-soft);
+}
+[data-theme="dark"] .question-item.is-marked {
+  background: rgba(245,158,11,0.08);
+}
+.mark-btn {
+  flex-shrink: 0;
+  font-size: 1.2rem;
+  transition: transform .15s;
+}
+.mark-btn:hover {
+  transform: scale(1.2);
+  background: transparent !important;
+}
+
 /* 核对后错误 */
 .question-item.is-wrong {
   border-color: var(--jy-danger); background: #fef2f2;
