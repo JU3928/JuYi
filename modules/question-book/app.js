@@ -420,7 +420,9 @@
       const self = this;
       this.els.groupChips.querySelectorAll('.group-chip').forEach(function (chip) {
         chip.addEventListener('click', function () {
-          const g = groups.find(function (x) { return x.key === this.dataset.group; });
+          var groupKey = this.dataset.group;
+          var g = null;
+          for (var i = 0; i < groups.length; i++) { if (groups[i].key === groupKey) { g = groups[i]; break; } }
           if (!g) return;
           self.selectedBooks.clear();
           g.ids.forEach(function (id) { self.selectedBooks.add(id); });
@@ -435,9 +437,9 @@
       // Extract "root" names by stripping chapter suffixes like 3.1, 4.2, etc.
       const roots = books.map(function (b) {
         const name = b.name;
-        // Strip trailing chapter numbers: "数据结构王道3.1" -> "数据结构王道"
-        // Also handle "极限660" -> "极限"
-        const stripped = name.replace(/[\d.]+$/g, '').replace(/[（(]\d+[)）]$/g, '').trim();
+        // Strip trailing chapter numbers (X.Y format): "数据结构王道3.1" -> "数据结构王道"
+        // Keep standalone numbers: "极限660" stays as "极限660"
+        const stripped = name.replace(/\d+\.\d+$/g, '').replace(/[（(]\d+[)）]$/g, '').trim();
         return { id: b.id, name: name, root: stripped, key: stripped };
       });
       // Group by root
