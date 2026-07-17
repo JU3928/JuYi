@@ -434,16 +434,27 @@
       this.els.groupChips.style.display = 'block';
       this.els.mainChips.style.display = 'none';
 
-      // Bind group chip clicks (same pattern as test button — button + getElementById)
+      // Bind group chip clicks — pass book IDs directly via closure, no key matching needed
       var self = this;
       for (var gi2 = 0; gi2 < groups.length; gi2++) {
         var btn = document.getElementById('chip_' + gi2);
         if (btn) {
-          (function (gKey) {
+          (function (ids) {
             btn.addEventListener('click', function () {
-              self._selectBooksByGroup(gKey);
+              self.selectedBooks.clear();
+              for (var i = 0; i < ids.length; i++) { self.selectedBooks.add(ids[i]); }
+              // Sync checkboxes
+              var checks = self.els.bookList.querySelectorAll('.book-card__check');
+              for (var ck = 0; ck < checks.length; ck++) {
+                checks[ck].checked = self.selectedBooks.has(parseInt(checks[ck].dataset.bookId, 10));
+              }
+              // Highlight active chip
+              var allChips = self.els.groupChips.querySelectorAll('.group-chip');
+              for (var ac = 0; ac < allChips.length; ac++) { allChips[ac].classList.remove('active'); }
+              btn.classList.add('active');
+              self._renderStats();
             });
-          })(groups[gi2].key);
+          })(groups[gi2].ids.slice());
         }
       }
 
