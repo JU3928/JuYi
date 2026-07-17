@@ -419,48 +419,46 @@
       }
       this.els.groupChips.style.display = 'flex';
       this.els.mainChips.style.display = 'flex';
-      let html = '<span style="font-size:var(--jy-font-size-xs);color:var(--jy-text-muted)">快速选择：</span>';
+      // Render as BUTTON elements (guaranteed clickable)
+      var self = this;
+      var chipHTML = '<span style="font-size:var(--jy-font-size-xs);color:var(--jy-text-muted)">快速选择：</span>';
       for (var gi = 0; gi < groups.length; gi++) {
         var g = groups[gi];
-        html += '<span class="filter-chip group-chip" data-group="' + esc(g.key) + '">' + esc(g.label) + ' (' + g.count + ')</span>';
+        chipHTML += '<button class="filter-chip group-chip" data-group="' + esc(g.key) + '">' + esc(g.label) + ' (' + g.count + ')</button>';
       }
-      this.els.groupChips.innerHTML = html;
-      this.els.mainChips.innerHTML = html;
-      // Event delegation on BOTH parent containers
-      var self = this;
-      [this.els.groupChips, this.els.mainChips].forEach(function (chipContainer) {
-      chipContainer.onclick = function (e) {
-        e.stopPropagation();
-        var chip = e.target;
-        // Walk up to find .group-chip (in case click lands on child text node)
-        while (chip && chip !== chipContainer) {
-          if (chip.classList && chip.classList.contains('group-chip')) break;
-          chip = chip.parentElement;
-        }
-        if (!chip || chip === chipContainer) return;
-        var groupKey = chip.getAttribute('data-group');
-        if (!groupKey) return;
-        // Visual feedback: highlight chip
-        var allChips = chipContainer.querySelectorAll('.group-chip');
-        for (var ac = 0; ac < allChips.length; ac++) { allChips[ac].classList.remove('active'); }
-        chip.classList.add('active');
-        // Update selection
-        var groups2 = self._detectGroups();
-        for (var gi2 = 0; gi2 < groups2.length; gi2++) {
-          if (groups2[gi2].key === groupKey) {
-            self.selectedBooks.clear();
-            var ids = groups2[gi2].ids;
-            for (var idi = 0; idi < ids.length; idi++) { self.selectedBooks.add(ids[idi]); }
-            var checks = self.els.bookList.querySelectorAll('.book-card__check');
-            for (var ck = 0; ck < checks.length; ck++) {
-              checks[ck].checked = self.selectedBooks.has(parseInt(checks[ck].dataset.bookId, 10));
+      // Render into main area only (avoid sidebar z-index/layout issues)
+      this.els.mainChips.innerHTML = chipHTML;
+      this.els.mainChips.style.display = 'flex';
+      this.els.groupChips.style.display = 'none';
+
+      // Bind click via direct onclick attribute on each button
+      var btns = this.els.mainChips.querySelectorAll('.group-chip');
+      for (var bi = 0; bi < btns.length; bi++) {
+        btns[bi].onclick = function () {
+          var groupKey = this.getAttribute('data-group');
+          if (!groupKey) return;
+          // Highlight active
+          var allBtns = self.els.mainChips.querySelectorAll('.group-chip');
+          for (var ab = 0; ab < allBtns.length; ab++) { allBtns[ab].classList.remove('active'); }
+          this.classList.add('active');
+          // Find group and select its books
+          var groups2 = self._detectGroups();
+          for (var gi2 = 0; gi2 < groups2.length; gi2++) {
+            if (groups2[gi2].key === groupKey) {
+              self.selectedBooks.clear();
+              var ids = groups2[gi2].ids;
+              for (var idi = 0; idi < ids.length; idi++) { self.selectedBooks.add(ids[idi]); }
+              break;
             }
-            self._renderStats();
-            return;
           }
-        }
-      };
-      }); // close forEach
+          // Update checkboxes
+          var checks = self.els.bookList.querySelectorAll('.book-card__check');
+          for (var ck = 0; ck < checks.length; ck++) {
+            checks[ck].checked = self.selectedBooks.has(parseInt(checks[ck].dataset.bookId, 10));
+          }
+          self._renderStats();
+        };
+      }
     }
 
     _detectGroups() {
