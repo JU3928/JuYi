@@ -90,8 +90,6 @@
       this._saveTimer = null;
       this.compositeMode = false;
       this.selectedBooks = new Set();
-      // Global ref for inline onclick
-      window._qbApp = this;
     }
 
     /* ---- lifecycle ---- */
@@ -415,10 +413,34 @@
       if (!groups.length) { this.els.groupChips.style.display = 'none'; return; }
       this.els.groupChips.style.display = 'flex';
       let html = '<span style="font-size:var(--jy-font-size-xs);color:var(--jy-text-muted)">快速选择：</span>';
-      groups.forEach(function (g) {
-        html += '<span class="filter-chip group-chip" data-group="' + esc(g.key) + '" onclick="window._qbSelectGroup(\'' + esc(g.key) + '\')">' + esc(g.label) + ' (' + g.count + ')</span>';
-      });
+      for (var gi = 0; gi < groups.length; gi++) {
+        var g = groups[gi];
+        html += '<span class="filter-chip group-chip" data-group="' + esc(g.key) + '">' + esc(g.label) + ' (' + g.count + ')</span>';
+      }
       this.els.groupChips.innerHTML = html;
+      // Direct onclick binding (avoids closure/this issues)
+      var self = this;
+      var chips = this.els.groupChips.querySelectorAll('.group-chip');
+      for (var ci = 0; ci < chips.length; ci++) {
+        chips[ci].onclick = (function (groupKey) {
+          return function () {
+            var groups2 = self._detectGroups();
+            for (var gi2 = 0; gi2 < groups2.length; gi2++) {
+              if (groups2[gi2].key === groupKey) {
+                self.selectedBooks.clear();
+                var ids = groups2[gi2].ids;
+                for (var idi = 0; idi < ids.length; idi++) { self.selectedBooks.add(ids[idi]); }
+                var checks = self.els.bookList.querySelectorAll('.book-card__check');
+                for (var ck = 0; ck < checks.length; ck++) {
+                  checks[ck].checked = self.selectedBooks.has(parseInt(checks[ck].dataset.bookId, 10));
+                }
+                self._renderStats();
+                return;
+              }
+            }
+          };
+        })(chips[ci].getAttribute('data-group'));
+      }
     }
 
     _detectGroups() {
@@ -1321,25 +1343,6 @@
   /* ================================================================
    * Bootstrap
    * ================================================================ */
-  // Global handler for composite group chip clicks
-  window._qbSelectGroup = function (groupKey) {
-    var app = window._qbApp;
-    if (!app || !app.compositeMode) return;
-    var groups = app._detectGroups();
-    var g = null;
-    for (var i = 0; i < groups.length; i++) { if (groups[i].key === groupKey) { g = groups[i]; break; } }
-    if (!g) return;
-    app.selectedBooks.clear();
-    g.ids.forEach(function (id) { app.selectedBooks.add(id); });
-    // Directly update DOM checkboxes
-    var allChecks = app.els.bookList.querySelectorAll('.book-card__check');
-    allChecks.forEach(function (cb) {
-      var bid = parseInt(cb.dataset.bookId, 10);
-      cb.checked = app.selectedBooks.has(bid);
-    });
-    app._renderStats();
-  };
-
   document.addEventListener('DOMContentLoaded', () => {
     const app = new QuestionBookApp();
     app.init().catch(err => {
