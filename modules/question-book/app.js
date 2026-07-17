@@ -418,29 +418,27 @@
         html += '<span class="filter-chip group-chip" data-group="' + esc(g.key) + '">' + esc(g.label) + ' (' + g.count + ')</span>';
       }
       this.els.groupChips.innerHTML = html;
-      // Direct onclick binding (avoids closure/this issues)
+      // Event delegation: one handler on parent
       var self = this;
-      var chips = this.els.groupChips.querySelectorAll('.group-chip');
-      for (var ci = 0; ci < chips.length; ci++) {
-        chips[ci].onclick = (function (groupKey) {
-          return function () {
-            var groups2 = self._detectGroups();
-            for (var gi2 = 0; gi2 < groups2.length; gi2++) {
-              if (groups2[gi2].key === groupKey) {
-                self.selectedBooks.clear();
-                var ids = groups2[gi2].ids;
-                for (var idi = 0; idi < ids.length; idi++) { self.selectedBooks.add(ids[idi]); }
-                var checks = self.els.bookList.querySelectorAll('.book-card__check');
-                for (var ck = 0; ck < checks.length; ck++) {
-                  checks[ck].checked = self.selectedBooks.has(parseInt(checks[ck].dataset.bookId, 10));
-                }
-                self._renderStats();
-                return;
-              }
+      this.els.groupChips.onclick = function (e) {
+        var chip = e.target.closest ? e.target.closest('.group-chip') : null;
+        if (!chip) return;
+        var groupKey = chip.getAttribute('data-group');
+        var groups2 = self._detectGroups();
+        for (var gi2 = 0; gi2 < groups2.length; gi2++) {
+          if (groups2[gi2].key === groupKey) {
+            self.selectedBooks.clear();
+            var ids = groups2[gi2].ids;
+            for (var idi = 0; idi < ids.length; idi++) { self.selectedBooks.add(ids[idi]); }
+            var checks = self.els.bookList.querySelectorAll('.book-card__check');
+            for (var ck = 0; ck < checks.length; ck++) {
+              checks[ck].checked = self.selectedBooks.has(parseInt(checks[ck].dataset.bookId, 10));
             }
-          };
-        })(chips[ci].getAttribute('data-group'));
-      }
+            self._renderStats();
+            return;
+          }
+        }
+      };
     }
 
     _detectGroups() {
