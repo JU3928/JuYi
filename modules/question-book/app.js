@@ -163,6 +163,7 @@
         btnCompositeRun: q('#btnCompositeRun'),
         btnCompositeCancel: q('#btnCompositeCancel'),
         groupChips: q('#groupChips'),
+        mainChips: q('#mainChips'),
         compositeOverlay: q('#compositeOverlay'),
         compositeBody: q('#compositeBody'),
       };
@@ -404,23 +405,30 @@
       this.els.btnComposite.style.display = '';
       this.els.compositeBar.style.display = 'none';
       this.els.groupChips.style.display = 'none';
+      this.els.mainChips.style.display = 'none';
       this._renderBookList();
       this._renderStats();
     }
 
     _renderDetectedGroups() {
       const groups = this._detectGroups();
-      if (!groups.length) { this.els.groupChips.style.display = 'none'; return; }
+      if (!groups.length) {
+        this.els.groupChips.style.display = 'none';
+        this.els.mainChips.style.display = 'none';
+        return;
+      }
       this.els.groupChips.style.display = 'flex';
+      this.els.mainChips.style.display = 'flex';
       let html = '<span style="font-size:var(--jy-font-size-xs);color:var(--jy-text-muted)">快速选择：</span>';
       for (var gi = 0; gi < groups.length; gi++) {
         var g = groups[gi];
         html += '<span class="filter-chip group-chip" data-group="' + esc(g.key) + '">' + esc(g.label) + ' (' + g.count + ')</span>';
       }
       this.els.groupChips.innerHTML = html;
-      // Event delegation on the parent element
+      this.els.mainChips.innerHTML = html;
+      // Event delegation on BOTH parent containers
       var self = this;
-      var chipContainer = this.els.groupChips;
+      [this.els.groupChips, this.els.mainChips].forEach(function (chipContainer) {
       chipContainer.onclick = function (e) {
         e.stopPropagation();
         var chip = e.target;
@@ -452,6 +460,7 @@
           }
         }
       };
+      }); // close forEach
     }
 
     _detectGroups() {
