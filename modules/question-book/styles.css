@@ -98,6 +98,7 @@
 }
 .filter-chip:hover { border-color: var(--jy-primary); color: var(--jy-primary); }
 .filter-chip.active { background: var(--jy-primary-soft); color: var(--jy-primary); border-color: var(--jy-primary); font-weight: 600; }
+.group-chip { cursor: pointer !important; }
 
 /* 进度条 */
 .book-card__progress-bar {

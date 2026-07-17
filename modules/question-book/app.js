@@ -418,12 +418,25 @@
         html += '<span class="filter-chip group-chip" data-group="' + esc(g.key) + '">' + esc(g.label) + ' (' + g.count + ')</span>';
       }
       this.els.groupChips.innerHTML = html;
-      // Event delegation: one handler on parent
+      // Event delegation on the parent element
       var self = this;
-      this.els.groupChips.onclick = function (e) {
-        var chip = e.target.closest ? e.target.closest('.group-chip') : null;
-        if (!chip) return;
+      var chipContainer = this.els.groupChips;
+      chipContainer.onclick = function (e) {
+        e.stopPropagation();
+        var chip = e.target;
+        // Walk up to find .group-chip (in case click lands on child text node)
+        while (chip && chip !== chipContainer) {
+          if (chip.classList && chip.classList.contains('group-chip')) break;
+          chip = chip.parentElement;
+        }
+        if (!chip || chip === chipContainer) return;
         var groupKey = chip.getAttribute('data-group');
+        if (!groupKey) return;
+        // Visual feedback: highlight chip
+        var allChips = chipContainer.querySelectorAll('.group-chip');
+        for (var ac = 0; ac < allChips.length; ac++) { allChips[ac].classList.remove('active'); }
+        chip.classList.add('active');
+        // Update selection
         var groups2 = self._detectGroups();
         for (var gi2 = 0; gi2 < groups2.length; gi2++) {
           if (groups2[gi2].key === groupKey) {
