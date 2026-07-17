@@ -434,24 +434,31 @@
       this.els.groupChips.style.display = 'block';
       this.els.mainChips.style.display = 'none';
 
-      // Bind group chip clicks — pass book IDs directly via closure, no key matching needed
+      // Bind group chip clicks — toggle: select group / clear selection
       var self = this;
       for (var gi2 = 0; gi2 < groups.length; gi2++) {
         var btn = document.getElementById('chip_' + gi2);
         if (btn) {
           (function (ids) {
             btn.addEventListener('click', function () {
-              self.selectedBooks.clear();
-              for (var i = 0; i < ids.length; i++) { self.selectedBooks.add(ids[i]); }
+              var wasActive = btn.classList.contains('active');
+              // Clear all chip highlights first
+              var allChips = self.els.groupChips.querySelectorAll('.group-chip');
+              for (var ac = 0; ac < allChips.length; ac++) { allChips[ac].classList.remove('active'); }
+              if (wasActive) {
+                // Toggle off: clear all
+                self.selectedBooks.clear();
+              } else {
+                // Toggle on: select this group
+                self.selectedBooks.clear();
+                for (var i = 0; i < ids.length; i++) { self.selectedBooks.add(ids[i]); }
+                btn.classList.add('active');
+              }
               // Sync checkboxes
               var checks = self.els.bookList.querySelectorAll('.book-card__check');
               for (var ck = 0; ck < checks.length; ck++) {
                 checks[ck].checked = self.selectedBooks.has(parseInt(checks[ck].dataset.bookId, 10));
               }
-              // Highlight active chip
-              var allChips = self.els.groupChips.querySelectorAll('.group-chip');
-              for (var ac = 0; ac < allChips.length; ac++) { allChips[ac].classList.remove('active'); }
-              btn.classList.add('active');
               self._renderStats();
             });
           })(groups[gi2].ids.slice());
@@ -519,6 +526,28 @@
         chips[ci].classList.toggle('active', groupKey && chips[ci].getAttribute('data-group') === groupKey);
       }
       this._renderStats();
+    }
+
+    _syncGroupChips() {
+      // Update chip highlighting based on current selection
+      var groups2 = this._detectGroups();
+      var chips = this.els.groupChips.querySelectorAll('.group-chip');
+      for (var ci = 0; ci < chips.length; ci++) {
+        chips[ci].classList.remove('active');
+      }
+      for (var gi = 0; gi < groups2.length; gi++) {
+        var g = groups2[gi];
+        if (g.ids.length !== this.selectedBooks.size) continue;
+        var allMatch = true;
+        for (var idi = 0; idi < g.ids.length; idi++) {
+          if (!this.selectedBooks.has(g.ids[idi])) { allMatch = false; break; }
+        }
+        if (allMatch) {
+          var btn = document.getElementById('chip_' + gi);
+          if (btn) btn.classList.add('active');
+          break;
+        }
+      }
     }
 
     _showCompositeStats() {
@@ -669,6 +698,7 @@
         const bookId = parseInt(e.target.dataset.bookId, 10);
         if (e.target.checked) this.selectedBooks.add(bookId);
         else this.selectedBooks.delete(bookId);
+        this._syncGroupChips();
         this._renderStats();
         return;
       }
