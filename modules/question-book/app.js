@@ -422,26 +422,29 @@
       this.els.mainChips.style.display = 'flex';
       // Render as BUTTON elements (guaranteed clickable)
       var self = this;
-      // Render group chips + test button in sidebar
+      // Render group chips as BUTTON elements (same as test button)
       var chipHTML = '<div style="margin-bottom:var(--jy-space-1)"><span style="font-size:var(--jy-font-size-xs);color:var(--jy-text-muted)">快速选择：</span></div>';
       for (var gi = 0; gi < groups.length; gi++) {
         var g = groups[gi];
-        chipHTML += '<span class="filter-chip group-chip" data-group="' + esc(g.key) + '" style="cursor:pointer">' + esc(g.label) + ' (' + g.count + ')</span>';
+        var btnId = 'chip_' + gi;
+        chipHTML += '<button id="' + btnId + '" class="filter-chip group-chip" style="cursor:pointer;border:none;font-family:inherit">' + esc(g.label) + ' (' + g.count + ')</button>';
       }
       chipHTML += '<div style="margin-top:6px"><button class="jy-btn jy-btn--outline" style="font-size:10px;padding:2px 8px;width:100%" id="btnTestRandom">🧪 测试：随机选中1个题本</button></div>';
       this.els.groupChips.innerHTML = chipHTML;
       this.els.groupChips.style.display = 'block';
       this.els.mainChips.style.display = 'none';
 
-      // Group chip click
+      // Bind group chip clicks (same pattern as test button — button + getElementById)
       var self = this;
-      var chips = this.els.groupChips.querySelectorAll('.group-chip');
-      for (var ci = 0; ci < chips.length; ci++) {
-        (function (gKey) {
-          chips[ci].addEventListener('click', function () {
-            self._selectBooksByGroup(gKey);
-          });
-        })(chips[ci].getAttribute('data-group'));
+      for (var gi2 = 0; gi2 < groups.length; gi2++) {
+        var btn = document.getElementById('chip_' + gi2);
+        if (btn) {
+          (function (gKey) {
+            btn.addEventListener('click', function () {
+              self._selectBooksByGroup(gKey);
+            });
+          })(groups[gi2].key);
+        }
       }
 
       // Test button: random select 1 book
