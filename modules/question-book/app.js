@@ -90,6 +90,7 @@
       this._saveTimer = null;
       this.compositeMode = false;
       this.selectedBooks = new Set();
+      window._qb = this; // for chip inline onclick
     }
 
     /* ---- lifecycle ---- */
@@ -421,44 +422,17 @@
       this.els.mainChips.style.display = 'flex';
       // Render as BUTTON elements (guaranteed clickable)
       var self = this;
+      // Render chips as inline buttons with onclick in the HTML itself
+      var self = this;
       var chipHTML = '<span style="font-size:var(--jy-font-size-xs);color:var(--jy-text-muted)">快速选择：</span>';
       for (var gi = 0; gi < groups.length; gi++) {
         var g = groups[gi];
-        chipHTML += '<button class="filter-chip group-chip" data-group="' + esc(g.key) + '">' + esc(g.label) + ' (' + g.count + ')</button>';
+        // Use inline onclick on the button itself — most reliable approach
+        chipHTML += '<button class="filter-chip group-chip" onclick="(function(){var k=this.getAttribute(\'data-group\');var a=window._qb;if(!a)return;var gs=a._detectGroups();a.selectedBooks.clear();for(var i=0;i<gs.length;i++){if(gs[i].key===k){gs[i].ids.forEach(function(id){a.selectedBooks.add(id)});break}}var cs=a.els.bookList.querySelectorAll(\'.book-card__check\');for(var j=0;j<cs.length;j++){cs[j].checked=a.selectedBooks.has(parseInt(cs[j].dataset.bookId,10))}a._renderStats()}).call(this)" data-group="' + esc(g.key) + '">' + esc(g.label) + ' (' + g.count + ')</button>';
       }
-      // Render into main area only (avoid sidebar z-index/layout issues)
       this.els.mainChips.innerHTML = chipHTML;
       this.els.mainChips.style.display = 'flex';
       this.els.groupChips.style.display = 'none';
-
-      // Bind click via direct onclick attribute on each button
-      var btns = this.els.mainChips.querySelectorAll('.group-chip');
-      for (var bi = 0; bi < btns.length; bi++) {
-        btns[bi].onclick = function () {
-          var groupKey = this.getAttribute('data-group');
-          if (!groupKey) return;
-          // Highlight active
-          var allBtns = self.els.mainChips.querySelectorAll('.group-chip');
-          for (var ab = 0; ab < allBtns.length; ab++) { allBtns[ab].classList.remove('active'); }
-          this.classList.add('active');
-          // Find group and select its books
-          var groups2 = self._detectGroups();
-          for (var gi2 = 0; gi2 < groups2.length; gi2++) {
-            if (groups2[gi2].key === groupKey) {
-              self.selectedBooks.clear();
-              var ids = groups2[gi2].ids;
-              for (var idi = 0; idi < ids.length; idi++) { self.selectedBooks.add(ids[idi]); }
-              break;
-            }
-          }
-          // Update checkboxes
-          var checks = self.els.bookList.querySelectorAll('.book-card__check');
-          for (var ck = 0; ck < checks.length; ck++) {
-            checks[ck].checked = self.selectedBooks.has(parseInt(checks[ck].dataset.bookId, 10));
-          }
-          self._renderStats();
-        };
-      }
     }
 
     _detectGroups() {
