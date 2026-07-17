@@ -422,17 +422,50 @@
       this.els.mainChips.style.display = 'flex';
       // Render as BUTTON elements (guaranteed clickable)
       var self = this;
-      // Render chips as inline buttons with onclick in the HTML itself
-      var self = this;
+      // Use checkboxes for group selection — same reliable mechanism as book cards
       var chipHTML = '<span style="font-size:var(--jy-font-size-xs);color:var(--jy-text-muted)">快速选择：</span>';
       for (var gi = 0; gi < groups.length; gi++) {
         var g = groups[gi];
-        // Use inline onclick on the button itself — most reliable approach
-        chipHTML += '<button class="filter-chip group-chip" onclick="(function(){var k=this.getAttribute(\'data-group\');var a=window._qb;if(!a)return;var gs=a._detectGroups();a.selectedBooks.clear();for(var i=0;i<gs.length;i++){if(gs[i].key===k){gs[i].ids.forEach(function(id){a.selectedBooks.add(id)});break}}var cs=a.els.bookList.querySelectorAll(\'.book-card__check\');for(var j=0;j<cs.length;j++){cs[j].checked=a.selectedBooks.has(parseInt(cs[j].dataset.bookId,10))}a._renderStats()}).call(this)" data-group="' + esc(g.key) + '">' + esc(g.label) + ' (' + g.count + ')</button>';
+        chipHTML += '<label class="filter-chip group-chip-label" style="cursor:pointer">' +
+          '<input type="checkbox" class="group-check" data-group="' + esc(g.key) + '" style="margin-right:4px;accent-color:var(--jy-primary)">' +
+          esc(g.label) + ' (' + g.count + ')' +
+        '</label>';
       }
       this.els.mainChips.innerHTML = chipHTML;
       this.els.mainChips.style.display = 'flex';
       this.els.groupChips.style.display = 'none';
+
+      // Handle group checkbox changes — same pattern as book card checkboxes
+      var self = this;
+      var checks = this.els.mainChips.querySelectorAll('.group-check');
+      for (var ci = 0; ci < checks.length; ci++) {
+        checks[ci].onchange = function () {
+          var groupKey = this.getAttribute('data-group');
+          if (!groupKey) return;
+          // Uncheck all other group checkboxes
+          var allGroupChecks = self.els.mainChips.querySelectorAll('.group-check');
+          for (var ag = 0; ag < allGroupChecks.length; ag++) {
+            if (allGroupChecks[ag] !== this) allGroupChecks[ag].checked = false;
+          }
+          if (!this.checked) { self.selectedBooks.clear(); self._renderStats(); return; }
+          // Find group and select its books
+          var groups2 = self._detectGroups();
+          for (var gi2 = 0; gi2 < groups2.length; gi2++) {
+            if (groups2[gi2].key === groupKey) {
+              self.selectedBooks.clear();
+              var ids = groups2[gi2].ids;
+              for (var idi = 0; idi < ids.length; idi++) { self.selectedBooks.add(ids[idi]); }
+              break;
+            }
+          }
+          // Update book checkboxes
+          var bookChecks = self.els.bookList.querySelectorAll('.book-card__check');
+          for (var bk = 0; bk < bookChecks.length; bk++) {
+            bookChecks[bk].checked = self.selectedBooks.has(parseInt(bookChecks[bk].dataset.bookId, 10));
+          }
+          self._renderStats();
+        };
+      }
     }
 
     _detectGroups() {
