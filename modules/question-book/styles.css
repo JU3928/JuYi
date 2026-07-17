@@ -80,6 +80,25 @@
 }
 .book-card__meta-divider { color: var(--jy-text-muted); }
 
+/* 复合统计 */
+.book-card--composite { padding-left: var(--jy-space-3); }
+.book-card__check {
+  position: absolute; top: var(--jy-space-4); left: var(--jy-space-3);
+  width: 18px; height: 18px; cursor: pointer; accent-color: var(--jy-primary); z-index: 1;
+}
+.book-card--composite { position: relative; padding-left: var(--jy-space-6); cursor: default !important; }
+.book-card--composite:hover { transform: none !important; }
+
+/* 分组标签 */
+.filter-chip {
+  display: inline-block; padding: .15rem .55rem; font-size: var(--jy-font-size-xs);
+  border-radius: 99px; cursor: pointer; user-select: none;
+  background: var(--jy-bg-tertiary); color: var(--jy-text-secondary);
+  border: 1px solid transparent; transition: all var(--jy-transition);
+}
+.filter-chip:hover { border-color: var(--jy-primary); color: var(--jy-primary); }
+.filter-chip.active { background: var(--jy-primary-soft); color: var(--jy-primary); border-color: var(--jy-primary); font-weight: 600; }
+
 /* 进度条 */
 .book-card__progress-bar {
   height: 6px; border-radius: 3px; background: var(--jy-bg-tertiary); overflow: hidden;

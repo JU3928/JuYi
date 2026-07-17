@@ -88,6 +88,8 @@
       this.editingBookId = null;
       this.pendingDeleteBookId = null;
       this._saveTimer = null;
+      this.compositeMode = false;
+      this.selectedBooks = new Set();
     }
 
     /* ---- lifecycle ---- */
@@ -156,6 +158,13 @@
         checkAnswersOverlay: q('#checkAnswersOverlay'),
         correctAnswersList: q('#correctAnswersList'),
         btnRunCheck: q('#btnRunCheck'),
+        btnComposite: q('#btnComposite'),
+        compositeBar: q('#compositeBar'),
+        btnCompositeRun: q('#btnCompositeRun'),
+        btnCompositeCancel: q('#btnCompositeCancel'),
+        groupChips: q('#groupChips'),
+        compositeOverlay: q('#compositeOverlay'),
+        compositeBody: q('#compositeBody'),
       };
     }
 
@@ -196,6 +205,11 @@
       E.btnOpenCheck.addEventListener('click', () => this._openCheckModal());
       E.btnRecheck.addEventListener('click', () => this._openCheckModal());
       E.btnRunCheck.addEventListener('click', () => this._onRunCheck());
+
+      // Composite stats
+      E.btnComposite.addEventListener('click', () => this._enterCompositeMode());
+      E.btnCompositeRun.addEventListener('click', () => this._showCompositeStats());
+      E.btnCompositeCancel.addEventListener('click', () => this._exitCompositeMode());
 
       // Auto-save
       window.addEventListener('beforeunload', () => this._persistAnswers());
@@ -245,9 +259,12 @@
 
     _renderStats() {
       const totalQ = this.books.reduce((sum, b) => sum + b.questionCount, 0);
-      this.els.statsPanel.innerHTML =
-        `<div class="stats-panel__row"><span>做题本</span><strong>${this.books.length}</strong></div>` +
+      let html = `<div class="stats-panel__row"><span>做题本</span><strong>${this.books.length}</strong></div>` +
         `<div class="stats-panel__row"><span>总题数</span><strong>${totalQ}</strong></div>`;
+      if (this.compositeMode) {
+        html += `<div class="stats-panel__row"><span>已选</span><strong style="color:var(--jy-primary)">${this.selectedBooks.size}</strong></div>`;
+      }
+      this.els.statsPanel.innerHTML = html;
     }
 
     _renderBookList() {
@@ -296,9 +313,12 @@
       }
 
       const scoreClass = hasScore ? ' book-card--has-score' : '';
+      const compositeClass = this.compositeMode ? ' book-card--composite' : '';
+      const checkedAttr = this.selectedBooks.has(book.id) ? ' checked' : '';
 
       return `
-        <div class="book-card${scoreClass}" data-id="${book.id}">
+        <div class="book-card${scoreClass}${compositeClass}" data-id="${book.id}">
+          ${this.compositeMode ? `<input type="checkbox" class="book-card__check" data-book-id="${book.id}"${checkedAttr}>` : ''}
           <div class="book-card__actions">
             <button class="jy-btn jy-btn--icon edit-book-btn" data-id="${book.id}" title="编辑">✎</button>
           </div>
@@ -365,6 +385,131 @@
       for (const rec of allAnswers) {
         this._answerCache[rec.bookId] = rec;
       }
+    }
+
+    /* ---- composite stats ---- */
+    _enterCompositeMode() {
+      this.compositeMode = true;
+      this.selectedBooks.clear();
+      this.els.btnComposite.style.display = 'none';
+      this.els.compositeBar.style.display = '';
+      this._renderDetectedGroups();
+      this._renderBookList();
+      this._renderStats();
+    }
+
+    _exitCompositeMode() {
+      this.compositeMode = false;
+      this.selectedBooks.clear();
+      this.els.btnComposite.style.display = '';
+      this.els.compositeBar.style.display = 'none';
+      this.els.groupChips.style.display = 'none';
+      this._renderBookList();
+      this._renderStats();
+    }
+
+    _renderDetectedGroups() {
+      const groups = this._detectGroups();
+      if (!groups.length) { this.els.groupChips.style.display = 'none'; return; }
+      this.els.groupChips.style.display = 'flex';
+      let html = '<span style="font-size:var(--jy-font-size-xs);color:var(--jy-text-muted)">快速选择：</span>';
+      groups.forEach(function (g) {
+        html += '<span class="filter-chip group-chip" data-group="' + esc(g.key) + '">' + esc(g.label) + ' (' + g.count + ')</span>';
+      });
+      this.els.groupChips.innerHTML = html;
+      const self = this;
+      this.els.groupChips.querySelectorAll('.group-chip').forEach(function (chip) {
+        chip.addEventListener('click', function () {
+          const g = groups.find(function (x) { return x.key === this.dataset.group; });
+          if (!g) return;
+          self.selectedBooks.clear();
+          g.ids.forEach(function (id) { self.selectedBooks.add(id); });
+          self._renderBookList();
+        });
+      });
+    }
+
+    _detectGroups() {
+      const books = this.books;
+      if (books.length < 2) return [];
+      // Extract "root" names by stripping chapter suffixes like 3.1, 4.2, etc.
+      const roots = books.map(function (b) {
+        const name = b.name;
+        // Strip trailing chapter numbers: "数据结构王道3.1" -> "数据结构王道"
+        // Also handle "极限660" -> "极限"
+        const stripped = name.replace(/[\d.]+$/g, '').replace(/[（(]\d+[)）]$/g, '').trim();
+        return { id: b.id, name: name, root: stripped, key: stripped };
+      });
+      // Group by root
+      const map = {};
+      roots.forEach(function (r) {
+        if (!map[r.key]) map[r.key] = { label: r.root, count: 0, ids: [] };
+        map[r.key].count++;
+        map[r.key].ids.push(r.id);
+      });
+      // Filter to groups with >= 2 books
+      return Object.values(map).filter(function (g) { return g.count >= 2; }).sort(function (a, b) { return b.count - a.count; });
+    }
+
+    _showCompositeStats() {
+      if (this.selectedBooks.size < 2) { alert('请至少选择 2 个做题本'); return; }
+      const self = this;
+      // Gather stats for each selected book
+      let totalQ = 0, totalCorrect = 0, totalWrong = 0;
+      const bookDetails = [];
+      this.selectedBooks.forEach(function (id) {
+        const book = self.books.find(function (b) { return b.id === id; });
+        if (!book) return;
+        const stored = self._answerCache && self._answerCache[book.id];
+        const answers = stored ? (stored.answers || {}) : {};
+        const subCounts = stored ? (stored.subCounts || {}) : {};
+        let correct = 0, wrong = 0, total = 0;
+        for (let i = 1; i <= book.questionCount; i++) {
+          const sc = subCounts[i] || 1;
+          for (let j = 1; j <= sc; j++) {
+            const key = sc > 1 ? (i + '.' + j) : i.toString();
+            const ans = (answers[key] || '').trim();
+            if (ans) {
+              total++;
+              if (book.type === 'choice') {
+                const correctAns = stored.correctAnswers ? (stored.correctAnswers[key] || '').trim() : '';
+                if (correctAns === ans) correct++;
+                else wrong++;
+              } else {
+                if (ans === '正确') correct++;
+                else wrong++;
+              }
+            }
+          }
+        }
+        totalQ += total;
+        totalCorrect += correct;
+        totalWrong += wrong;
+        if (total > 0) bookDetails.push({ name: book.name, total: total, correct: correct, rate: correct / total });
+      });
+
+      if (totalQ === 0) { alert('选中做题本暂无可统计的答题记录'); return; }
+      const overallRate = totalCorrect / totalQ;
+      const cls = overallRate >= 0.8 ? '--high' : (overallRate >= 0.6 ? '--mid' : '--low');
+
+      let html = '<div style="text-align:center;padding:var(--jy-space-4)">' +
+        '<div class="score-display">' +
+        '<div class="score-display__value score-display__value' + cls + '">' + Math.round(overallRate * 100) + '%</div>' +
+        '<div class="score-display__label">综合正确率（' + totalCorrect + '/' + totalQ + '）</div>' +
+        '<div class="progress-bar" style="margin-top:var(--jy-space-3)">' +
+        '<div class="progress-bar__fill progress-bar__fill' + cls + '" style="width:' + Math.round(overallRate * 100) + '%"></div></div></div>';
+
+      // Per-book breakdown
+      html += '<div style="margin-top:var(--jy-space-4)"><table style="width:100%;font-size:var(--jy-font-size-sm)"><thead><tr><th>做题本</th><th>已答</th><th>正确率</th></tr></thead><tbody>';
+      bookDetails.sort(function (a, b) { return b.rate - a.rate; });
+      bookDetails.forEach(function (d) {
+        const dCls = d.rate >= 0.8 ? 'is-high' : (d.rate >= 0.6 ? 'is-mid' : 'is-low');
+        html += '<tr><td>' + esc(d.name) + '</td><td>' + d.correct + '/' + d.total + '</td><td><span class="book-card__stat--score ' + dCls + '" style="font-size:var(--jy-font-size-xs)">' + Math.round(d.rate * 100) + '%</span></td></tr>';
+      });
+      html += '</tbody></table></div>';
+
+      this.els.compositeBody.innerHTML = html;
+      this.els.compositeOverlay.classList.add('is-open');
     }
 
     /* ---- book CRUD ---- */
@@ -449,6 +594,16 @@
     }
 
     _onBookListClick(e) {
+      // Composite mode: checkbox toggle
+      if (this.compositeMode && e.target.classList.contains('book-card__check')) {
+        const bookId = parseInt(e.target.dataset.bookId, 10);
+        if (e.target.checked) this.selectedBooks.add(bookId);
+        else this.selectedBooks.delete(bookId);
+        this._renderStats();
+        return;
+      }
+      if (this.compositeMode) return; // No navigation in composite mode
+
       const editBtn = e.target.closest('.edit-book-btn');
       if (editBtn) {
         e.stopPropagation();

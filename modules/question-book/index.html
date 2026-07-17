@@ -20,6 +20,12 @@
     <div class="sidebar__section">
       <span class="sidebar__section-title">📊 统计</span>
       <div id="statsPanel" class="stats-panel"></div>
+      <button id="btnComposite" class="jy-btn jy-btn--outline jy-btn--sm" style="width:100%;margin-top:var(--jy-space-2)">📊 复合统计</button>
+      <div id="compositeBar" style="display:none;margin-top:var(--jy-space-2);text-align:center">
+        <button id="btnCompositeRun" class="jy-btn jy-btn--primary jy-btn--sm">统计选中</button>
+        <button id="btnCompositeCancel" class="jy-btn jy-btn--ghost jy-btn--sm">取消</button>
+      </div>
+      <div id="groupChips" style="display:none;margin-top:var(--jy-space-2);display:none;flex-wrap:wrap;gap:4px"></div>
     </div>
     <div class="sidebar__footer">
       <button id="btnToggleTheme" class="jy-btn jy-btn--outline jy-btn--sm sidebar__action-btn">🌙 暗色模式</button>
@@ -160,6 +166,20 @@
     <div class="jy-modal__footer">
       <button class="jy-btn jy-btn--ghost modal-close-btn">取消</button>
       <button id="btnRunCheck" class="jy-btn jy-btn--primary">🔍 开始核对</button>
+    </div>
+  </div>
+</div>
+
+<!-- ====== 复合统计弹窗 ====== -->
+<div id="compositeOverlay" class="jy-overlay modal-close-target">
+  <div class="jy-modal" style="max-width:580px">
+    <div class="jy-modal__header">
+      <span class="jy-modal__title">📊 复合统计结果</span>
+      <button class="jy-btn jy-btn--icon modal-close-btn">✕</button>
+    </div>
+    <div class="jy-modal__body" id="compositeBody"></div>
+    <div class="jy-modal__footer">
+      <button class="jy-btn jy-btn--ghost modal-close-btn">关闭</button>
     </div>
   </div>
 </div>
