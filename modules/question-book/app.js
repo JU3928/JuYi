@@ -90,6 +90,8 @@
       this._saveTimer = null;
       this.compositeMode = false;
       this.selectedBooks = new Set();
+      // Global ref for inline onclick
+      window._qbApp = this;
     }
 
     /* ---- lifecycle ---- */
@@ -414,21 +416,9 @@
       this.els.groupChips.style.display = 'flex';
       let html = '<span style="font-size:var(--jy-font-size-xs);color:var(--jy-text-muted)">快速选择：</span>';
       groups.forEach(function (g) {
-        html += '<span class="filter-chip group-chip" data-group="' + esc(g.key) + '">' + esc(g.label) + ' (' + g.count + ')</span>';
+        html += '<span class="filter-chip group-chip" data-group="' + esc(g.key) + '" onclick="window._qbSelectGroup(\'' + esc(g.key) + '\')">' + esc(g.label) + ' (' + g.count + ')</span>';
       });
       this.els.groupChips.innerHTML = html;
-      const self = this;
-      this.els.groupChips.querySelectorAll('.group-chip').forEach(function (chip) {
-        chip.addEventListener('click', function () {
-          var groupKey = this.dataset.group;
-          var g = null;
-          for (var i = 0; i < groups.length; i++) { if (groups[i].key === groupKey) { g = groups[i]; break; } }
-          if (!g) return;
-          self.selectedBooks.clear();
-          g.ids.forEach(function (id) { self.selectedBooks.add(id); });
-          self._renderBookList();
-        });
-      });
     }
 
     _detectGroups() {
@@ -449,12 +439,12 @@
         map[r.key].count++;
         map[r.key].ids.push(r.id);
       });
-      // Filter to groups with >= 2 books
-      return Object.values(map).filter(function (g) { return g.count >= 2; }).sort(function (a, b) { return b.count - a.count; });
+      // Return groups with >=1 book (single books still helpful for quick-select)
+      return Object.values(map).filter(function (g) { return g.count >= 1; }).sort(function (a, b) { return b.count - a.count; });
     }
 
     _showCompositeStats() {
-      if (this.selectedBooks.size < 2) { alert('请至少选择 2 个做题本'); return; }
+      if (this.selectedBooks.size < 1) { alert('请至少选择 1 个做题本'); return; }
       const self = this;
       // Gather stats for each selected book
       let totalQ = 0, totalCorrect = 0, totalWrong = 0;
@@ -1331,6 +1321,25 @@
   /* ================================================================
    * Bootstrap
    * ================================================================ */
+  // Global handler for composite group chip clicks
+  window._qbSelectGroup = function (groupKey) {
+    var app = window._qbApp;
+    if (!app || !app.compositeMode) return;
+    var groups = app._detectGroups();
+    var g = null;
+    for (var i = 0; i < groups.length; i++) { if (groups[i].key === groupKey) { g = groups[i]; break; } }
+    if (!g) return;
+    app.selectedBooks.clear();
+    g.ids.forEach(function (id) { app.selectedBooks.add(id); });
+    // Directly update DOM checkboxes
+    var allChecks = app.els.bookList.querySelectorAll('.book-card__check');
+    allChecks.forEach(function (cb) {
+      var bid = parseInt(cb.dataset.bookId, 10);
+      cb.checked = app.selectedBooks.has(bid);
+    });
+    app._renderStats();
+  };
+
   document.addEventListener('DOMContentLoaded', () => {
     const app = new QuestionBookApp();
     app.init().catch(err => {
