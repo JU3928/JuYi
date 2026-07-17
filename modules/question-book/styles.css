@@ -243,6 +243,16 @@
   animation: optionPulse 0.3s ease;
 }
 
+/* 填空题/解答题 正确/错误按钮 */
+.question-option.is-correct-btn.is-selected {
+  background: var(--jy-success); color: #fff;
+  border-color: var(--jy-success);
+}
+.question-option.is-wrong-btn.is-selected {
+  background: var(--jy-danger); color: #fff;
+  border-color: var(--jy-danger);
+}
+
 /* 子题 +/- 按钮 */
 .sub-add-btn, .sub-remove-btn {
   width: 24px; height: 24px; font-size: 14px; font-weight: 700;

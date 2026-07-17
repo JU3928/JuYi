@@ -575,12 +575,11 @@
 
       // 子题管理按钮（只在第一个子题行上显示，且是非核对状态）
       let subActions = '';
-      if (book.type === 'choice' && !isChecked && key.indexOf('.') === -1) {
+      if (!isChecked && key.indexOf('.') === -1) {
         subActions = `<button class="sub-add-btn jy-btn jy-btn--icon" data-q="${mainNum}" title="增加小空">＋</button>`;
       }
-      if (book.type === 'choice' && !isChecked && subCount && subCount > 1 && key === mainNum + '.' + subCount) {
+      if (!isChecked && subCount && subCount > 1 && key === mainNum + '.' + subCount) {
         subActions = `<button class="sub-remove-btn jy-btn jy-btn--icon" data-q="${mainNum}" title="移除末空">－</button>`;
-        // 如果只有一空则也显示+
         if (subCount === 1) subActions = '';
       }
 
@@ -618,19 +617,39 @@
 
     _buildFillBlankQuestion(mainNum, key, val, answeredClass) {
       const label = key.indexOf('.') > -1 ? key : key.toString();
+      const marks = this.currentAnswerRecord.marks || {};
+      const isMarked = marks[mainNum];
+      const markIcon = isMarked ? '⭐' : '☆';
+      const markClass = isMarked ? ' is-marked' : '';
+      const selCorrect = val === '正确' ? ' is-selected is-correct-btn' : '';
+      const selWrong = val === '错误' ? ' is-selected is-wrong-btn' : '';
       return `
-        <div class="question-item${answeredClass}" data-q="${mainNum}" data-key="${key}">
+        <div class="question-item${answeredClass}${markClass}" data-q="${mainNum}" data-key="${key}">
           <span class="question-item__num-badge">${label}</span>
-          <input class="jy-input" data-q="${key}" value="${escAttr(val)}" placeholder="输入答案...">
+          <div class="question-options">
+            <button class="question-option${selCorrect}" data-q="${key}" data-val="正确">✓ 正确</button>
+            <button class="question-option${selWrong}" data-q="${key}" data-val="错误">✗ 错误</button>
+          </div>
+          <button class="mark-btn jy-btn jy-btn--ghost jy-btn--icon" data-mark="${mainNum}" title="${isMarked ? '取消标记' : '标记此题'}">${markIcon}</button>
         </div>`;
     }
 
     _buildEssayQuestion(mainNum, key, val, answeredClass) {
       const label = key.indexOf('.') > -1 ? key : key.toString();
+      const marks = this.currentAnswerRecord.marks || {};
+      const isMarked = marks[mainNum];
+      const markIcon = isMarked ? '⭐' : '☆';
+      const markClass = isMarked ? ' is-marked' : '';
+      const selCorrect = val === '正确' ? ' is-selected is-correct-btn' : '';
+      const selWrong = val === '错误' ? ' is-selected is-wrong-btn' : '';
       return `
-        <div class="question-item${answeredClass}" data-q="${mainNum}" data-key="${key}">
+        <div class="question-item${answeredClass}${markClass}" data-q="${mainNum}" data-key="${key}">
           <span class="question-item__num-badge">${label}</span>
-          <textarea class="jy-input" data-q="${key}" rows="3" placeholder="输入解答...">${esc(val)}</textarea>
+          <div class="question-options">
+            <button class="question-option${selCorrect}" data-q="${key}" data-val="正确">✓ 正确</button>
+            <button class="question-option${selWrong}" data-q="${key}" data-val="错误">✗ 错误</button>
+          </div>
+          <button class="mark-btn jy-btn jy-btn--ghost jy-btn--icon" data-mark="${mainNum}" title="${isMarked ? '取消标记' : '标记此题'}">${markIcon}</button>
         </div>`;
     }
 
@@ -649,7 +668,7 @@
       const btn = e.target.closest('.question-option');
       if (!btn) return;
 
-      // 核对后锁定，提示用户
+      // 核对后锁定（仅选择题需要录入正确答案后锁定）
       if (this._isChecked() && this.activeBook.type === 'choice') {
         alert('已核对完成。如需修改答案，请先点击「重新核对」并重新录入正确答案。');
         return;
@@ -790,6 +809,12 @@
 
     _isChecked() {
       if (!this.currentAnswerRecord) return false;
+      const book = this.activeBook;
+      // For fill-blank/essay: self-assessed, stats available once any question answered
+      if (book && (book.type === 'fill-blank' || book.type === 'essay')) {
+        const answers = this.currentAnswerRecord.answers || {};
+        return Object.keys(answers).length > 0;
+      }
       const ca = this.currentAnswerRecord.correctAnswers;
       return ca && Object.keys(ca).length > 0;
     }
@@ -798,6 +823,21 @@
       const book = this.activeBook;
       if (!book || !this._isChecked()) return null;
       const answers = this.currentAnswerRecord.answers || {};
+      // For fill-blank/essay: self-assessed — count "正确" entries directly
+      if (book.type === 'fill-blank' || book.type === 'essay') {
+        const subCounts = this.currentAnswerRecord.subCounts || {};
+        let correct = 0, total = 0;
+        const wrongNums = [];
+        for (let i = 1; i <= book.questionCount; i++) {
+          const sc = subCounts[i] || 1;
+          for (let j = 1; j <= sc; j++) {
+            const key = sc > 1 ? (i + '.' + j) : i.toString();
+            const ans = (answers[key] || '').trim();
+            if (ans) { total++; if (ans === '正确') correct++; else { wrongNums.push(sc > 1 ? key : i); } }
+          }
+        }
+        return total > 0 ? { correct, wrong: total - correct, rate: correct / total, total, wrongNums } : null;
+      }
       const correctAnswers = this.currentAnswerRecord.correctAnswers || {};
       const subCounts = this.currentAnswerRecord.subCounts || {};
       let correct = 0, wrong = 0;
@@ -939,6 +979,11 @@
           const remaining = totalSlots - filledSlots;
           this.els.checkHintText.textContent = `还有 ${remaining} 个空未答，完成所有题目后可录入正确答案`;
         }
+      } else {
+        // fill-blank / essay: self-assessed, no separate check flow
+        this.els.btnOpenCheck.style.display = 'none';
+        this.els.btnRecheck.style.display = 'none';
+        this.els.checkHint.style.display = 'none';
       }
     }
 
@@ -986,11 +1031,31 @@
 
     _renderCheckSection() {
       const book = this.activeBook;
-      if (!book || book.type !== 'choice') {
-        this.els.checkSection.style.display = 'none';
+      if (!book) { this.els.checkSection.style.display = 'none'; return; }
+
+      // fill-blank/essay: auto-calculated from self-assessment
+      if (book.type === 'fill-blank' || book.type === 'essay') {
+        const stats = this._getCheckStats();
+        if (stats) {
+          this.els.checkSection.style.display = '';
+          const ratePct = Math.round(stats.rate * 100);
+          const cls = stats.rate >= 0.8 ? '--high' : (stats.rate >= 0.6 ? '--mid' : '--low');
+          let html = '<div class="score-display">' +
+            '<div class="score-display__value score-display__value' + cls + '">' + ratePct + '%</div>' +
+            '<div class="score-display__label">正确率（' + stats.correct + '/' + stats.total + '）</div>' +
+            '<div class="progress-bar" style="margin-top:var(--jy-space-3)">' +
+            '<div class="progress-bar__fill progress-bar__fill' + cls + '" style="width:' + ratePct + '%"></div></div></div>';
+          if (stats.wrongNums && stats.wrongNums.length) {
+            html += '<div style="margin-top:var(--jy-space-3);font-size:var(--jy-font-size-sm);color:var(--jy-text-secondary)">❌ 错题：' + stats.wrongNums.join('、') + '</div>';
+          }
+          this.els.checkResults.innerHTML = html;
+        } else {
+          this.els.checkSection.style.display = 'none';
+        }
         return;
       }
 
+      if (book.type !== 'choice') { this.els.checkSection.style.display = 'none'; return; }
       const stats = this._getCheckStats();
       if (!stats) {
         this.els.checkSection.style.display = 'none';
