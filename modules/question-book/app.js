@@ -912,8 +912,8 @@
         <div class="question-item${answeredClass}${markClass}" data-q="${mainNum}" data-key="${key}">
           <span class="question-item__num-badge">${label}</span>
           <div class="question-options">
-            <button class="question-option${selCorrect}" data-q="${key}" data-val="正确">✓ 正确</button>
-            <button class="question-option${selWrong}" data-q="${key}" data-val="错误">✗ 错误</button>
+            <button class="question-option${selCorrect}" data-q="${key}" data-val="正确">✓</button>
+            <button class="question-option${selWrong}" data-q="${key}" data-val="错误">✗</button>
           </div>
           <button class="mark-btn jy-btn jy-btn--ghost jy-btn--icon" data-mark="${mainNum}" title="${isMarked ? '取消标记' : '标记此题'}">${markIcon}</button>
         </div>`;
@@ -1349,11 +1349,11 @@
       html += `<div class="check-stat-row">
         <div class="check-stat-row__item">
           <div class="check-stat-row__value check-stat-row__value--correct">${stats.correct}</div>
-          <div class="check-stat-row__label">✓ 正确</div>
+          <div class="check-stat-row__label">✓</div>
         </div>
         <div class="check-stat-row__item">
           <div class="check-stat-row__value check-stat-row__value--wrong">${stats.wrong}</div>
-          <div class="check-stat-row__label">✗ 错误</div>
+          <div class="check-stat-row__label">✗</div>
         </div>
         <div class="check-stat-row__item">
           <div class="check-stat-row__value">${stats.total}</div>
