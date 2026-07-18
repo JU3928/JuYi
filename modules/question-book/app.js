@@ -423,16 +423,18 @@
       var bookLevel = groups.filter(function (g) { return g.level === 'book'; });
       var html = '';
 
-      // Subject level: e.g. "极限" "数据结构"
+      // Subject level: checkboxes with labels
       if (subjects.length) {
         html += '<div style="margin-bottom:4px"><span style="font-size:10px;color:var(--jy-text-muted)">学科：</span>';
         for (var si = 0; si < subjects.length; si++) {
-          html += '<button id="chip_' + si + '" class="filter-chip group-chip" style="border:none;font-family:inherit;cursor:pointer">' + subjects[si].label + ' (' + subjects[si].ids.length + ')</button>';
+          html += '<label class="filter-chip group-chip" style="cursor:pointer">' +
+            '<input type="checkbox" id="chip_' + si + '" class="group-check" style="margin-right:3px;accent-color:var(--jy-primary);vertical-align:middle">' +
+            subjects[si].label + ' (' + subjects[si].ids.length + ')</label>';
         }
         html += '</div>';
       }
 
-      // Book level: e.g. "660" "1000" grouped by parent
+      // Book level: checkboxes with labels
       if (bookLevel.length) {
         var byParent = {};
         bookLevel.forEach(function (b) { var p = b.parent || '_'; if (!byParent[p]) byParent[p] = []; byParent[p].push(b); });
@@ -443,7 +445,9 @@
           html += '<div style="margin-bottom:4px"><span style="font-size:10px;color:var(--jy-text-muted)">' + prefixLabel + '：</span>';
           for (var bi = 0; bi < items.length; bi++) {
             var idx = offset + bi;
-            html += '<button id="chip_' + idx + '" class="filter-chip group-chip" style="border:none;font-family:inherit;cursor:pointer">' + items[bi].label + ' (' + items[bi].ids.length + ')</button>';
+            html += '<label class="filter-chip group-chip" style="cursor:pointer">' +
+              '<input type="checkbox" id="chip_' + idx + '" class="group-check" style="margin-right:3px;accent-color:var(--jy-primary);vertical-align:middle">' +
+              items[bi].label + ' (' + items[bi].ids.length + ')</label>';
           }
           html += '</div>';
           offset += items.length;
@@ -452,27 +456,32 @@
 
       this.els.groupChips.innerHTML = html;
 
-      // Bind clicks — additive multi-select (don't clear previous selection)
+      // Bind checkbox click — additive multi-select, onclick always fires
       var self = this;
+      var applyGroup = function (gi) {
+        var cb = document.getElementById('chip_' + gi);
+        if (!cb) return;
+        var ids = groups[gi].ids;
+        if (cb.checked) {
+          for (var i = 0; i < ids.length; i++) { self.selectedBooks.add(ids[i]); }
+        } else {
+          for (var i = 0; i < ids.length; i++) { self.selectedBooks.delete(ids[i]); }
+        }
+        var checks = self.els.bookList.querySelectorAll('.book-card__check');
+        for (var ck = 0; ck < checks.length; ck++) {
+          checks[ck].checked = self.selectedBooks.has(parseInt(checks[ck].dataset.bookId, 10));
+        }
+        self._renderStats();
+      };
+      // Store on window for inline onclick backup
+      window._qbApplyGroup = applyGroup;
       for (var gi = 0; gi < groups.length; gi++) {
-        var btn = document.getElementById('chip_' + gi);
-        if (!btn) continue;
-        (function (ids) {
-          btn.addEventListener('click', function () {
-            if (btn.classList.contains('active')) {
-              for (var i = 0; i < ids.length; i++) { self.selectedBooks.delete(ids[i]); }
-              btn.classList.remove('active');
-            } else {
-              for (var i = 0; i < ids.length; i++) { self.selectedBooks.add(ids[i]); }
-              btn.classList.add('active');
-            }
-            var checks = self.els.bookList.querySelectorAll('.book-card__check');
-            for (var ck = 0; ck < checks.length; ck++) {
-              checks[ck].checked = self.selectedBooks.has(parseInt(checks[ck].dataset.bookId, 10));
-            }
-            self._renderStats();
-          });
-        })(groups[gi].ids.slice());
+        var cb = document.getElementById('chip_' + gi);
+        if (!cb) continue;
+        (function (gIdx) {
+          cb.onclick = function () { setTimeout(function () { applyGroup(gIdx); }, 0); };
+          cb.onchange = function () { applyGroup(gIdx); };
+        })(gi);
       }
     }
 
