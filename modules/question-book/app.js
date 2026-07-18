@@ -412,94 +412,118 @@
     }
 
     _renderDetectedGroups() {
-      const groups = this._detectGroups();
+      var groups = this._detectGroups();
       if (!groups.length) {
         this.els.groupChips.style.display = 'none';
-        this.els.mainChips.style.display = 'none';
         return;
       }
-      this.els.groupChips.style.display = 'flex';
-      this.els.mainChips.style.display = 'flex';
-      // Render as BUTTON elements (guaranteed clickable)
-      var self = this;
-      // Render group chips as BUTTON elements (same as test button)
-      var chipHTML = '<div style="margin-bottom:var(--jy-space-1)"><span style="font-size:var(--jy-font-size-xs);color:var(--jy-text-muted)">快速选择：</span></div>';
-      for (var gi = 0; gi < groups.length; gi++) {
-        var g = groups[gi];
-        var btnId = 'chip_' + gi;
-        chipHTML += '<button id="' + btnId + '" class="filter-chip group-chip" style="cursor:pointer;border:none;font-family:inherit">' + esc(g.label) + ' (' + g.count + ')</button>';
-      }
-      chipHTML += '<div style="margin-top:6px"><button class="jy-btn jy-btn--outline" style="font-size:10px;padding:2px 8px;width:100%" id="btnTestRandom">🧪 测试：随机选中1个题本</button></div>';
-      this.els.groupChips.innerHTML = chipHTML;
       this.els.groupChips.style.display = 'block';
-      this.els.mainChips.style.display = 'none';
 
-      // Bind group chip clicks — toggle: select group / clear selection
-      var self = this;
-      for (var gi2 = 0; gi2 < groups.length; gi2++) {
-        var btn = document.getElementById('chip_' + gi2);
-        if (btn) {
-          (function (ids) {
-            btn.addEventListener('click', function () {
-              var wasActive = btn.classList.contains('active');
-              // Clear all chip highlights first
-              var allChips = self.els.groupChips.querySelectorAll('.group-chip');
-              for (var ac = 0; ac < allChips.length; ac++) { allChips[ac].classList.remove('active'); }
-              if (wasActive) {
-                // Toggle off: clear all
-                self.selectedBooks.clear();
-              } else {
-                // Toggle on: select this group
-                self.selectedBooks.clear();
-                for (var i = 0; i < ids.length; i++) { self.selectedBooks.add(ids[i]); }
-                btn.classList.add('active');
-              }
-              // Sync checkboxes
-              var checks = self.els.bookList.querySelectorAll('.book-card__check');
-              for (var ck = 0; ck < checks.length; ck++) {
-                checks[ck].checked = self.selectedBooks.has(parseInt(checks[ck].dataset.bookId, 10));
-              }
-              self._renderStats();
-            });
-          })(groups[gi2].ids.slice());
+      var subjects = groups.filter(function (g) { return g.level === 'subject'; });
+      var bookLevel = groups.filter(function (g) { return g.level === 'book'; });
+      var html = '';
+
+      // Subject level: e.g. "极限" "数据结构"
+      if (subjects.length) {
+        html += '<div style="margin-bottom:4px"><span style="font-size:10px;color:var(--jy-text-muted)">学科：</span>';
+        for (var si = 0; si < subjects.length; si++) {
+          html += '<button id="chip_' + si + '" class="filter-chip group-chip" style="border:none;font-family:inherit;cursor:pointer">' + subjects[si].label + ' (' + subjects[si].ids.length + ')</button>';
         }
+        html += '</div>';
       }
 
-      // Test button: random select 1 book
-      var testBtn = document.getElementById('btnTestRandom');
-      if (testBtn) {
-        testBtn.addEventListener('click', function () {
-          if (self.books.length === 0) return;
-          var ri = Math.floor(Math.random() * self.books.length);
-          var randBook = self.books[ri];
-          self.selectedBooks.clear();
-          self.selectedBooks.add(randBook.id);
-          self._selectBooksByGroup(null); // refresh checkboxes
-          self._renderStats();
+      // Book level: e.g. "660" "1000" grouped by parent
+      if (bookLevel.length) {
+        var byParent = {};
+        bookLevel.forEach(function (b) { var p = b.parent || '_'; if (!byParent[p]) byParent[p] = []; byParent[p].push(b); });
+        var offset = subjects.length;
+        Object.keys(byParent).forEach(function (parent) {
+          var items = byParent[parent];
+          var prefixLabel = parent === '_' ? '' : parent;
+          html += '<div style="margin-bottom:4px"><span style="font-size:10px;color:var(--jy-text-muted)">' + prefixLabel + '：</span>';
+          for (var bi = 0; bi < items.length; bi++) {
+            var idx = offset + bi;
+            html += '<button id="chip_' + idx + '" class="filter-chip group-chip" style="border:none;font-family:inherit;cursor:pointer">' + items[bi].label + ' (' + items[bi].ids.length + ')</button>';
+          }
+          html += '</div>';
+          offset += items.length;
         });
+      }
+
+      this.els.groupChips.innerHTML = html;
+
+      // Bind clicks — additive multi-select (don't clear previous selection)
+      var self = this;
+      for (var gi = 0; gi < groups.length; gi++) {
+        var btn = document.getElementById('chip_' + gi);
+        if (!btn) continue;
+        (function (ids) {
+          btn.addEventListener('click', function () {
+            if (btn.classList.contains('active')) {
+              for (var i = 0; i < ids.length; i++) { self.selectedBooks.delete(ids[i]); }
+              btn.classList.remove('active');
+            } else {
+              for (var i = 0; i < ids.length; i++) { self.selectedBooks.add(ids[i]); }
+              btn.classList.add('active');
+            }
+            var checks = self.els.bookList.querySelectorAll('.book-card__check');
+            for (var ck = 0; ck < checks.length; ck++) {
+              checks[ck].checked = self.selectedBooks.has(parseInt(checks[ck].dataset.bookId, 10));
+            }
+            self._renderStats();
+          });
+        })(groups[gi].ids.slice());
       }
     }
 
     _detectGroups() {
-      const books = this.books;
+      var books = this.books;
       if (books.length < 2) return [];
-      // Extract "root" names by stripping chapter suffixes like 3.1, 4.2, etc.
-      const roots = books.map(function (b) {
-        const name = b.name;
-        // Strip trailing chapter numbers (X.Y format): "数据结构王道3.1" -> "数据结构王道"
-        // Keep standalone numbers: "极限660" stays as "极限660"
-        const stripped = name.replace(/\d+\.\d+$/g, '').replace(/[（(]\d+[)）]$/g, '').trim();
-        return { id: b.id, name: name, root: stripped, key: stripped };
+      // Step 1: Strip chapter numbers (X.Y) from all names
+      var roots = books.map(function (b) {
+        var stripped = b.name.replace(/\d+\.\d+$/g, '').replace(/[（(]\d+[)）]$/g, '').trim();
+        return { id: b.id, root: stripped };
       });
-      // Group by root
-      const map = {};
+      var allRoots = roots.map(function (r) { return r.root; });
+      var groups = [];
+
+      // Step 2: Find common prefixes (Chinese chars only) shared by ≥2 books
+      var prefixMap = {};
       roots.forEach(function (r) {
-        if (!map[r.key]) map[r.key] = { label: r.root, count: 0, ids: [] };
-        map[r.key].count++;
-        map[r.key].ids.push(r.id);
+        // Extract Chinese-prefix (all leading non-digit, non-punctuation chars)
+        var m = r.root.match(/^([^\d]+)/);
+        if (m && m[1].length >= 1) {
+          var pref = m[1];
+          if (!prefixMap[pref]) prefixMap[pref] = [];
+          prefixMap[pref].push(r.id);
+        }
       });
-      // Return groups with >=1 book (single books still helpful for quick-select)
-      return Object.values(map).filter(function (g) { return g.count >= 1; }).sort(function (a, b) { return b.count - a.count; });
+
+      // Add subject-level groups (e.g. "极限", "数据结构")
+      Object.keys(prefixMap).forEach(function (pref) {
+        if (prefixMap[pref].length >= 2) {
+          groups.push({ key: 's_' + pref, label: pref, ids: prefixMap[pref].slice(), level: 'subject' });
+        }
+      });
+
+      // Step 3: Find book-number suffixes within each subject
+      // e.g. within "极限" → "660", "1000"
+      Object.keys(prefixMap).forEach(function (pref) {
+        var rootsWithPref = roots.filter(function (r) { return r.root.indexOf(pref) === 0 && r.root.length > pref.length; });
+        var suffixes = [];
+        rootsWithPref.forEach(function (r) {
+          var suf = r.root.slice(pref.length);
+          if (suf && suffixes.indexOf(suf) === -1) suffixes.push(suf);
+        });
+        suffixes.forEach(function (suf) {
+          var ids = roots.filter(function (r) { return r.root === pref + suf; }).map(function (r) { return r.id; });
+          if (ids.length >= 1) {
+            groups.push({ key: 'b_' + pref + suf, label: suf, ids: ids.slice(), level: 'book', parent: pref });
+          }
+        });
+      });
+
+      return groups;
     }
 
     _selectBooksByGroup(groupKey) {
@@ -698,7 +722,6 @@
         const bookId = parseInt(e.target.dataset.bookId, 10);
         if (e.target.checked) this.selectedBooks.add(bookId);
         else this.selectedBooks.delete(bookId);
-        this._syncGroupChips();
         this._renderStats();
         return;
       }
