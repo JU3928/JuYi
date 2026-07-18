@@ -7,7 +7,7 @@
   const STORE_ANSWERS = 'questionAnswers';
   const LS_THEME = 'jy_theme';
 
-  const TYPE_LABELS = { 'choice': '选择题', 'fill-blank': '填空题', 'essay': '解答题' };
+  const TYPE_LABELS = { 'choice': '选择题', 'open': '非选择题' };
   const OPTIONS = ['A', 'B', 'C', 'D'];
 
   /* ================================================================
@@ -843,10 +843,8 @@
 
       if (book.type === 'choice') {
         return this._buildChoiceQuestion(mainNum, key, val, classes + checkClass, resultIcon, correctAnswerDisplay, displayLabel, subActions);
-      } else if (book.type === 'fill-blank') {
-        return this._buildFillBlankQuestion(mainNum, key, val, classes);
       } else {
-        return this._buildEssayQuestion(mainNum, key, val, classes);
+        return this._buildOpenQuestion(mainNum, key, val, classes);
       }
     }
 
@@ -870,26 +868,7 @@
         </div>`;
     }
 
-    _buildFillBlankQuestion(mainNum, key, val, answeredClass) {
-      const label = key.indexOf('.') > -1 ? key : key.toString();
-      const marks = this.currentAnswerRecord.marks || {};
-      const isMarked = marks[mainNum];
-      const markIcon = isMarked ? '⭐' : '☆';
-      const markClass = isMarked ? ' is-marked' : '';
-      const selCorrect = val === '正确' ? ' is-selected is-correct-btn' : '';
-      const selWrong = val === '错误' ? ' is-selected is-wrong-btn' : '';
-      return `
-        <div class="question-item${answeredClass}${markClass}" data-q="${mainNum}" data-key="${key}">
-          <span class="question-item__num-badge">${label}</span>
-          <div class="question-options">
-            <button class="question-option${selCorrect}" data-q="${key}" data-val="正确">✓ 正确</button>
-            <button class="question-option${selWrong}" data-q="${key}" data-val="错误">✗ 错误</button>
-          </div>
-          <button class="mark-btn jy-btn jy-btn--ghost jy-btn--icon" data-mark="${mainNum}" title="${isMarked ? '取消标记' : '标记此题'}">${markIcon}</button>
-        </div>`;
-    }
-
-    _buildEssayQuestion(mainNum, key, val, answeredClass) {
+    _buildOpenQuestion(mainNum, key, val, answeredClass) {
       const label = key.indexOf('.') > -1 ? key : key.toString();
       const marks = this.currentAnswerRecord.marks || {};
       const isMarked = marks[mainNum];
@@ -1066,7 +1045,7 @@
       if (!this.currentAnswerRecord) return false;
       const book = this.activeBook;
       // For fill-blank/essay: self-assessed, stats available once any question answered
-      if (book && (book.type === 'fill-blank' || book.type === 'essay')) {
+      if (book && (book.type === 'open')) {
         const answers = this.currentAnswerRecord.answers || {};
         return Object.keys(answers).length > 0;
       }
@@ -1079,7 +1058,7 @@
       if (!book || !this._isChecked()) return null;
       const answers = this.currentAnswerRecord.answers || {};
       // For fill-blank/essay: self-assessed — count "正确" entries directly
-      if (book.type === 'fill-blank' || book.type === 'essay') {
+      if (book.type === 'open') {
         const subCounts = this.currentAnswerRecord.subCounts || {};
         let correct = 0, total = 0;
         const wrongNums = [];
@@ -1289,7 +1268,7 @@
       if (!book) { this.els.checkSection.style.display = 'none'; return; }
 
       // fill-blank/essay: auto-calculated from self-assessment
-      if (book.type === 'fill-blank' || book.type === 'essay') {
+      if (book.type === 'open') {
         const stats = this._getCheckStats();
         if (stats) {
           this.els.checkSection.style.display = '';

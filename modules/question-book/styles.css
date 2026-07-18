@@ -71,8 +71,7 @@
   font-weight: 600; border-radius: 99px; color: #fff; flex-shrink: 0;
 }
 .book-card__type--choice { background: var(--jy-primary); }
-.book-card__type--fill-blank { background: var(--jy-warning); }
-.book-card__type--essay { background: #7c3aed; }
+.book-card__type--open { background: var(--jy-warning); }
 
 .book-card__meta {
   display: flex; align-items: center; gap: var(--jy-space-3);
