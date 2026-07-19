@@ -877,14 +877,16 @@
         }
       }
 
-      // 子题管理按钮（只在第一个子题行上显示，且是非核对状态）
+      // 子题管理按钮：无子题时+在唯一行上，有子题时+-都在最后一行
       let subActions = '';
       if (!isChecked && key.indexOf('.') === -1) {
+        // 未拆分的题：显示 + 开始拆分
         subActions = `<button class="sub-add-btn jy-btn jy-btn--icon" data-q="${mainNum}" title="增加小空">＋</button>`;
       }
       if (!isChecked && subCount && subCount > 1 && key === mainNum + '.' + subCount) {
-        subActions = `<button class="sub-remove-btn jy-btn jy-btn--icon" data-q="${mainNum}" title="移除末空">－</button>`;
-        if (subCount === 1) subActions = '';
+        // 最后一个子题行：同时显示 +（继续加）和 -（移除末尾）
+        subActions = `<button class="sub-add-btn jy-btn jy-btn--icon" data-q="${mainNum}" title="增加小空">＋</button>
+                      <button class="sub-remove-btn jy-btn jy-btn--icon" data-q="${mainNum}" title="移除末空">－</button>`;
       }
 
       const label = key.indexOf('.') > -1 ? key : key.toString();
