@@ -377,6 +377,23 @@
         if (checked > 0) {
           result.score = { correct, wrong, rate: correct / checked, total: checked };
         }
+      } else if (book.type === 'open') {
+        // 非选择题：从自评结果计算正确率（"正确"/"错误"）
+        let correct = 0, wrong = 0;
+        for (let i = 1; i <= book.questionCount; i++) {
+          const sc = subCounts[i] || 1;
+          for (let j = 1; j <= sc; j++) {
+            const key = sc > 1 ? (i + '.' + j) : i.toString();
+            const ans = (answers[key] || '').trim();
+            if (ans) {
+              if (ans === '正确') correct++; else wrong++;
+            }
+          }
+        }
+        const checked = correct + wrong;
+        if (checked > 0) {
+          result.score = { correct, wrong, rate: correct / checked, total: checked };
+        }
       }
       return result;
     }
@@ -799,7 +816,7 @@
       this.els.answerProgress.textContent = answeredSlots + '/' + totalSlots + ' 已答';
 
       // 正确率徽章
-      if (this._isChecked() && book.type === 'choice') {
+      if (this._isChecked()) {
         const stats = this._getCheckStats();
         if (stats) {
           const cls = stats.rate >= 0.8 ? 'is-high' : (stats.rate >= 0.6 ? 'is-mid' : 'is-low');
