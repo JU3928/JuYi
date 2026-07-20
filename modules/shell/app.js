@@ -104,10 +104,7 @@
   /* ================================================================
    * Utilities
    * ================================================================ */
-  function esc(str) {
-    if (!str) return '';
-    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  }
+  /* esc / escAttr / stripHtml / sanitizeHtml — provided by shared/utils.js */
   function fmtDate(ts) {
     const d = new Date(ts);
     return d.getFullYear() + '-' +
@@ -512,7 +509,7 @@
       this.$modalTitle.textContent = card ? '编辑卡片' : '新建卡片';
       this.$editId.value = card ? card.id : '';
       this.$editTitle.value = card ? card.title : '';
-      this.$editContent.innerHTML = card ? card.content : '';
+      this.$editContent.innerHTML = card ? sanitizeHtml(card.content) : '';
       this.$editCategory.value = card ? card.category : '';
       this.$editTags.value = card && card.tags ? card.tags.join('，') : '';
       this.$overlay.classList.add('is-open');
@@ -579,7 +576,7 @@
 
     _openDetail(card) {
       this.$detailTitle.textContent = card.title;
-      this.$detailContent.innerHTML = card.content;
+      this.$detailContent.innerHTML = sanitizeHtml(card.content);
       var metaParts = [];
       if (card.category) metaParts.push('📂 ' + esc(card.category));
       if (card.tags && card.tags.length) metaParts.push('🏷 ' + card.tags.map(esc).join(' · '));

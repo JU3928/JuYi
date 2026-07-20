@@ -366,7 +366,7 @@
         return;
       }
       const item = items[currentIndex];
-      this.els.reviewCardContent.innerHTML = sanitizeHTML(item.question || '<span class="jy-text-muted">暂无题目</span>');
+      this.els.reviewCardContent.innerHTML = sanitizeHtml(item.question || '<span class="jy-text-muted">暂无题目</span>');
       this.els.reviewCardBadge.innerHTML = item.isHard
         ? '<span class="card__badge card__badge--hard">难题</span>'
         : '<span class="card__badge card__badge--normal">普通</span>';
@@ -418,7 +418,7 @@
       const { items, currentIndex } = this.review;
       if (currentIndex >= items.length) return;
       const item = items[currentIndex];
-      this.els.answerBody.innerHTML = sanitizeHTML(item.answer || '<span class="jy-text-muted">暂无解析</span>');
+      this.els.answerBody.innerHTML = sanitizeHtml(item.answer || '<span class="jy-text-muted">暂无解析</span>');
       this._openOverlay(this.els.answerOverlay);
     }
 
@@ -495,8 +495,8 @@
       const lastReview = item.lastReviewedAt ? fmtDate(item.lastReviewedAt, true) : '尚未复习';
 
       b.innerHTML = `
-        <div class="detail-section"><span class="detail-section__label">📌 题目</span><div class="detail-section__content">${sanitizeHTML(item.question || '<span class="jy-text-muted">暂无</span>')}</div></div>
-        <div class="detail-section"><span class="detail-section__label">💡 解析</span><div class="detail-section__content">${sanitizeHTML(item.answer || '<span class="jy-text-muted">暂无</span>')}</div></div>
+        <div class="detail-section"><span class="detail-section__label">📌 题目</span><div class="detail-section__content">${sanitizeHtml(item.question || '<span class="jy-text-muted">暂无</span>')}</div></div>
+        <div class="detail-section"><span class="detail-section__label">💡 解析</span><div class="detail-section__content">${sanitizeHtml(item.answer || '<span class="jy-text-muted">暂无</span>')}</div></div>
         <div class="detail-meta">
           <span class="detail-meta__item"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${color}"></span> 科目：${esc(item.subject)}</span>
           <span class="detail-meta__item">${badge}</span>
@@ -713,16 +713,13 @@
     }
     _insertImage(content, file) { const r = new FileReader(); r.onload = () => { content.focus(); document.execCommand('insertImage', false, r.result); }; r.readAsDataURL(file); }
     _getEditorContent(name) { const el = document.querySelector(`.rich-editor[data-editor="${name}"] .rich-editor__content`); return el ? el.innerHTML : ''; }
-    _setEditorContent(name, html) { const el = document.querySelector(`.rich-editor[data-editor="${name}"] .rich-editor__content`); if (el) el.innerHTML = html || ''; }
+    _setEditorContent(name, html) { const el = document.querySelector(`.rich-editor[data-editor="${name}"] .rich-editor__content`); if (el) el.innerHTML = sanitizeHtml(html) || ''; }
   }
 
   /* ================================================================
    * 工具函数
    * ================================================================ */
-  function stripHtml(html) { if (!html) return ''; const d = document.createElement('div'); d.innerHTML = html; d.querySelectorAll('img').forEach(img => img.replaceWith(' [图片] ')); return d.textContent || ''; }
-  function sanitizeHTML(html) { if (!html) return ''; return html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '').replace(/on\w+\s*=\s*"[^"]*"/gi, '').replace(/on\w+\s*=\s*'[^']*'/gi, ''); }
-  function esc(str) { if (!str) return ''; const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
-  function escAttr(str) { if (!str) return ''; return String(str).replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
+  /* esc / escAttr / stripHtml / sanitizeHtml — provided by shared/utils.js */
   function fmtDate(ts, withTime) { if (!ts) return ''; const d = new Date(ts); const pad = n => String(n).padStart(2, '0'); const ds = `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())}`; return withTime ? `${ds} ${pad(d.getHours())}:${pad(d.getMinutes())}` : ds; }
 
   /* ================================================================
