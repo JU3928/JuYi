@@ -11,53 +11,6 @@
   const OPTIONS = ['A', 'B', 'C', 'D'];
 
   /* ================================================================
-   * IndexedDB wrapper
-   * ================================================================ */
-  class DB {
-    constructor() { this.db = null; }
-    open(name, version, stores) {
-      return new Promise((resolve, reject) => {
-        const req = indexedDB.open(name, version);
-        req.onupgradeneeded = (e) => {
-          const db = e.target.result;
-          for (const [sn, def] of Object.entries(stores)) {
-            const store = db.objectStoreNames.contains(sn)
-              ? e.target.transaction.objectStore(sn)
-              : db.createObjectStore(sn, { keyPath: def.keyPath, autoIncrement: def.autoIncrement !== false });
-            for (const idx of def.indexes || []) {
-              if (!store.indexNames.contains(idx.name)) {
-                store.createIndex(idx.name, idx.keyPath, { unique: idx.unique || false });
-              }
-            }
-          }
-        };
-        req.onsuccess = (e) => { this.db = e.target.result; resolve(this.db); };
-        req.onerror = (e) => reject(e.target.error);
-      });
-    }
-    _tx(storeName, mode, cb) {
-      return new Promise((resolve, reject) => {
-        const tx = this.db.transaction(storeName, mode);
-        const store = tx.objectStore(storeName);
-        const result = cb(store);
-        if (result && typeof result.then === 'function') { result.then(resolve).catch(reject); }
-        else { tx.oncomplete = () => resolve(result); tx.onerror = () => reject(tx.error); }
-      });
-    }
-    _p(req) { return new Promise((resolve, reject) => { req.onsuccess = () => resolve(req.result); req.onerror = () => reject(req.error); }); }
-    add(sn, item) { return this._tx(sn, 'readwrite', s => this._p(s.add(item))); }
-    put(sn, item) { return this._tx(sn, 'readwrite', s => this._p(s.put(item))); }
-    get(sn, id) { return this._tx(sn, 'readonly', s => this._p(s.get(id))); }
-    getAll(sn) { return this._tx(sn, 'readonly', s => this._p(s.getAll())); }
-    delete(sn, id) { return this._tx(sn, 'readwrite', s => this._p(s.delete(id))); }
-    clear(sn) { return this._tx(sn, 'readwrite', s => this._p(s.clear())); }
-    count(sn) { return this._tx(sn, 'readonly', s => this._p(s.count())); }
-    getByIndex(sn, indexName, value) {
-      return this._tx(sn, 'readonly', s => this._p(s.index(indexName).get(value)));
-    }
-  }
-
-  /* ================================================================
    * Utility
    * ================================================================ */
   function esc(str) {
@@ -80,7 +33,7 @@
    * ================================================================ */
   class QuestionBookApp {
     constructor() {
-      this.db = new DB();
+      this.db = new JuYiDB();
       this.books = [];
       this.view = 'list';
       this.activeBook = null;

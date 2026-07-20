@@ -1,53 +1,14 @@
 ;(function(){
   'use strict';
 
-  /* ================================================================
-   * Mini IndexedDB — history persistence
-   * ================================================================ */
   const DB_NAME = 'JuYiLabImageTools';
   const DB_VERSION = 1;
   const STORE = 'history';
 
-  class DB {
-    constructor() { this._db = null; }
-    open() {
-      return new Promise((resolve, reject) => {
-        const req = indexedDB.open(DB_NAME, DB_VERSION);
-        req.onupgradeneeded = (e) => {
-          const db = e.target.result;
-          if (!db.objectStoreNames.contains(STORE)) {
-            db.createObjectStore(STORE, { keyPath: 'id', autoIncrement: true });
-          }
-        };
-        req.onsuccess = (e) => { this._db = e.target.result; resolve(); };
-        req.onerror = () => reject(req.error);
-      });
-    }
-    _tx(mode, cb) {
-      return new Promise((resolve, reject) => {
-        const tx = this._db.transaction(STORE, mode);
-        const store = tx.objectStore(STORE);
-        const result = cb(store);
-        if (result instanceof IDBRequest) {
-          result.onsuccess = () => resolve(result.result);
-          result.onerror = () => reject(result.error);
-        } else {
-          tx.oncomplete = () => resolve(result);
-          tx.onerror = () => reject(tx.error);
-        }
-      });
-    }
-    add(item)       { return this._tx('readwrite', s => s.add(item)); }
-    getAll()        { return this._tx('readonly', s => s.getAll()); }
-    delete(id)      { return this._tx('readwrite', s => s.delete(id)); }
-    clear()         { return this._tx('readwrite', s => s.clear()); }
-    count()         { return this._tx('readonly', s => s.count()); }
-  }
-
   /* ================================================================
    * App State
    * ================================================================ */
-  const db = new DB();
+  const db = new JuYiDB();
   let currentImage = null;       // data URL of currently displayed image
   let currentFilename = null;    // auto-generated filename
   let history = [];
@@ -230,7 +191,7 @@
    * History
    * ================================================================ */
   async function loadHistory() {
-    history = await db.getAll();
+    history = await db.getAll(STORE);
     // Newest first
     history.reverse();
     renderHistory();
@@ -297,13 +258,13 @@
     const ext = mimeToExt(mimeType);
     const filename = 'image_' + formatTimestamp() + '.' + ext;
     const record = { dataUrl, mimeType, filename, createdAt: Date.now() };
-    await db.add(record);
+    await db.add(STORE, record);
     await loadHistory();
   }
 
   async function clearHistory() {
     if (!confirm('确定要清空所有粘贴历史吗？')) return;
-    await db.clear();
+    await db.clear(STORE);
     history = [];
     renderHistory();
     showToast('🗑️ 历史已清空');
@@ -340,7 +301,7 @@
     initTheme();
 
     // DB
-    await db.open();
+    await db.open(DB_NAME, DB_VERSION, { [STORE]: { keyPath: 'id', autoIncrement: true, indexes: [] } });
     await loadHistory();
 
     // Events

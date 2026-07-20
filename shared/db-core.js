@@ -156,6 +156,19 @@ class JuYiDB {
     });
   }
 
+  /**
+   * 按索引查询单条
+   * @param {string} storeName
+   * @param {string} indexName
+   * @param {*}      value
+   * @returns {Promise<Object|undefined>}
+   */
+  getByIndex(storeName, indexName, value) {
+    return this._tx(storeName, 'readonly', (store) => {
+      return this._promisify(store.index(indexName).get(value));
+    });
+  }
+
   /* ============================ 导出 / 导入 ============================ */
 
   /**
@@ -181,7 +194,7 @@ class JuYiDB {
    * @param {Object} stores   - store 定义（与 open 相同格式），用于校验
    */
   async importAll(jsonData, stores = {}) {
-    if (jsonData._format !== 'JuYiDB/1') {
+    if (jsonData._format !== 'JuYiDB/1' && jsonData._format !== 'JuYiDB/2') {
       throw new Error('不支持的导入格式');
     }
     const { stores: data } = jsonData;

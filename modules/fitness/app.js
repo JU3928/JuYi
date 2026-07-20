@@ -4,35 +4,10 @@
   const STORE = 'fitness';
   const LS_THEME = 'jy_theme';
 
-  // ---- IndexedDB ----
-  class DB {
-    constructor() { this.db = null; }
-    open(name, version, stores) {
-      return new Promise((resolve, reject) => {
-        const r = indexedDB.open(name, version);
-        r.onupgradeneeded = e => {
-          for (const [sn, def] of Object.entries(stores)) {
-            const s = e.target.result.objectStoreNames.contains(sn) ? e.target.transaction.objectStore(sn) : e.target.result.createObjectStore(sn, { keyPath: def.keyPath, autoIncrement: def.autoIncrement !== false });
-            for (const idx of def.indexes || []) { if (!s.indexNames.contains(idx.name)) s.createIndex(idx.name, idx.keyPath, { unique: idx.unique || false }); }
-          }
-        };
-        r.onsuccess = e => { this.db = e.target.result; resolve(this.db); };
-        r.onerror = e => reject(e.target.error);
-      });
-    }
-    _tx(sn, mode, cb) { return new Promise((resolve, reject) => { const tx = this.db.transaction(sn, mode); const store = tx.objectStore(sn); const res = cb(store); if (res && typeof res.then === 'function') { res.then(resolve).catch(reject); } else { tx.oncomplete = () => resolve(res); tx.onerror = () => reject(tx.error); } }); }
-    _p(r) { return new Promise((resolve, reject) => { r.onsuccess = () => resolve(r.result); r.onerror = () => reject(r.error); }); }
-    add(sn, item) { return this._tx(sn, 'readwrite', s => this._p(s.add(item))); }
-    put(sn, item) { return this._tx(sn, 'readwrite', s => this._p(s.put(item))); }
-    getAll(sn) { return this._tx(sn, 'readonly', s => this._p(s.getAll())); }
-    delete(sn, id) { return this._tx(sn, 'readwrite', s => this._p(s.delete(id))); }
-    clear(sn) { return this._tx(sn, 'readwrite', s => this._p(s.clear())); }
-  }
-
   // ---- 主应用 ----
   class FitnessApp {
     constructor() {
-      this.db = new DB();
+      this.db = new JuYiDB();
       this.items = [];
       this.activeTab = 'weight';
       this.filterTags = new Set();
