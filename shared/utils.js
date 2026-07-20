@@ -46,8 +46,14 @@ function sanitizeHtml(html) {
     start:1, type:1,               // ol
   };
 
-  walk(doc.body);
+  // doc.body 可能为 null（如输入是纯 SVG/XML 或解析失败），返回转义后的纯文本
+  if (!doc.body) {
+    var txt = document.createElement('div');
+    txt.textContent = html;
+    return txt.innerHTML;
+  }
 
+  walk(doc.body);
   return doc.body.innerHTML;
 
   function walk(node) {
