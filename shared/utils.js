@@ -27,8 +27,9 @@ function sanitizeHtml(html) {
     return '';
   }
 
-  // 白名单：允许的标签
+  // 白名单：允许的标签（含 DOMParser 产生的 html/head/body 结构标签）
   var TAG = {
+    html:1, head:1, body:1,
     p:1, br:1, b:1, strong:1, i:1, em:1, u:1, s:1, del:1, ins:1,
     ul:1, ol:1, li:1, span:1, div:1,
     h1:1, h2:1, h3:1, h4:1, h5:1, h6:1,
