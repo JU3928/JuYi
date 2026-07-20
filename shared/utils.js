@@ -151,3 +151,7 @@ function stripHtml(html) {
   }
   return (d.textContent || '').trim();
 }
+
+/* 兼容 ES module 导入（Vite 开发模式） */
+export { sanitizeHtml, esc, escAttr, stripHtml };
+

@@ -1,7 +1,1 @@
 node_modules/
-server/
-.env
-.DS_Store
-*.log
-.firecrawl/
-lab/assets/opencv.js

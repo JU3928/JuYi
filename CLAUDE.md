@@ -14,18 +14,58 @@ JuYi is a **zero-dependency, pure frontend** personal toolbox. Every module is a
 
 ## How to Run
 
+**生产环境（零依赖）：**
 ```
-# Any module — just open its HTML file:
+# 任意模块 — 双击 HTML 即可运行：
 open modules/error-notebook/index.html
 
-# Root homepage (module navigation):
+# 根首页（模块导航）：
 open index.html
 
-# Lab second homepage:
+# 实验室首页：
 open lab/index.html
 ```
 
+**开发环境（Vite HMR）：**
+```
+npm install          # 仅首次（安装 Vite 到 devDependencies）
+npm run dev          # 启动开发服务器 → http://localhost:3000
+# 访问 http://localhost:3000/modules/question-book/index.dev.html
+```
+
 GitHub Pages deploys from `master` branch root: `https://ju3928.github.io/JuYi/`
+
+---
+## Vite 开发架构
+
+项目引入 Vite 作为**纯开发工具**（不改变生产构建的零依赖约束）。
+
+### 源码拆分 (`src/`)
+
+部分模块的 JS 逻辑拆分为 ES modules，由 Vite 提供 HMR：
+
+```
+src/modules/question-book/
+├── db.js       # 数据库常量 + CRUD 函数
+├── render.js   # 纯渲染函数（HTML 生成）
+├── state.js    # QuestionBookApp 类（状态 + 事件编排）
+└── main.js     # 入口：导入 → new App → init()
+```
+
+生产版本仍为 `modules/question-book/app.js`（IIFE 单文件）。
+
+### 共享库双模式
+
+`shared/db-core.js` 和 `shared/utils.js` 同时支持：
+- **全局脚本**：`<script src="...">` → `window.JuYiDB` / `window.sanitizeHtml`
+- **ES module**：`import { JuYiDB } from '...'` → Vite 开发模式
+
+添加新的共享函数时，必须在文件末尾添加 `export { ... }`。
+
+### 开发 HTML
+
+需要 Vite HMR 的模块使用 `index.dev.html`，通过 `<script type="module" src="...">` 加载。
+生产 HTML（`index.html`）保持 `<script src="app.js">` 不变。
 
 ---
 
@@ -34,7 +74,8 @@ GitHub Pages deploys from `master` branch root: `https://ju3928.github.io/JuYi/`
 ### Shared layer (`shared/`)
 
 - **`base.css`** — Design system. Defines all CSS custom properties (`--jy-*`) on `:root`: colors, spacing (8px-based), typography (6-level scale), shadows, radii. Also provides reusable component classes: `.jy-btn` (variants: `--primary`, `--danger`, `--ghost`, `--outline`, sizes `--sm`/`--lg`/`--icon`), `.jy-input`, `.jy-select`, `.jy-modal`/`.jy-overlay`, `.jy-empty`, `.jy-form-group`. **Every module must `<link>` this file.**
-- **`db-core.js`** — Generic IndexedDB async wrapper (`JuYiDB` class). Despite existing, most modules inline their own minimal `DB` class (historical convention). Use whichever the module already uses; don't migrate unless the module is being rewritten.
+- **`db-core.js`** — Generic IndexedDB async wrapper (`JuYiDB` class). All 4 main modules now use this shared class. Methods: `open`, `add`, `put`, `get`, `getAll`, `delete`, `clear`, `count`, `getByIndex`, `exportAll`, `importAll`.
+- **`utils.js`** — Security utilities: `sanitizeHtml()` (DOM-based HTML purifier — whitelist tags/attributes, strip event handlers and dangerous protocols), `esc()`, `escAttr()`, `stripHtml()`. **Any module using innerHTML with user content must use `sanitizeHtml()`.**
 
 ### Module pattern (`modules/<name>/`)
 
