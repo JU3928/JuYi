@@ -51,6 +51,9 @@
 
     /* ==================== 初始化 ==================== */
     async init() {
+      // 诊断：确认 shared 模块已正确加载
+      if (typeof JuYiDB === 'undefined') { var em = document.getElementById('cardList'); if (em) em.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--jy-danger)">❌ JuYiDB 未加载（shared/db-core.js 可能加载失败）</div>'; return; }
+      if (typeof sanitizeHtml === 'undefined') { var em2 = document.getElementById('cardList'); if (em2) em2.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--jy-danger)">❌ sanitizeHtml 未加载（shared/utils.js 可能加载失败）</div>'; return; }
       this._initTheme();
       this._loadSubjects();
       await this._openDB();
@@ -731,6 +734,12 @@
       app.els.cardList.addEventListener('click', e => app._onCardClick(e));
       app._updateThemeBtn();
       console.log('JuYi 错题本 v2 已就绪');
-    }).catch(err => console.error('初始化失败:', err));
+    }).catch(err => {
+      console.error('初始化失败:', err);
+      var el = document.getElementById('cardList');
+      if (el) el.innerHTML = '<div style="padding:2rem;text-align:center;color:var(--jy-danger)">⚠️ 初始化失败：' + (err && err.message || err) + '<br><small>请检查浏览器控制台（F12）获取详情</small></div>';
+      var empty = document.getElementById('emptyState');
+      if (empty) empty.style.display = 'none';
+    });
   });
 })();
