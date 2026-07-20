@@ -233,7 +233,3 @@ class JuYiDB {
     });
   }
 }
-
-/* 兼容 ES module 导入（Vite 开发模式） */
-if (typeof exports !== 'undefined') exports.JuYiDB = JuYiDB;
-export { JuYiDB };
