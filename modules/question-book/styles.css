@@ -28,11 +28,12 @@
 .main__toolbar { display: flex; align-items: center; gap: var(--jy-space-3); padding: var(--jy-space-3) var(--jy-space-6); border-bottom: 1px solid var(--jy-border); background: var(--jy-surface); }
 .main__toolbar-title { font-size: var(--jy-font-size-md); font-weight: 600; }
 .main__toolbar-actions { margin-left: auto; }
-.panel { flex: 1; overflow-y: auto; padding: 0; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+#listView { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.panel { flex: 1; overflow-y: auto; padding: 0; -webkit-overflow-scrolling: touch; }
 
 /* ======================== 做题本卡片 ======================== */
 .book-grid {
-  flex: 1; overflow-y: auto; padding: var(--jy-space-5) var(--jy-space-6);
+  padding: var(--jy-space-5) var(--jy-space-6);
   display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: var(--jy-space-4); align-content: start;
 }
