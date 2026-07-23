@@ -472,3 +472,84 @@
     gap: 0;
   }
 }
+
+/* ======================== 文件夹树 ======================== */
+.folder-bar {
+  margin-bottom: var(--jy-space-3);
+  background: var(--jy-surface);
+  border: 1px solid var(--jy-border);
+  border-radius: var(--jy-radius-lg);
+  overflow: hidden;
+}
+.folder-bar__header {
+  display: flex;
+  align-items: center;
+  gap: var(--jy-space-2);
+  padding: var(--jy-space-2) var(--jy-space-4);
+  font-size: var(--jy-font-size-sm);
+  font-weight: 600;
+  border-bottom: 1px solid var(--jy-border);
+}
+.folder-tree {
+  padding: var(--jy-space-2);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.folder-tree__item {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  font-size: var(--jy-font-size-xs);
+  border-radius: 99px;
+  cursor: pointer;
+  user-select: none;
+  background: var(--jy-bg-tertiary);
+  color: var(--jy-text-secondary);
+  transition: all .15s;
+  white-space: nowrap;
+}
+.folder-tree__item:hover { background: var(--jy-primary-soft); color: var(--jy-primary); }
+.folder-tree__item.is-active { background: var(--jy-primary-soft); color: var(--jy-primary); font-weight: 600; }
+
+/* ======================== File Card ======================== */
+.card--file .card__thumb {
+  width: 100%;
+  height: 160px;
+  overflow: hidden;
+  border-radius: var(--jy-radius) var(--jy-radius) 0 0;
+  background: var(--jy-bg-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.card--file .card__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.card--file .card__icon-big {
+  font-size: 3rem;
+  padding: 1.5rem;
+  text-align: center;
+  color: var(--jy-text-muted);
+}
+.card__file-info { padding: var(--jy-space-2); }
+.card__file-meta {
+  font-size: var(--jy-font-size-xs);
+  color: var(--jy-text-muted);
+}
+
+/* ======================== XMind Outline ======================== */
+.xmind-tree { padding: var(--jy-space-3); }
+.xmind-outline {
+  white-space: pre-wrap;
+  font-family: var(--jy-font-mono, monospace);
+  font-size: var(--jy-font-size-sm);
+  line-height: 1.8;
+  color: var(--jy-text-secondary);
+  background: var(--jy-bg);
+  border-radius: var(--jy-radius);
+  padding: var(--jy-space-4);
+  max-height: 55vh;
+  overflow: auto;
+}

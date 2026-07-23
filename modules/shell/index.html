@@ -14,8 +14,10 @@
   <!-- ====== 顶栏 ====== -->
   <header class="topbar">
     <h1 class="topbar__logo">🐚 拾贝</h1>
-    <span class="topbar__subtitle">知识卡片 · 每日美言</span>
+    <span class="topbar__subtitle">知识卡片 · 文件仓库 · 每日美言</span>
     <div class="topbar__spacer"></div>
+    <button id="btnImportFile" class="jy-btn jy-btn--outline jy-btn--sm">📎 导入文件</button>
+    <input type="file" id="fileInput" accept=".png,.jpg,.jpeg,.gif,.webp,.pdf,.xmind" style="display:none" multiple>
     <button id="btnImport" class="jy-btn jy-btn--outline jy-btn--sm">📥 导入</button>
     <button id="btnExport" class="jy-btn jy-btn--outline jy-btn--sm">📤 导出</button>
     <input type="file" id="importFile" accept=".json" style="display:none">
@@ -40,6 +42,17 @@
       </div>
       <div class="daily-card__right" aria-hidden="true">🐚</div>
     </section>
+
+    <!-- ====== 文件夹树 ====== -->
+    <div class="folder-bar" id="folderBar">
+      <div class="folder-bar__header">
+        <span>📁 文件夹</span>
+        <button id="btnNewFolder" class="jy-btn jy-btn--ghost jy-btn--icon jy-btn--sm" title="新建文件夹">＋</button>
+      </div>
+      <div class="folder-tree" id="folderTree">
+        <span class="folder-tree__item folder-tree__item--all is-active" data-folder="">📂 全部</span>
+      </div>
+    </div>
 
     <!-- ====== 工具栏 ====== -->
     <div class="toolbar">
@@ -156,7 +169,24 @@
   </div>
 </div>
 
+<!-- ====== 文件查看器弹窗 ====== -->
+<div id="fileViewerOverlay" class="jy-overlay modal-close-target">
+  <div class="jy-modal" style="max-width:900px">
+    <div class="jy-modal__header">
+      <span class="jy-modal__title" id="fileViewerTitle">文件查看</span>
+      <button class="jy-btn jy-btn--icon modal-close-btn">✕</button>
+    </div>
+    <div class="jy-modal__body" id="fileViewerBody" style="min-height:300px;max-height:70vh;overflow:auto"></div>
+    <div class="jy-modal__footer">
+      <button class="jy-btn jy-btn--ghost modal-close-btn">关闭</button>
+      <button id="btnDownloadFile" class="jy-btn jy-btn--primary">💾 下载原文件</button>
+    </div>
+  </div>
+</div>
+
+<script src="../../shared/db-core.js"></script>
 <script src="../../shared/utils.js"></script>
+<script src="xmind-parser.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

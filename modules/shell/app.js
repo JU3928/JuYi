@@ -58,50 +58,6 @@
   ];
 
   /* ================================================================
-   * IndexedDB wrapper (inline — follows project convention)
-   * ================================================================ */
-  class DB {
-    constructor() { this.db = null; }
-    open(name, version, stores) {
-      return new Promise((resolve, reject) => {
-        const req = indexedDB.open(name, version);
-        req.onupgradeneeded = (e) => {
-          const db = e.target.result;
-          for (const [sn, def] of Object.entries(stores)) {
-            const store = db.objectStoreNames.contains(sn)
-              ? e.target.transaction.objectStore(sn)
-              : db.createObjectStore(sn, { keyPath: def.keyPath, autoIncrement: def.autoIncrement !== false });
-            for (const idx of def.indexes || []) {
-              if (!store.indexNames.contains(idx.name)) {
-                store.createIndex(idx.name, idx.keyPath, { unique: idx.unique || false });
-              }
-            }
-          }
-        };
-        req.onsuccess = (e) => { this.db = e.target.result; resolve(this.db); };
-        req.onerror = (e) => reject(e.target.error);
-      });
-    }
-    _tx(storeName, mode, cb) {
-      return new Promise((resolve, reject) => {
-        const tx = this.db.transaction(storeName, mode);
-        const store = tx.objectStore(storeName);
-        const result = cb(store);
-        if (result && typeof result.then === 'function') { result.then(resolve).catch(reject); }
-        else { tx.oncomplete = () => resolve(result); tx.onerror = () => reject(tx.error); }
-      });
-    }
-    _p(req) { return new Promise((resolve, reject) => { req.onsuccess = () => resolve(req.result); req.onerror = () => reject(req.error); }); }
-    add(sn, item) { return this._tx(sn, 'readwrite', s => this._p(s.add(item))); }
-    put(sn, item) { return this._tx(sn, 'readwrite', s => this._p(s.put(item))); }
-    get(sn, id) { return this._tx(sn, 'readonly', s => this._p(s.get(id))); }
-    getAll(sn) { return this._tx(sn, 'readonly', s => this._p(s.getAll())); }
-    delete(sn, id) { return this._tx(sn, 'readwrite', s => this._p(s.delete(id))); }
-    clear(sn) { return this._tx(sn, 'readwrite', s => this._p(s.clear())); }
-    count(sn) { return this._tx(sn, 'readonly', s => this._p(s.count())); }
-  }
-
-  /* ================================================================
    * Utilities
    * ================================================================ */
   /* esc / escAttr / stripHtml / sanitizeHtml — provided by shared/utils.js */
@@ -163,15 +119,16 @@
    * ================================================================ */
   class ShellApp {
     constructor() {
-      this.db = new DB();
+      this.db = new JuYiDB();
       this.cards = [];
-      this.filters = { category: '', tags: new Set() };
+      this.filters = { category: '', tags: new Set(), folder: '' };
       this.searchQuery = '';
       this.sortOrder = 'newest'; // 'newest' | 'oldest'
       this.editingId = null;
       this.pendingDeleteId = null;
       this.dailyQuote = null;
       this._dbReady = false;
+      this._viewingFileId = null;
     }
 
     /* ---- lifecycle ---- */
@@ -256,6 +213,21 @@
       this.$importFile = d.getElementById('importFile');
       this.$btnImport = d.getElementById('btnImport');
       this.$btnExport = d.getElementById('btnExport');
+
+      // File import
+      this.$btnImportFile = d.getElementById('btnImportFile');
+      this.$fileInput = d.getElementById('fileInput');
+
+      // Folder
+      this.$folderTree = d.getElementById('folderTree');
+      this.$btnNewFolder = d.getElementById('btnNewFolder');
+
+      // File viewer
+      this.$fileViewerOverlay = d.getElementById('fileViewerOverlay');
+      this.$fileViewerTitle = d.getElementById('fileViewerTitle');
+      this.$fileViewerBody = d.getElementById('fileViewerBody');
+      this.$btnDownloadFile = d.getElementById('btnDownloadFile');
+      this._currentFileData = null; // for download
     }
 
     _bindEvents() {
@@ -302,6 +274,10 @@
           var overlay = e.target.closest('.jy-overlay');
           if (overlay) overlay.classList.remove('is-open');
         }
+        // File viewer: also close on overlay click
+        if (e.target.id === 'fileViewerOverlay') {
+          e.target.classList.remove('is-open');
+        }
       });
 
       // Paste image in content editor
@@ -313,6 +289,42 @@
       var btnTheme = document.getElementById('btnToggleTheme');
       if (btnTheme) {
         btnTheme.addEventListener('click', function () { self._toggleTheme(); });
+      }
+
+      // File import
+      if (this.$btnImportFile) {
+        this.$btnImportFile.addEventListener('click', function () { self.$fileInput.click(); });
+      }
+      if (this.$fileInput) {
+        this.$fileInput.addEventListener('change', function () { self._handleFileImport(this); });
+      }
+
+      // Folder
+      if (this.$btnNewFolder) {
+        this.$btnNewFolder.addEventListener('click', function () { self._createFolder(); });
+      }
+      if (this.$folderTree) {
+        this.$folderTree.addEventListener('click', function (e) {
+          var item = e.target.closest('.folder-tree__item');
+          if (!item) return;
+          var folder = item.dataset.folder || '';
+          self._selectFolder(folder);
+        });
+      }
+
+      // File viewer
+      if (this.$btnDownloadFile) {
+        this.$btnDownloadFile.addEventListener('click', function () { self._downloadCurrentFile(); });
+      }
+
+      // Drag & drop file import on card grid
+      if (this.$cardGrid) {
+        this.$cardGrid.addEventListener('dragover', function (e) { e.preventDefault(); });
+        this.$cardGrid.addEventListener('drop', function (e) {
+          e.preventDefault();
+          var files = e.dataTransfer.files;
+          if (files && files.length) self._processFiles(files);
+        });
       }
     }
 
@@ -503,6 +515,150 @@
       }
     }
 
+    /* ---- File Import ---- */
+    _handleFileImport(input) {
+      if (!this._dbReady) { alert('数据存储不可用'); input.value = ''; return; }
+      var files = input.files;
+      if (!files || !files.length) return;
+      this._processFiles(files);
+      input.value = '';
+    }
+
+    async _processFiles(files) {
+      var self = this;
+      for (var i = 0; i < files.length; i++) {
+        var file = files[i];
+        var reader = new FileReader();
+        var result = await new Promise(function (resolve) {
+          reader.onload = function (e) { resolve({ name: file.name, type: file.type, data: e.target.result, size: file.size }); };
+          reader.onerror = function () { resolve(null); };
+          reader.readAsDataURL(file);
+        });
+        if (!result) { alert(file.name + ' 读取失败'); continue; }
+
+        var card = {
+          title: file.name,
+          content: '',
+          category: '导入文件',
+          tags: [self._fileTypeLabel(result.type, file.name)],
+          source: 'file',
+          type: 'file',
+          fileName: file.name,
+          fileType: result.type,
+          fileData: result.data,
+          fileSize: result.size,
+          folder: self.filters.folder || '默认',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+
+        // Parse XMind for preview content
+        if (/\.xmind$/i.test(file.name)) {
+          try {
+            var buffer = await file.arrayBuffer();
+            var mindMap = await XMindParser.parse(buffer);
+            if (mindMap) {
+              card.content = mindMap.html;
+            }
+          } catch (e) { /* keep empty content */ }
+        }
+
+        await self._saveCard(card);
+      }
+      self.render();
+    }
+
+    _fileTypeLabel(mimeType, fileName) {
+      if (/\.xmind$/i.test(fileName)) return 'XMind';
+      if (/\.pdf$/i.test(fileName)) return 'PDF';
+      if (/image\//.test(mimeType)) return '图片';
+      return '文件';
+    }
+
+    /* ---- Folder ---- */
+    _selectFolder(folder) {
+      this.filters.folder = folder;
+      this.renderCards();
+      this.renderFolderTree();
+    }
+
+    _createFolder() {
+      var name = prompt('请输入文件夹名称：');
+      if (!name || !name.trim()) return;
+      name = name.trim();
+      // Create folder by saving an empty marker — or just switch to it
+      this.filters.folder = name;
+      this.renderCards();
+      this.renderFolderTree();
+    }
+
+    _getFolders() {
+      var folders = new Set();
+      this.cards.forEach(function (c) {
+        if (c.folder) folders.add(c.folder);
+        else folders.add('默认');
+      });
+      var arr = Array.from(folders).sort();
+      // Move '默认' to front
+      var defIdx = arr.indexOf('默认');
+      if (defIdx > 0) { arr.splice(defIdx, 1); arr.unshift('默认'); }
+      return arr;
+    }
+
+    renderFolderTree() {
+      var folders = this._getFolders();
+      var counts = {};
+      this.cards.forEach(function (c) {
+        var f = c.folder || '默认';
+        counts[f] = (counts[f] || 0) + 1;
+      });
+      var html = '<span class="folder-tree__item folder-tree__item--all' + (this.filters.folder === '' ? ' is-active' : '') + '" data-folder="">📂 全部（' + this.cards.length + '）</span>';
+      folders.forEach(function (f) {
+        html += '<span class="folder-tree__item' + (this.filters.folder === f ? ' is-active' : '') + '" data-folder="' + esc(f) + '">📁 ' + esc(f) + '（' + (counts[f] || 0) + '）</span>';
+      }, this);
+      this.$folderTree.innerHTML = html;
+    }
+
+    /* ---- File Viewer ---- */
+    _openFileViewer(card) {
+      if (!card || card.type !== 'file') return;
+      this._viewingFileId = card.id;
+      this._currentFileData = card.fileData;
+      this.$fileViewerTitle.textContent = card.fileName || card.title;
+
+      var body = this.$fileViewerBody;
+      body.innerHTML = '';
+      var isPDF = /\.pdf$/i.test(card.fileName || '');
+      var isImage = (card.fileType || '').indexOf('image/') === 0;
+      var isXMind = /\.xmind$/i.test(card.fileName || '');
+
+      if (isImage) {
+        body.innerHTML = '<img src="' + card.fileData + '" style="max-width:100%;max-height:65vh;display:block;margin:0 auto" alt="">';
+      } else if (isPDF) {
+        body.innerHTML = '<iframe src="' + card.fileData + '" style="width:100%;height:65vh;border:none" title="PDF"></iframe>';
+      } else if (isXMind) {
+        if (card.content) {
+          body.innerHTML = card.content;
+        } else {
+          body.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--jy-text-muted)">🧠 XMind 文件<br><small>解析中...若持续显示此消息，请点击下方按钮下载原文件</small></div>';
+        }
+      } else {
+        body.innerHTML = '<div style="text-align:center;padding:2rem"><div style="font-size:3rem;margin-bottom:1rem">📄</div><p>' + esc(card.fileName || '未知文件') + '</p><p style="color:var(--jy-text-muted)">此格式暂不支持在线预览，请下载查看</p></div>';
+      }
+
+      this.$fileViewerOverlay.classList.add('is-open');
+    }
+
+    _downloadCurrentFile() {
+      if (!this._currentFileData) return;
+      var card = this.cards.find(function (c) { return c.id === this._viewingFileId; }, this);
+      var filename = card ? card.fileName : 'download';
+      var a = document.createElement('a');
+      a.href = this._currentFileData;
+      a.download = filename;
+      a.click();
+    }
+
     /* ---- Card CRUD ---- */
     _openModal(card) {
       this.editingId = card ? card.id : null;
@@ -645,6 +801,7 @@
     /* ---- Render ---- */
     render() {
       this.renderDailyQuote();
+      this.renderFolderTree();
       this.renderCards();
       this.renderFilters();
     }
@@ -721,6 +878,9 @@
       var self = this;
       // Filter
       var filtered = this.cards.slice();
+      if (this.filters.folder) {
+        filtered = filtered.filter(function (c) { return (c.folder || '默认') === self.filters.folder; });
+      }
       if (this.filters.category) {
         filtered = filtered.filter(function (c) { return c.category === self.filters.category; });
       }
@@ -755,44 +915,64 @@
 
       var html = '';
       filtered.forEach(function (card) {
-        var contentText = (card.content || '').replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
-        if (contentText.length > 120) contentText = contentText.substring(0, 120) + '...';
-        var titleEsc = esc(card.title || '无标题');
-        var contentEsc = esc(contentText);
-        var catEsc = esc(card.category || '未分类');
-        var tagsHtml = '';
-        if (card.tags && card.tags.length) {
-          tagsHtml = card.tags.map(function (t) {
-            return '<span class="card-tag">' + esc(t) + '</span>';
-          }).join('');
+        if (card.type === 'file') {
+          html += self._buildFileCard(card);
+        } else {
+          html += self._buildNoteCard(card);
         }
-        var sourceBadge = card.source === 'daily' ? '<span class="card-badge card-badge--daily">每日精选</span>' : '';
-        var dateStr = fmtDate(card.createdAt);
-        html += '<div class="card" data-id="' + card.id + '">' +
-          '<div class="card__body">' +
-            '<div class="card__header">' +
-              '<h3 class="card__title">' + titleEsc + '</h3>' +
-              sourceBadge +
-            '</div>' +
-            '<p class="card__preview">' + contentEsc + '</p>' +
-            '<div class="card__tags">' + tagsHtml + '</div>' +
-          '</div>' +
-          '<div class="card__footer">' +
-            '<span class="card__category">📂 ' + catEsc + '</span>' +
-            '<span class="card__date">' + dateStr + '</span>' +
-          '</div>' +
-        '</div>';
       });
       this.$cardGrid.innerHTML = html;
 
-      // Bind card click -> detail
+      // Bind card click
       this.$cardGrid.querySelectorAll('.card').forEach(function (el) {
         el.addEventListener('click', function () {
           var id = parseInt(this.dataset.id);
           var card = self.cards.find(function (c) { return c.id === id; });
-          if (card) self._openDetail(card);
+          if (!card) return;
+          if (card.type === 'file') self._openFileViewer(card);
+          else self._openDetail(card);
         });
       });
+    }
+
+    _buildNoteCard(card) {
+      var contentText = (card.content || '').replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+      if (contentText.length > 120) contentText = contentText.substring(0, 120) + '...';
+      var titleEsc = esc(card.title || '无标题');
+      var catEsc = esc(card.category || '未分类');
+      var tagsHtml = '';
+      if (card.tags && card.tags.length) {
+        tagsHtml = card.tags.map(function (t) { return '<span class="card-tag">' + esc(t) + '</span>'; }).join('');
+      }
+      var sourceBadge = card.source === 'daily' ? '<span class="card-badge card-badge--daily">每日精选</span>' : '';
+      return '<div class="card card--note" data-id="' + card.id + '">' +
+        '<div class="card__body"><div class="card__header"><h3 class="card__title">' + titleEsc + '</h3>' + sourceBadge + '</div>' +
+        '<p class="card__preview">' + esc(contentText) + '</p><div class="card__tags">' + tagsHtml + '</div></div>' +
+        '<div class="card__footer"><span class="card__category">📂 ' + catEsc + '</span><span class="card__date">' + fmtDate(card.createdAt) + '</span></div></div>';
+    }
+
+    _buildFileCard(card) {
+      var isImage = (card.fileType || '').indexOf('image/') === 0;
+      var isPDF = /\.pdf$/i.test(card.fileName || '');
+      var isXMind = /\.xmind$/i.test(card.fileName || '');
+      var icon = isImage ? '🖼️' : isPDF ? '📕' : isXMind ? '🧠' : '📄';
+      var label = isImage ? '图片' : isPDF ? 'PDF' : isXMind ? 'XMind' : '文件';
+      var sizeStr = card.fileSize ? (card.fileSize > 1024 * 1024 ? (card.fileSize / 1024 / 1024).toFixed(1) + ' MB' : (card.fileSize / 1024).toFixed(0) + ' KB') : '';
+
+      var previewHTML = '';
+      if (isImage) {
+        previewHTML = '<div class="card__thumb"><img src="' + card.fileData + '" alt="" loading="lazy"></div>';
+      } else {
+        previewHTML = '<div class="card__icon-big">' + icon + '</div>';
+      }
+
+      return '<div class="card card--file" data-id="' + card.id + '">' +
+        '<div class="card__body">' + previewHTML +
+        '<div class="card__file-info">' +
+        '<h3 class="card__title" title="' + esc(card.fileName || card.title) + '">' + esc((card.fileName || card.title).length > 30 ? (card.fileName || card.title).slice(0, 30) + '...' : (card.fileName || card.title)) + '</h3>' +
+        '<span class="card__file-meta">' + label + (sizeStr ? ' · ' + sizeStr : '') + '</span>' +
+        '</div></div>' +
+        '<div class="card__footer"><span class="card__category">📁 ' + esc(card.folder || '默认') + '</span><span class="card__date">' + fmtDate(card.createdAt) + '</span></div></div>';
     }
   }
 
