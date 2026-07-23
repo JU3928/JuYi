@@ -69,6 +69,8 @@
 
     /* ---- lifecycle ---- */
     async init() {
+      // 诊断
+      if (typeof JuYiDB === 'undefined') { alert('❌ JuYiDB 未加载'); return; }
       this._restoreTheme();
       this._cacheDom();
       this._bindEvents();
@@ -843,7 +845,7 @@
   document.addEventListener('DOMContentLoaded', () => {
     const app = new BattleReportApp();
     window._battleReportApp = app;
-    app.init().catch(err => { console.error('战报板初始化失败:', err); alert('战报板初始化失败，请刷新重试'); });
+    app.init().catch(err => { console.error('战报板初始化失败:', err); alert('战报板初始化失败：' + (err && err.message || err)); });
   });
 
 })();

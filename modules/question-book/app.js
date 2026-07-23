@@ -48,6 +48,8 @@
 
     /* ---- lifecycle ---- */
     async init() {
+      // 诊断
+      if (typeof JuYiDB === 'undefined') { alert('❌ JuYiDB 未加载'); return; }
       this._restoreTheme();
       this._cacheDom();
       this._bindEvents();
@@ -1416,7 +1418,7 @@
     const app = new QuestionBookApp();
     app.init().catch(err => {
       console.error('做题本初始化失败', err);
-      alert('做题本初始化失败，请刷新重试');
+      alert('做题本初始化失败：' + (err && err.message || err));
     });
     window._questionBookApp = app;
   });
