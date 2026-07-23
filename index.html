@@ -300,9 +300,7 @@
         // Delete existing DB first
         var delReq = indexedDB.deleteDatabase(name);
         delReq.onsuccess = function () {
-          // Determine version based on number of stores (simple heuristic)
-          var version = Object.keys(stores).length || 1;
-          var req = indexedDB.open(name, version);
+          var req = indexedDB.open(name, 1);
           req.onupgradeneeded = function (e) {
             var db = e.target.result;
             Object.keys(stores).forEach(function (sn) {
@@ -330,8 +328,8 @@
           req.onerror = function () { resolve(); };
         };
         delReq.onerror = function () {
-          // Can't delete — try opening and clearing
-          var req2 = indexedDB.open(name);
+          // Can't delete — try opening at version 1 and clearing
+          var req2 = indexedDB.open(name, 1);
           req2.onsuccess = function (e) {
             var db = e.target.result;
             var storeNames = Array.from(db.objectStoreNames);
