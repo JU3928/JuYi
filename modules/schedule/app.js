@@ -6,17 +6,18 @@
    * ================================================================ */
   const LS_THEME = 'jy_theme';
   const LS_CHECKIN_PREFIX = 'jy_sched_';
+  const WEEK_NAMES = ['日','一','二','三','四','五','六'];
 
   function checkinKey(dateStr) { return LS_CHECKIN_PREFIX + dateStr; }
 
   /* ================================================================
-   * Task definitions — only normal & niuke
+   * Task definitions — normal + dynamic contest
    * Row: [time, content, type, note]
    * Types: fixed | elastic | competition
    * ================================================================ */
   const DATA = {
     normal: {
-      note: '常规无比赛日，所有固定任务正常执行。新增英语阅读唤醒下午状态，剪辑+阅读利用碎片时间。',
+      note: '常规无比赛日，所有固定任务正常执行。午间自习利用碎片时间。',
       rows: [
         ['07:00-07:30','起床洗漱','fixed','可简单拉伸'],
         ['07:30-08:00','早餐','fixed','不刷手机'],
@@ -24,8 +25,7 @@
         ['09:30-09:40','休息','fixed','远眺'],
         ['09:40-12:00','数学','fixed','高数/线代/概率'],
         ['12:00-12:30','午餐','fixed','放松'],
-        ['12:30-12:50','🎬 剪辑','elastic','碎片时间利用'],
-        ['12:50-13:05','📖 阅读','elastic','短文/资讯'],
+        ['12:30-13:05','午间自习','elastic','碎片时间利用'],
         ['13:05-13:30','午休','fixed','不超过30分钟'],
         ['13:40-15:30','408专业课','fixed','每天一科轮换'],
         ['15:30-16:00','英语阅读','fixed','唤醒下午大脑，衔接运动'],
@@ -40,32 +40,37 @@
         ['23:00','睡觉','fixed','约7.5小时睡眠'],
       ],
     },
-    niuke: {
-      note: '牛客周赛日 · 比赛 19:00-21:00。所有固定任务时段完全不变，英语阅读（固定）必须保留。晚间弹性时段被比赛替换。',
-      rows: [
-        ['07:00-07:30','起床洗漱','fixed',''],
-        ['07:30-08:00','早餐','fixed',''],
-        ['08:00-09:30','英语（早）','fixed','绝不压缩'],
-        ['09:30-09:40','休息','fixed',''],
-        ['09:40-12:00','数学','fixed','绝不压缩'],
-        ['12:00-12:30','午餐','fixed',''],
-        ['12:30-12:50','🎬 剪辑','elastic','建议今日暂停，保留精力备战比赛'],
-        ['12:50-13:05','📖 阅读','elastic','建议今日暂停，保留精力备战比赛'],
-        ['13:05-13:30','午休','fixed',''],
-        ['13:40-15:30','408专业课','fixed','绝不压缩'],
-        ['15:30-16:00','英语阅读','fixed','固定任务，必须保留'],
-        ['16:00-17:00','运动','fixed','必须执行'],
-        ['17:00-17:30','洗澡放松','fixed',''],
-        ['17:30-18:30','算法热身','elastic','简单题找手感'],
-        ['18:30-19:00','晚餐（提前）','fixed','吃早一些'],
-        ['19:00-21:00','牛客周赛','competition','专心比赛'],
-        ['21:00-21:30','赛后放松','elastic','不进行高强度学习'],
-        ['21:30-22:00','洗漱/简单复盘','fixed','比赛替代晚间学习'],
-        ['22:00-22:30','准备入睡','fixed',''],
-        ['22:30','睡觉','fixed','保证睡眠'],
-      ],
-    },
   };
+
+  /**
+   * 生成比赛日时段（基于 normal 动态替换）
+   * 周六：最后一项替换为 LeetCode 周赛 22:20-24:00
+   * 周日：数学时段替换为 LeetCode 周赛 09:40-12:00
+   * 非周末：返回 normal（调用方应提示用户）
+   */
+  function buildContestRows(dateStr) {
+    var rows = DATA.normal.rows.map(function (r) { return r.slice(); });
+    var day = new Date(dateStr + 'T00:00:00').getDay(); // 0=Sun, 6=Sat
+    if (day === 6) {
+      rows[rows.length - 1] = ['22:20-24:00', 'LeetCode周赛（22:30-24:00）', 'competition', '专心比赛'];
+    } else if (day === 0) {
+      rows[4] = ['09:40-12:00', 'LeetCode周赛（10:30-12:00）', 'competition', '专心比赛'];
+    }
+    return rows;
+  }
+
+  function getContestNote(dateStr) {
+    var day = new Date(dateStr + 'T00:00:00').getDay();
+    if (day === 6) return 'LeetCode 周赛日（周六）· 比赛 22:30-24:00。晚间洗漱时段替换为比赛，其他计划不变。';
+    if (day === 0) return 'LeetCode 周赛日（周日）· 比赛 10:30-12:00。数学时段替换为比赛，其他计划不变。';
+    return '';
+  }
+
+  /** 获取当前场景的有效时段行 */
+  function getEffectiveRows(scenario, dateStr) {
+    if (scenario === 'contest') return buildContestRows(dateStr);
+    return DATA.normal.rows;
+  }
 
   /* ================================================================
    * Utilities
@@ -100,7 +105,17 @@
   }
   function getOrCreateCheckin(dateStr, rows) {
     var existing = loadCheckin(dateStr);
-    if (existing) return existing;
+    if (existing) {
+      // 数据兼容：忽略已删除的旧时段键
+      var validSlots = {};
+      rows.forEach(function (r) { validSlots[r[0]] = true; });
+      var cleaned = {};
+      for (var k in existing.checks) {
+        if (validSlots[k]) cleaned[k] = existing.checks[k];
+      }
+      existing.checks = cleaned;
+      return existing;
+    }
     // Initialize checks to false for all time slots
     var checks = {};
     rows.forEach(function (r) { checks[r[0]] = false; });
@@ -115,6 +130,7 @@
     var elasticTotal = 0, elasticDone = 0;
     rows.forEach(function (r) {
       var slot = r[0], type = r[2];
+      if (type === 'competition') return; // 比赛不计入完成率
       if (type === 'fixed') {
         fixedTotal++;
         if (checks[slot]) fixedDone++;
@@ -171,7 +187,7 @@
       var today = todayStr();
       this.viewingDate = today;
       this.isReadOnly = false;
-      var rows = DATA[this.current].rows;
+      var rows = getEffectiveRows(this.current, today);
       this.checkinData = getOrCreateCheckin(today, rows);
     }
 
@@ -204,12 +220,21 @@
       // Scenario buttons
       this.$scenarioBtns.forEach(function (btn) {
         btn.addEventListener('click', function () {
+          var scenario = this.dataset.scenario;
+          // 比赛日非周末检查
+          if (scenario === 'contest') {
+            var day = new Date(self.viewingDate + 'T00:00:00').getDay();
+            if (day !== 0 && day !== 6) {
+              self._showContestHint('今日（星期' + WEEK_NAMES[day] + '）无 LeetCode 比赛，显示常规计划');
+              return;
+            }
+          }
           self.$scenarioBtns.forEach(function (b) { b.classList.remove('active'); });
           this.classList.add('active');
-          self.current = this.dataset.scenario;
+          self.current = scenario;
           // Reload checkin data for current viewing date with new rows
           if (self.viewingDate === todayStr() && !self.isReadOnly) {
-            self.checkinData = getOrCreateCheckin(self.viewingDate, DATA[self.current].rows);
+            self.checkinData = getOrCreateCheckin(self.viewingDate, getEffectiveRows(self.current, self.viewingDate));
           }
           self._render();
         });
@@ -218,7 +243,7 @@
       // Check all fixed
       this.$btnCheckAll.addEventListener('click', function () {
         if (self.isReadOnly) return;
-        var rows = DATA[self.current].rows;
+        var rows = getEffectiveRows(self.current, self.viewingDate);
         rows.forEach(function (r) {
           if (r[2] === 'fixed') self.checkinData.checks[r[0]] = true;
         });
@@ -299,31 +324,29 @@
 
     _renderTable() {
       var self = this;
-      var rows = DATA[this.current].rows;
+      var rows = getEffectiveRows(this.current, this.viewingDate);
       var checks = this._getEffectiveChecks();
-      var scenarioNote = DATA[this.current].note;
+      var note = this.current === 'contest' ? getContestNote(this.viewingDate) : DATA.normal.note;
 
-      this.$scenarioNote.textContent = scenarioNote;
+      this.$scenarioNote.textContent = note;
 
       var labels = { fixed: '固定', elastic: '弹性', competition: '比赛' };
       var html = '';
       rows.forEach(function (r) {
-        var slot = r[0], content = r[1], type = r[2], note = r[3];
+        var slot = r[0], content = r[1], type = r[2], noteText = r[3];
         var checked = checks[slot] || false;
-        var isNiukeElastic = (self.current === 'niuke' && type === 'elastic' && (content.indexOf('剪辑') !== -1 || content.indexOf('阅读') !== -1));
         var rowClass = 'tr--' + type;
         if (checked) rowClass += ' is-checked';
-        if (isNiukeElastic) rowClass += ' is-dimmed';
 
-        var disabledAttr = (self.isReadOnly || isNiukeElastic) ? ' disabled' : '';
+        var disabledAttr = self.isReadOnly ? ' disabled' : '';
         var checkedAttr = checked ? ' checked' : '';
 
         html += '<tr class="' + rowClass + '">' +
           '<td class="td-check"><input type="checkbox" class="check-box" data-slot="' + slot + '"' + checkedAttr + disabledAttr + '></td>' +
           '<td class="td-time">' + slot + '</td>' +
-          '<td class="td-content">' + content + (isNiukeElastic ? ' <span class="dim-hint">（建议今日暂停，保留精力备战比赛）</span>' : '') + '</td>' +
+          '<td class="td-content">' + content + '</td>' +
           '<td><span class="badge-type badge-type--' + type + '">' + (labels[type] || type) + '</span></td>' +
-          '<td class="td-note">' + (note || '') + '</td>' +
+          '<td class="td-note">' + (noteText || '') + '</td>' +
         '</tr>';
       });
       this.$scheduleBody.innerHTML = html;
@@ -340,7 +363,7 @@
 
     _renderTimeline() {
       var self = this;
-      var rows = DATA[this.current].rows;
+      var rows = getEffectiveRows(this.current, this.viewingDate);
       var checks = this._getEffectiveChecks();
       var blocks = [];
       rows.forEach(function (r) {
@@ -372,12 +395,12 @@
       if (stored) return stored.checks;
       // Fallback: empty checks
       var checks = {};
-      DATA[this.current].rows.forEach(function (r) { checks[r[0]] = false; });
+      getEffectiveRows(this.current, this.viewingDate).forEach(function (r) { checks[r[0]] = false; });
       return checks;
     }
 
     _renderStats() {
-      var rows = DATA[this.current].rows;
+      var rows = getEffectiveRows(this.current, this.viewingDate);
       var checks = this._getEffectiveChecks();
       var stats = calcCompletion(rows, checks);
       this.$statsBar.textContent = stats.totalRate + '%';
@@ -388,7 +411,7 @@
     }
 
     _renderMotivation() {
-      var rows = DATA[this.current].rows;
+      var rows = getEffectiveRows(this.current, this.viewingDate);
       var checks = this._getEffectiveChecks();
       var stats = calcCompletion(rows, checks);
       var msg = '';
@@ -412,6 +435,22 @@
       this.$readOnlyBadge.style.display = this.isReadOnly ? 'inline-block' : 'none';
       this.$btnCheckAll.style.display = this.isReadOnly ? 'none' : 'inline-block';
       this.$viewDateLabel.textContent = isToday ? '今日' : fmtChineseDate(this.viewingDate);
+      // 比赛日显示星期提示
+      if (this.current === 'contest') {
+        var day = new Date(this.viewingDate + 'T00:00:00').getDay();
+        this.$viewDateLabel.textContent += ' · 周' + WEEK_NAMES[day] + (day === 6 ? ' 晚间场' : day === 0 ? ' 上午场' : '');
+      }
+    }
+
+    _showContestHint(msg) {
+      var self = this;
+      var original = this.$scenarioNote.textContent;
+      this.$scenarioNote.textContent = msg;
+      this.$scenarioNote.style.color = 'var(--jy-warning)';
+      setTimeout(function () {
+        self.$scenarioNote.textContent = original;
+        self.$scenarioNote.style.color = '';
+      }, 3000);
     }
 
     /* ================================================================
@@ -497,7 +536,7 @@
         if (!stored) {
           // No data for this date, show empty
           stored = { date: dateStr, checks: {} };
-          DATA[this.current].rows.forEach(function (r) { stored.checks[r[0]] = false; });
+          getEffectiveRows(this.current, this.viewingDate).forEach(function (r) { stored.checks[r[0]] = false; });
         }
         this.checkinData = stored;
       }
