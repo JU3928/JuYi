@@ -596,24 +596,84 @@
       const overallRate = totalCorrect / totalQ;
       const cls = overallRate >= 0.8 ? '--high' : (overallRate >= 0.6 ? '--mid' : '--low');
 
-      let html = '<div style="text-align:center;padding:var(--jy-space-4)">' +
+      var compositeSort = 'rate';
+
+      function renderCompositeTable() {
+        var sorted = bookDetails.slice();
+        if (compositeSort === 'rate') {
+          sorted.sort(function (a, b) { return b.rate - a.rate; });
+        } else {
+          sorted = naturalSortByChapter(sorted);
+        }
+        var rows = '';
+        sorted.forEach(function (d) {
+          var dCls = d.rate >= 0.8 ? 'is-high' : (d.rate >= 0.6 ? 'is-mid' : 'is-low');
+          rows += '<tr><td>' + esc(d.name) + '</td><td>' + d.correct + '/' + d.total + '</td><td><span class="book-card__stat--score ' + dCls + '" style="font-size:var(--jy-font-size-xs)">' + Math.round(d.rate * 100) + '%</span></td></tr>';
+        });
+        return rows;
+      }
+
+      function extractChapterNum(name) {
+        var m = name.match(/^第[一二三四五六七八九十百]+章\s*(\d+(?:\.\d+)?)/);
+        if (m) {
+          var parts = m[1].split('.');
+          var v = 0;
+          for (var i = 0; i < parts.length; i++) v = v * 1000 + parseInt(parts[i], 10);
+          return v;
+        }
+        m = name.match(/^(\d+(?:\.\d+)?)/);
+        if (m) {
+          var parts2 = m[0].split('.');
+          var v2 = 0;
+          for (var j = 0; j < parts2.length; j++) v2 = v2 * 1000 + parseInt(parts2[j], 10);
+          return v2;
+        }
+        return -1;
+      }
+
+      function naturalSortByChapter(list) {
+        return list.slice().sort(function (a, b) {
+          var na = extractChapterNum(a.name);
+          var nb = extractChapterNum(b.name);
+          if (na < 0 && nb < 0) return a.name < b.name ? -1 : 1;
+          if (na < 0) return 1;
+          if (nb < 0) return -1;
+          return na - nb;
+        });
+      }
+
+      var hasChapter = bookDetails.some(function (d) { return extractChapterNum(d.name) >= 0; });
+
+      var html = '<div style="text-align:center;padding:var(--jy-space-4)">' +
         '<div class="score-display">' +
         '<div class="score-display__value score-display__value' + cls + '">' + Math.round(overallRate * 100) + '%</div>' +
         '<div class="score-display__label">综合正确率（' + totalCorrect + '/' + totalQ + '）</div>' +
         '<div class="progress-bar" style="margin-top:var(--jy-space-3)">' +
         '<div class="progress-bar__fill progress-bar__fill' + cls + '" style="width:' + Math.round(overallRate * 100) + '%"></div></div></div>';
 
-      // Per-book breakdown
-      html += '<div style="margin-top:var(--jy-space-4)"><table style="width:100%;font-size:var(--jy-font-size-sm)"><thead><tr><th>做题本</th><th>已答</th><th>正确率</th></tr></thead><tbody>';
-      bookDetails.sort(function (a, b) { return b.rate - a.rate; });
-      bookDetails.forEach(function (d) {
-        const dCls = d.rate >= 0.8 ? 'is-high' : (d.rate >= 0.6 ? 'is-mid' : 'is-low');
-        html += '<tr><td>' + esc(d.name) + '</td><td>' + d.correct + '/' + d.total + '</td><td><span class="book-card__stat--score ' + dCls + '" style="font-size:var(--jy-font-size-xs)">' + Math.round(d.rate * 100) + '%</span></td></tr>';
-      });
-      html += '</tbody></table></div>';
+      if (hasChapter) {
+        html += '<div style="margin-top:var(--jy-space-3);display:flex;gap:var(--jy-space-2);justify-content:center">' +
+          '<button class="jy-btn jy-btn--outline jy-btn--sm composite-sort-btn is-active" data-sort="rate">📊 正确率</button>' +
+          '<button class="jy-btn jy-btn--outline jy-btn--sm composite-sort-btn" data-sort="chapter">📖 章节序</button></div>';
+      }
+
+      html += '<div style="margin-top:var(--jy-space-3)"><table style="width:100%;font-size:var(--jy-font-size-sm)"><thead><tr><th>做题本</th><th>已答</th><th>正确率</th></tr></thead><tbody id="compositeTbody">' +
+        renderCompositeTable() + '</tbody></table></div>';
 
       this.els.compositeBody.innerHTML = html;
       this.els.compositeOverlay.classList.add('is-open');
+
+      // Bind sort buttons
+      var self2 = this;
+      this.els.compositeBody.querySelectorAll('.composite-sort-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          compositeSort = this.dataset.sort;
+          this.parentElement.querySelectorAll('.composite-sort-btn').forEach(function (b) { b.classList.remove('is-active'); });
+          this.classList.add('is-active');
+          var tb = document.getElementById('compositeTbody');
+          if (tb) tb.innerHTML = renderCompositeTable();
+        });
+      });
     }
 
     /* ---- book CRUD ---- */
