@@ -614,21 +614,23 @@
       }
 
       function extractChapterNum(name) {
-        var m = name.match(/^第[一二三四五六七八九十百]+章\s*(\d+(?:\.\d+)?)/);
-        if (m) {
-          var parts = m[1].split('.');
-          var v = 0;
-          for (var i = 0; i < parts.length; i++) v = v * 1000 + parseInt(parts[i], 10);
-          return v;
-        }
-        m = name.match(/^(\d+(?:\.\d+)?)/);
-        if (m) {
-          var parts2 = m[0].split('.');
-          var v2 = 0;
-          for (var j = 0; j < parts2.length; j++) v2 = v2 * 1000 + parseInt(parts2[j], 10);
-          return v2;
-        }
+        var m = name.match(/^第[一二三四五六七八九十百]+章\s*(\d+(?:\.\d+)*)/);
+        if (m) return numVal(m[1]);
+        m = name.match(/^(\d+(?:\.\d+)*)/);
+        if (m) return numVal(m[1]);
+        // "数据结构王道3.1" / "极限660" — number at the end
+        m = name.match(/(\d+(?:\.\d+)+)$/);
+        if (m) return numVal(m[1]);
+        m = name.match(/(\d+)$/);
+        if (m) return parseInt(m[1], 10);
         return -1;
+      }
+
+      function numVal(v) {
+        var parts = v.split('.');
+        var r = 0;
+        for (var i = 0; i < parts.length; i++) r = r * 1000 + parseInt(parts[i], 10);
+        return r;
       }
 
       function naturalSortByChapter(list) {
