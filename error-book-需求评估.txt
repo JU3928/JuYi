@@ -1,0 +1,91 @@
+JuYi 项目 — error-book 模块需求评估
+=========================================
+
+1. 数据访问方案
+----------------
+推荐方案：直接复用 shared/db-core.js。两个模块打开同一个 IndexedDB 名称（JuYiDB），浏览器允许多个标签页同时连接同一个数据库，IndexedDB 自带事务隔离。不需要额外封装 data-service.js——两个模块各自 new JuYiDB() 然后 db.open('JuYiDB', 2, {...}) 即可共享读写。
+
+大数据（Base64 图片）避免卡顿的策略：
+（a）列表视图不渲染完整 innerHTML，仅展示 stripHtml() 提取的纯文本摘要（现有 error-notebook 的 _buildCard 已经这么做了，只取前 120 字）。
+（b）详情展开时才通过 innerHTML 渲染单条记录的完整 HTML，避免一次性插入上百张 base64 图片撑爆 DOM。
+（c）如果仍需渲染卡片缩略图，可以用 <img loading="lazy"> 让浏览器懒加载。
+（d）分页/虚拟滚动对于现有数据量（通常几百条）并非必需——但如果预期超过 500 条，建议实现简单的"加载更多"按钮（每次取 50 条），因为 IndexedDB 的 getAll() 会将所有数据一次性加载到 JS 内存，大 base64 会让内存膨胀。可以改用游标（IDBCursor）分批读取，只取摘要字段。
+
+结论：先用 getAll + 摘要渲染 + loading="lazy" 即可，性能瓶颈出现后再加游标分页。
+
+2. 跨模块跳转与定位
+--------------------
+推荐方案：URL Query String（?id=123）+ 页面监听。
+
+具体实现：
+（a）error-book 中点击"定位原文"→ window.open('modules/error-notebook/index.html?id=123', '_blank')。
+（b）error-notebook 的 init() 中增加：从 URL 读取 ?id=123 → 查 IndexedDB 获取该记录 → 调用 _openDetailModal() 弹出详情弹窗。
+（c）URL 参数处理放在 init() 末尾、_renderAll() 之前，确保 DOM 和事件已就绪。
+
+备选方案对比：
+- localStorage + storage 事件：可以跨标签页通信，但只能传输字符串，需要轮询或监听 storage 事件。问题在于如果 error-notebook 已在另一个标签页打开，storage 事件可以触发弹窗，但无法精确控制是哪个标签页（如果有多个）。额外复杂度较高。
+- Broadcast Channel：API 简洁，适合同源标签页通信，但兼容性略差于 URL 参数方案（Safari 15.4+ 才支持）。且仍然需要额外实现"如果目标未打开则打开新标签页"的逻辑。
+
+推荐组合方案：URL Query String 为主（处理目标未打开的情况）+ Broadcast Channel 为辅（目标已打开时直接发送消息，无需刷新页面）。
+
+异常处理：
+- error-notebook 中 id=123 对应的记录已被删除 → 弹 toast 提示"该题目已被删除"
+- id 不存在或解析失败 → 静默忽略，正常渲染列表
+- error-notebook 未打开 → window.open 打开新标签页，正常走 URL 参数流程
+
+3. UI 与样式隔离
+-----------------
+推荐方案：不依赖 shared/base.css，单独引入 book-theme.css。
+
+原因：
+（a）shared/base.css 定义了 :root 级别的 CSS 变量（--jy-bg, --jy-surface 等），全局生效。如果 error-book 引用它，暗色模式切换会影响所有页面。
+（b）更好的做法：book-theme.css 定义一套独立的变量（--eb-bg: #faf8f5, --eb-text: #2c2416 等），将 error-book 包装在一个 #eb-app 容器内，所有样式通过 #eb-app 作用域隔离。
+
+复用基础组件：
+- 按钮、弹窗等 UI 组件复制 shared/base.css 中的相关 CSS 片段到 book-theme.css，并替换变量名为 book 专用变量。组件逻辑（如弹窗开关、模态关闭）手动实现在 app.js 中，不依赖 shared 的组件类。
+- 或者更简单：直接复制 shared/base.css 中 .jy-btn / .jy-modal 的 CSS 规则到 book-theme.css，将变量替换为硬编码值或 book 专用变量。
+
+4. 富文本渲染安全
+------------------
+XSS 风险：
+已知 sanitizeHtml 已过滤，直接 innerHTML 渲染理论上安全。但建议仍然调用 sanitizeHtml() 再渲染一次，作为 defense-in-depth（防止直接从 IndexedDB 读取的旧数据含有未净化的内容）。
+
+Base64 图片性能优化：
+（a）列表/卡片视图不渲染完整 innerHTML——用 stripHtml 提取纯文本摘要，img 标签替换为 [图片] 占位符。
+（b）详情视图中渲染完整 HTML 时，对 <img> 标签做后续处理：如果 src 是 data:image/... 且超过某个阈值（如 100KB），先用占位符显示，用户点击后再加载。
+（c）或者直接依赖 <img loading="lazy"> 让浏览器延迟加载——但这只推迟网络请求，对 data: URI 的解析开销没有帮助。对于 data: URI，浏览器在解析 HTML 时同步解码 base64，所以大量大图片确实会阻塞 DOM。建议：渲染前用 DOMParser 解析 HTML，将大图片的 src 替换为占位符，用户点击后才将 data: URI 赋值回去（类似"点击查看图片"的交互）。
+
+结论：详情视图直接 innerHTML + sanitizeHtml 渲染（每页只有 1 条记录，不会同时加载大量图片），性能可接受。列表视图只展示文本摘要，不渲染图片。
+
+5. 筛选与排序逻辑
+------------------
+标签索引构建：
+
+当前数据量（< 500 条）下，全量扫描 IndexedDB 构建标签索引完全可行。GetAll() 返回所有记录，遍历提取 tags 字段去重——对于几百条记录耗时 < 50ms，无需额外维护标签索引表。
+
+但如果数据量增长到数千条：
+- 方案 A：在 error-notebook 每次增删改时，同步更新 localStorage 中的标签索引（{tag: count}）。error-book 直接读取这个索引即可，无需扫描 IndexedDB。
+- 方案 B：使用 IndexedDB 的 index 游标（IDBIndex.openCursor）按需遍历，只取 tags 列，不加载 question/answer 等大字段。
+
+当前阶段推荐方案 A（简单有效）：error-notebook 的 _onSave / _onConfirmDelete 末尾更新 localStorage 的标签索引。因为 error-notebook 本身在 _renderTagFilter 中已经做了全量标签扫描，改为增量维护可以同时优化两个模块。
+
+6. 导出/打印适配
+-----------------
+window.print() + @media print 可以满足基本需求，但有以下限制：
+
+（a）base64 图片在打印时可能被截断——如果图片高度超过剩余页面空间，浏览器默认不会在图片中间分页。需要在 CSS 中设置 img { max-width: 100%; page-break-inside: avoid; }。
+（b）固定每页 1-2 道题的布局：用 .question-page { page-break-after: always; } 包裹每道题。但富文本内容高度不可预测（可能有长图片），强行分页可能产生大片空白。解决：在打印前用 JS 估算每道题的内容高度（getBoundingClientRect），动态决定放 1 道还是 2 道题。
+（c）打印时的样式需要 @media print { } 完全重写——隐藏导航、按钮、侧边栏，设置白底黑字、衬线字体、A4 尺寸。
+
+如果 window.print() 不满足精细控制需求（如自定义页眉页脚、页码、多栏排版），需要引入 html2canvas 或 jsPDF 做更精确的 PDF 生成。但这违反零依赖原则，建议先用 @media print 实现基本功能，后续按需升级。
+
+7. 项目构建与部署
+------------------
+建议继续沿用纯静态 HTML + IIFE 模式。
+
+原因：
+（a）该模块功能相对独立，代码量预计 300-500 行，IIFE 完全够用。
+（b）引入 Vite/Webpack 会增加 node_modules、配置文件和部署复杂度，与项目整体"双击即用"的理念相悖。
+（c）如果后续需要引入第三方库（如 html2canvas），可以通过 CDN <script> 标签加载，保留静态部署特性。但要注意 CDN 不可用时模块会降级（捕获异常，提示功能不可用）。更安全的方式是将库文件下载到 shared/ 目录下（如 shared/html2canvas.min.js），保持离线可用。
+
+当前阶段不建议切换为 ESM 模块化构建——等需要引入 2 个以上第三方库时再统一评估。
