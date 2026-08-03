@@ -81,6 +81,9 @@
         bookList: q('#bookList'),
         emptyState: q('#emptyState'),
         btnAdd: q('#btnAdd'),
+        searchBooks: q('#searchBooks'),
+        btnClearSearchBooks: q('#btnClearSearchBooks'),
+        btnSearchStats: q('#btnSearchStats'),
         answerView: q('#answerView'),
         answerBookTitle: q('#answerBookTitle'),
         answerProgress: q('#answerProgress'),
@@ -168,6 +171,11 @@
       E.btnCompositeRun.addEventListener('click', () => this._showCompositeStats());
       E.btnCompositeCancel.addEventListener('click', () => this._exitCompositeMode());
 
+      // Search + custom composite stats
+      E.searchBooks.addEventListener('input', () => this._onSearchBooks());
+      E.btnClearSearchBooks.addEventListener('click', () => this._clearSearchBooks());
+      E.btnSearchStats.addEventListener('click', () => this._showSearchStats());
+
       // Auto-save
       window.addEventListener('beforeunload', () => this._persistAnswers());
       document.addEventListener('visibilitychange', () => {
@@ -225,14 +233,85 @@
     }
 
     _renderBookList() {
+      var q = (this.els.searchBooks && this.els.searchBooks.value || '').trim().toLowerCase();
+      var filtered = q ? this.books.filter(function (b) { return b.name.toLowerCase().indexOf(q) !== -1; }) : this.books;
       if (this.books.length === 0) {
         this.els.bookList.style.display = 'none';
         this.els.emptyState.style.display = '';
         return;
       }
       this.els.bookList.style.display = '';
-      this.els.emptyState.style.display = 'none';
-      this.els.bookList.innerHTML = this.books.map(b => this._buildBookCard(b)).join('');
+      this.els.emptyState.style.display = filtered.length === 0 ? '' : 'none';
+      if (filtered.length === 0) {
+        this.els.bookList.innerHTML = '';
+        return;
+      }
+      this.els.bookList.innerHTML = filtered.map(function (b) { return this._buildBookCard(b); }, this).join('');
+    }
+
+    _onSearchBooks() {
+      var q = (this.els.searchBooks.value || '').trim();
+      this.els.btnClearSearchBooks.style.display = q ? 'inline-block' : 'none';
+      this.els.btnSearchStats.style.display = q ? 'inline-flex' : 'none';
+      this._renderBookList();
+    }
+
+    _clearSearchBooks() {
+      this.els.searchBooks.value = '';
+      this.els.btnClearSearchBooks.style.display = 'none';
+      this.els.btnSearchStats.style.display = 'none';
+      this._renderBookList();
+    }
+
+    _showSearchStats() {
+      var q = (this.els.searchBooks.value || '').trim().toLowerCase();
+      if (!q) { alert('请先输入搜索关键词'); return; }
+      var matched = this.books.filter(function (b) { return b.name.toLowerCase().indexOf(q) !== -1; });
+      if (!matched.length) { alert('没有匹配「' + q + '」的做题本'); return; }
+      var self = this;
+      var totalQ = 0, totalCorrect = 0, totalWrong = 0;
+      var bookDetails = [];
+      matched.forEach(function (book) {
+        var stored = self._answerCache && self._answerCache[book.id];
+        var answers = stored ? (stored.answers || {}) : {};
+        var subCounts = stored ? (stored.subCounts || {}) : {};
+        var correct = 0, wrong = 0, total = 0;
+        for (var i = 1; i <= book.questionCount; i++) {
+          var sc = subCounts[i] || 1;
+          for (var j = 1; j <= sc; j++) {
+            var key = sc > 1 ? (i + '.' + j) : i.toString();
+            var ans = (answers[key] || '').trim();
+            if (ans) {
+              total++;
+              if (book.type === 'choice') {
+                var ca = stored.correctAnswers ? (stored.correctAnswers[key] || '').trim() : '';
+                if (ca === ans) correct++; else wrong++;
+              } else {
+                if (ans === '正确') correct++; else wrong++;
+              }
+            }
+          }
+        }
+        totalQ += total; totalCorrect += correct; totalWrong += wrong;
+        if (total > 0) bookDetails.push({ name: book.name, total: total, correct: correct, rate: correct / total });
+      });
+      if (totalQ === 0) { alert('匹配的做题本暂无可统计的答题记录'); return; }
+      var overallRate = totalCorrect / totalQ;
+      var cls = overallRate >= 0.8 ? '--high' : (overallRate >= 0.6 ? '--mid' : '--low');
+      var html = '<div style="text-align:center;padding:var(--jy-space-4)">' +
+        '<div style="font-size:var(--jy-font-size-sm);color:var(--jy-text-muted);margin-bottom:var(--jy-space-3)">搜索「' + esc(q) + '」· 匹配 ' + matched.length + ' 个做题本</div>' +
+        '<div class="score-display"><div class="score-display__value score-display__value' + cls + '">' + Math.round(overallRate * 100) + '%</div>' +
+        '<div class="score-display__label">综合正确率（' + totalCorrect + '/' + totalQ + '）</div>' +
+        '<div class="progress-bar" style="margin-top:var(--jy-space-3)"><div class="progress-bar__fill progress-bar__fill' + cls + '" style="width:' + Math.round(overallRate * 100) + '%"></div></div></div>';
+      html += '<div style="margin-top:var(--jy-space-4)"><table style="width:100%;font-size:var(--jy-font-size-sm)"><thead><tr><th>做题本</th><th>已答</th><th>正确率</th></tr></thead><tbody>';
+      bookDetails.sort(function (a, b) { return b.rate - a.rate; });
+      bookDetails.forEach(function (d) {
+        var dc = d.rate >= 0.8 ? 'is-high' : (d.rate >= 0.6 ? 'is-mid' : 'is-low');
+        html += '<tr><td>' + esc(d.name) + '</td><td>' + d.correct + '/' + d.total + '</td><td><span class="book-card__stat--score ' + dc + '" style="font-size:var(--jy-font-size-xs)">' + Math.round(d.rate * 100) + '%</span></td></tr>';
+      });
+      html += '</tbody></table></div>';
+      this.els.compositeBody.innerHTML = html;
+      this.els.compositeOverlay.classList.add('is-open');
     }
 
     _buildBookCard(book) {
