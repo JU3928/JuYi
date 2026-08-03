@@ -501,29 +501,7 @@
         }
       });
 
-      // Step 3: Extract clean book-number labels from suffixes
-      // "660" → "660", "_1000_4" → "1000", " 880" → "880"
-      Object.keys(prefixMap).forEach(function (pref) {
-        var rootsWithPref = roots.filter(function (r) { return r.root.indexOf(pref) === 0 && r.root.length > pref.length; });
-        // Group by extracted book number, not raw suffix
-        var bookNumMap = {}; // bookNum → { label, ids }
-        rootsWithPref.forEach(function (r) {
-          var suf = r.root.slice(pref.length);
-          var m = suf.match(/\d+/);
-          if (!m) return; // no number → skip
-          var bookNum = m[0];
-          if (!bookNumMap[bookNum]) bookNumMap[bookNum] = { label: bookNum, ids: [] };
-          if (bookNumMap[bookNum].ids.indexOf(r.id) === -1) bookNumMap[bookNum].ids.push(r.id);
-        });
-        Object.keys(bookNumMap).forEach(function (bn) {
-          var entry = bookNumMap[bn];
-          if (entry.ids.length >= 1) {
-            groups.push({ key: 'b_' + pref + bn, label: entry.label, ids: entry.ids.slice(), level: 'book', parent: pref });
-          }
-        });
-      });
-
-      // Step 4: Cross-subject book-level groups (e.g. "660" across 极限+微分)
+      // Step 3: Cross-subject book-level groups (e.g. "660" across 极限+微分)
       var globalBookMap = {}; // bookNum → ids[]
       roots.forEach(function (r) {
         var m = r.root.match(/\d+/);
@@ -536,6 +514,26 @@
         if (globalBookMap[bn].length >= 2) {
           groups.push({ key: 'g_' + bn, label: bn, ids: globalBookMap[bn].slice(), level: 'book_global' });
         }
+      });
+
+      // Step 4: Per-subject book-number groups (e.g. within "极限" → "660", "1000")
+      Object.keys(prefixMap).forEach(function (pref) {
+        var rootsWithPref = roots.filter(function (r) { return r.root.indexOf(pref) === 0 && r.root.length > pref.length; });
+        var bookNumMap = {};
+        rootsWithPref.forEach(function (r) {
+          var suf = r.root.slice(pref.length);
+          var m = suf.match(/\d+/);
+          if (!m) return;
+          var bookNum = m[0];
+          if (!bookNumMap[bookNum]) bookNumMap[bookNum] = { label: bookNum, ids: [] };
+          if (bookNumMap[bookNum].ids.indexOf(r.id) === -1) bookNumMap[bookNum].ids.push(r.id);
+        });
+        Object.keys(bookNumMap).forEach(function (bn) {
+          var entry = bookNumMap[bn];
+          if (entry.ids.length >= 1) {
+            groups.push({ key: 'b_' + pref + bn, label: entry.label, ids: entry.ids.slice(), level: 'book', parent: pref });
+          }
+        });
       });
 
       return groups;
