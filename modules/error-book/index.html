@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>错题图鉴 — JuYi</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div id="eb-app" class="eb-app">
+
+  <!-- ====== P1 仪表盘 + 书架视图 ====== -->
+  <div id="shelf-view">
+
+    <div class="eb-feature-top">
+      <!-- Canvas 环形图 -->
+      <div class="eb-dashboard">
+        <div class="eb-dashboard__chart-wrap">
+          <canvas id="pieCanvas" width="320" height="320"></canvas>
+          <div class="eb-dashboard__center" id="pieCenter">--</div>
+        </div>
+        <div class="eb-dashboard__cards" id="statCards"></div>
+      </div>
+
+      <!-- 标签云 -->
+      <div class="eb-tagcloud" id="tagCloud"></div>
+    </div>
+
+    <div class="eb-feature-bottom">
+      <h2 class="eb-section-title">📚 我的错题书</h2>
+      <div class="eb-shelf" id="bookShelf"></div>
+      <div class="eb-shelf-empty" id="shelfEmpty" style="display:none">
+        <div class="eb-empty-icon">📭</div>
+        <div class="eb-empty-text">暂无错题记录</div>
+        <div class="eb-empty-sub">去错题本添加题目后回来翻阅</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== 书页视图 ====== -->
+  <div id="book-view" style="display:none">
+    <nav class="eb-navbar">
+      <button id="btnBackShelf" class="eb-btn eb-btn--ghost">📚 返回书架</button>
+      <span class="eb-navbar__title" id="bookViewTitle">错题集</span>
+      <span class="eb-navbar__progress" id="bookProgress">--</span>
+    </nav>
+    <div class="eb-page-list" id="pageList"></div>
+  </div>
+
+  <!-- ====== P2 封面遮罩 ====== -->
+  <div id="cover-overlay" class="eb-cover-overlay" style="display:none">
+    <img id="coverImage" src="" alt="封面" class="eb-cover-img">
+  </div>
+
+</div>
+
+<script src="../../shared/db-core.js"></script>
+<script src="../../shared/utils.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

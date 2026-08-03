@@ -63,6 +63,17 @@
       this._cacheDom();
       this._bindEvents();
       this._renderAll();
+
+      // 支持从 error-book 跳转定位（?id=123）
+      var urlParams = new URLSearchParams(window.location.search);
+      var targetId = urlParams.get('id');
+      if (targetId) {
+        var self = this;
+        this.db.get('errorNotebook', Number(targetId)).then(function (item) {
+          if (item) self._openDetailModal(item);
+          else alert('该题目已不存在或已被删除');
+        });
+      }
     }
 
     async _openDB() {

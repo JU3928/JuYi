@@ -1,0 +1,249 @@
+/* ===================================================================
+ * JuYi — 错题图鉴 样式（书本主题，不依赖 base.css）
+ * =================================================================== */
+
+/* ========================== 设计令牌 ========================== */
+:root {
+  --eb-bg:              #faf8f5;
+  --eb-surface:         #ffffff;
+  --eb-surface-hover:   #f5f0e8;
+  --eb-text:            #2c2416;
+  --eb-text-secondary:  #6b5f4f;
+  --eb-text-muted:      #9b8e7a;
+  --eb-border:          #e5ddd0;
+  --eb-border-light:    #f0ebe0;
+  --eb-shadow:          0 4px 16px rgba(44,36,22,0.08);
+  --eb-shadow-hover:    0 8px 28px rgba(44,36,22,0.14);
+  --eb-radius:          12px;
+  --eb-radius-sm:       8px;
+  --eb-font-serif:      "Georgia","Times New Roman","Noto Serif SC",serif;
+  --eb-font-sans:       -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans SC",sans-serif;
+  --eb-accent:          #8b5e3c;
+  --eb-accent-soft:     #f5ede3;
+  --eb-danger:          #c0392b;
+  --eb-success:         #27ae60;
+  --eb-space-1: 0.25rem; --eb-space-2: 0.5rem; --eb-space-3: 0.75rem;
+  --eb-space-4: 1rem; --eb-space-5: 1.25rem; --eb-space-6: 1.5rem; --eb-space-8: 2rem;
+  --eb-transition: 0.25s ease;
+}
+
+/* ========================== 重置 ========================== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 16px; }
+
+/* ========================== 根容器 ========================== */
+.eb-app {
+  min-height: 100vh;
+  background: var(--eb-bg);
+  color: var(--eb-text);
+  font-family: var(--eb-font-sans);
+  line-height: 1.6;
+  padding: var(--eb-space-4) var(--eb-space-6);
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+/* ========================== 通用按钮 ========================== */
+.eb-btn {
+  display: inline-flex; align-items: center; gap: var(--eb-space-1);
+  padding: var(--eb-space-2) var(--eb-space-4);
+  border: 1px solid var(--eb-border); border-radius: var(--eb-radius-sm);
+  background: var(--eb-surface); color: var(--eb-text);
+  font-size: 0.875rem; cursor: pointer;
+  transition: all var(--eb-transition);
+  font-family: inherit; white-space: nowrap;
+}
+.eb-btn:hover { background: var(--eb-surface-hover); border-color: var(--eb-accent); }
+.eb-btn--ghost { background: none; border-color: transparent; }
+.eb-btn--ghost:hover { background: var(--eb-accent-soft); }
+.eb-btn--accent { background: var(--eb-accent); color: #fff; border-color: var(--eb-accent); }
+
+/* ========================== 区域标题 ========================== */
+.eb-section-title {
+  font-family: var(--eb-font-serif);
+  font-size: 1.3rem; font-weight: 700;
+  color: var(--eb-text); margin-bottom: var(--eb-space-4);
+}
+
+/* ========================== P1 仪表盘 ========================== */
+.eb-dashboard {
+  display: flex; align-items: center; gap: var(--eb-space-6);
+  flex-wrap: wrap; justify-content: center;
+  margin-bottom: var(--eb-space-6);
+}
+.eb-dashboard__chart-wrap {
+  position: relative; width: 200px; height: 200px; flex-shrink: 0;
+}
+.eb-dashboard__chart-wrap canvas {
+  width: 200px; height: 200px; display: block;
+}
+.eb-dashboard__center {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  font-size: 1.6rem; font-weight: 700; color: var(--eb-text);
+  font-family: var(--eb-font-serif); pointer-events: none;
+}
+.eb-dashboard__cards {
+  display: flex; flex-direction: column; gap: var(--eb-space-3);
+}
+.eb-stat-card {
+  background: var(--eb-surface);
+  border: 1px solid var(--eb-border);
+  border-radius: var(--eb-radius-sm);
+  padding: var(--eb-space-3) var(--eb-space-5);
+  min-width: 160px; text-align: center;
+  box-shadow: var(--eb-shadow);
+}
+.eb-stat-card__value {
+  font-size: 1.8rem; font-weight: 700; font-family: var(--eb-font-serif);
+  color: var(--eb-accent);
+}
+.eb-stat-card__label {
+  font-size: 0.8rem; color: var(--eb-text-secondary); margin-top: 2px;
+}
+
+/* ========================== P3 标签云 ========================== */
+.eb-tagcloud {
+  display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;
+  padding: var(--eb-space-3) var(--eb-space-4);
+  margin-bottom: var(--eb-space-6);
+}
+.eb-tag-bubble {
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%; cursor: pointer;
+  background: var(--eb-accent-soft);
+  color: var(--eb-text-secondary);
+  transition: all var(--eb-transition);
+  font-weight: 600; user-select: none;
+  text-align: center; padding: 0.5rem;
+  border: 2px solid transparent;
+}
+.eb-tag-bubble:hover {
+  transform: scale(1.12); border-color: var(--eb-accent);
+  color: var(--eb-accent); box-shadow: var(--eb-shadow);
+}
+
+/* ========================== 书架卡片 ========================== */
+.eb-feature-bottom { margin-top: var(--eb-space-4); }
+.eb-shelf {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--eb-space-4);
+}
+.eb-spine-card {
+  display: flex; border-radius: var(--eb-radius);
+  overflow: hidden; cursor: pointer; background: var(--eb-surface);
+  box-shadow: var(--eb-shadow); transition: all var(--eb-transition);
+  min-height: 140px;
+}
+.eb-spine-card:hover { box-shadow: var(--eb-shadow-hover); transform: translateY(-2px); }
+.eb-spine-card__bar {
+  width: 8px; flex-shrink: 0;
+}
+.eb-spine-card__body {
+  flex: 1; padding: var(--eb-space-4); display: flex; flex-direction: column;
+}
+.eb-spine-card__title {
+  font-family: var(--eb-font-serif); font-size: 1.1rem;
+  font-weight: 700; color: var(--eb-text); margin-bottom: var(--eb-space-1);
+}
+.eb-spine-card__subtitle {
+  font-size: 0.8rem; color: var(--eb-text-secondary); margin-bottom: auto;
+}
+.eb-spine-card__hint {
+  font-size: 0.7rem; color: var(--eb-text-muted); margin-top: var(--eb-space-2);
+}
+.eb-shelf-empty { text-align: center; padding: var(--eb-space-8); }
+.eb-empty-icon { font-size: 4rem; margin-bottom: var(--eb-space-3); }
+.eb-empty-text { font-size: 1.2rem; color: var(--eb-text-secondary); margin-bottom: var(--eb-space-1); }
+.eb-empty-sub { font-size: 0.85rem; color: var(--eb-text-muted); }
+
+/* ========================== 书页视图 ========================== */
+.eb-navbar {
+  display: flex; align-items: center; gap: var(--eb-space-3);
+  padding: var(--eb-space-3) var(--eb-space-4); margin-bottom: var(--eb-space-6);
+  background: var(--eb-surface); border-radius: var(--eb-radius);
+  box-shadow: var(--eb-shadow); position: sticky; top: var(--eb-space-2); z-index: 10;
+  flex-wrap: wrap;
+}
+.eb-navbar__title {
+  font-family: var(--eb-font-serif); font-size: 1.2rem; font-weight: 700;
+  color: var(--eb-text); flex: 1; text-align: center;
+}
+.eb-navbar__progress {
+  font-size: 0.85rem; color: var(--eb-text-secondary);
+  font-family: var(--eb-font-serif);
+}
+
+.eb-page-list {
+  display: flex; flex-direction: column; gap: var(--eb-space-8);
+}
+.eb-question-page {
+  background: var(--eb-surface); border-radius: var(--eb-radius);
+  box-shadow: var(--eb-shadow); overflow: hidden;
+}
+.eb-question-page__header {
+  display: flex; align-items: center; gap: var(--eb-space-2);
+  padding: var(--eb-space-3) var(--eb-space-5);
+  border-bottom: 1px solid var(--eb-border-light); flex-wrap: wrap;
+  font-size: 0.8rem; color: var(--eb-text-secondary);
+}
+.eb-question-page__header .eb-dot {
+  display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+}
+.eb-question-page__header .eb-hard {
+  color: var(--eb-danger); font-weight: 600;
+}
+.eb-question-page__body {
+  padding: var(--eb-space-5) var(--eb-space-6);
+  line-height: 1.8; font-size: 0.95rem;
+}
+.eb-question-page__body img {
+  max-width: 100%; height: auto; margin: var(--eb-space-3) 0;
+}
+.eb-question-page__tags {
+  padding: 0 var(--eb-space-5) var(--eb-space-3);
+  display: flex; flex-wrap: wrap; gap: var(--eb-space-1);
+}
+.eb-tag {
+  display: inline-block; padding: 2px 8px; font-size: 0.72rem;
+  background: var(--eb-accent-soft); color: var(--eb-text-secondary);
+  border-radius: 99px;
+}
+.eb-question-page__footer {
+  display: flex; align-items: center; justify-content: flex-end;
+  padding: var(--eb-space-3) var(--eb-space-5);
+  border-top: 1px solid var(--eb-border-light);
+  gap: var(--eb-space-2); flex-wrap: wrap;
+}
+.eb-question-page__divider {
+  height: 1px; background: linear-gradient(to right, transparent, var(--eb-border), transparent);
+  margin: 0 var(--eb-space-8);
+}
+
+/* ========================== P2 封面遮罩 ========================== */
+.eb-cover-overlay {
+  position: fixed; inset: 0; z-index: 999;
+  background: rgba(20,15,8,0.92);
+  display: flex; align-items: center; justify-content: center;
+  transition: opacity 0.6s ease;
+}
+.eb-cover-overlay.is-fading { opacity: 0; pointer-events: none; }
+.eb-cover-img {
+  max-width: 92vw; max-height: 92vh;
+  border-radius: var(--eb-radius); box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+}
+
+/* ========================== 响应式 ========================== */
+@media (max-width: 768px) {
+  .eb-app { padding: var(--eb-space-3); }
+  .eb-shelf { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+  .eb-dashboard { flex-direction: column; gap: var(--eb-space-4); }
+  .eb-dashboard__chart-wrap { width: 150px; height: 150px; }
+  .eb-dashboard__chart-wrap canvas { width: 150px; height: 150px; }
+  .eb-dashboard__center { font-size: 1.2rem; }
+  .eb-stat-card { min-width: 120px; padding: var(--eb-space-2) var(--eb-space-3); }
+  .eb-stat-card__value { font-size: 1.3rem; }
+  .eb-navbar { padding: var(--eb-space-2); gap: var(--eb-space-1); }
+  .eb-navbar__title { font-size: 1rem; }
+  .eb-question-page__body { padding: var(--eb-space-3); font-size: 0.88rem; }
+}
