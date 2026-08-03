@@ -10,6 +10,14 @@
   var LS_SUBJECTS = 'jy_error_notebook_subjects';
   var BATCH_SIZE = 20;
 
+  function fmtDate(ts) {
+    if (!ts) return '';
+    var d = new Date(ts);
+    return d.getFullYear() + '-' +
+      String(d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getDate()).padStart(2, '0');
+  }
+
   var MOTTOS = [
     '知错能改，善莫大焉',
     '错误是最好的老师',
