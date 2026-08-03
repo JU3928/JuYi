@@ -487,19 +487,24 @@
         }
       });
 
-      // Step 3: Find book-number suffixes within each subject
-      // e.g. within "极限" → "660", "1000"
+      // Step 3: Extract clean book-number labels from suffixes
+      // "660" → "660", "_1000_4" → "1000", " 880" → "880"
       Object.keys(prefixMap).forEach(function (pref) {
         var rootsWithPref = roots.filter(function (r) { return r.root.indexOf(pref) === 0 && r.root.length > pref.length; });
-        var suffixes = [];
+        // Group by extracted book number, not raw suffix
+        var bookNumMap = {}; // bookNum → { label, ids }
         rootsWithPref.forEach(function (r) {
           var suf = r.root.slice(pref.length);
-          if (suf && suffixes.indexOf(suf) === -1) suffixes.push(suf);
+          var m = suf.match(/\d+/);
+          if (!m) return; // no number → skip
+          var bookNum = m[0];
+          if (!bookNumMap[bookNum]) bookNumMap[bookNum] = { label: bookNum, ids: [] };
+          if (bookNumMap[bookNum].ids.indexOf(r.id) === -1) bookNumMap[bookNum].ids.push(r.id);
         });
-        suffixes.forEach(function (suf) {
-          var ids = roots.filter(function (r) { return r.root === pref + suf; }).map(function (r) { return r.id; });
-          if (ids.length >= 1) {
-            groups.push({ key: 'b_' + pref + suf, label: suf, ids: ids.slice(), level: 'book', parent: pref });
+        Object.keys(bookNumMap).forEach(function (bn) {
+          var entry = bookNumMap[bn];
+          if (entry.ids.length >= 1) {
+            groups.push({ key: 'b_' + pref + bn, label: entry.label, ids: entry.ids.slice(), level: 'book', parent: pref });
           }
         });
       });
