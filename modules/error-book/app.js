@@ -77,9 +77,6 @@
 
   function _bindEvents() {
     els.btnBackShelf.addEventListener('click', _backToShelf);
-    window.addEventListener('resize', function () {
-      if (els.shelfView.style.display !== 'none') _renderPieChart();
-    });
   }
 
   /* ================================================================
@@ -146,9 +143,6 @@
    * ================================================================ */
   function _renderAll() {
     _renderShelf();
-    _renderPieChart();
-    _renderStatCards();
-    _renderTagCloud();
   }
 
   /* ================================================================
