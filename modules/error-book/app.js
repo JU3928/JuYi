@@ -403,18 +403,19 @@
     ctx.font = 'italic 22px Georgia, "Times New Roman", serif';
     ctx.fillText('"' + motto + '"', w / 2, h - 80);
 
-    // Show
+    // Show cover
     els.coverImage.src = canvas.toDataURL('image/png');
     els.coverOverlay.style.display = 'flex';
     els.coverOverlay.classList.remove('is-fading');
 
+    // After 1.2s display, fade out (0.6s transition) then show pages
     setTimeout(function () {
       els.coverOverlay.classList.add('is-fading');
-      els.coverOverlay.addEventListener('transitionend', function handler() {
-        els.coverOverlay.removeEventListener('transitionend', handler);
+      setTimeout(function () {
         els.coverOverlay.style.display = 'none';
+        els.coverOverlay.classList.remove('is-fading');
         _renderBookPages(subjectName);
-      });
+      }, 650);
     }, 1200);
   }
 

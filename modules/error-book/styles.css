@@ -225,7 +225,7 @@ html { font-size: 16px; }
   position: fixed; inset: 0; z-index: 999;
   background: rgba(20,15,8,0.92);
   display: flex; align-items: center; justify-content: center;
-  transition: opacity 0.6s ease;
+  opacity: 1; transition: opacity 0.6s ease;
 }
 .eb-cover-overlay.is-fading { opacity: 0; pointer-events: none; }
 .eb-cover-img {
