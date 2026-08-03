@@ -251,8 +251,10 @@
 
     _onSearchBooks() {
       var q = (this.els.searchBooks.value || '').trim();
-      this.els.btnClearSearchBooks.style.display = q ? 'inline-block' : 'none';
+      this.els.btnClearSearchBooks.style.display = q ? 'flex' : 'none';
       this.els.btnSearchStats.style.display = q ? 'inline-flex' : 'none';
+      var label = document.getElementById('searchStatsLabel');
+      if (label) label.textContent = q.length > 12 ? q.slice(0, 12) + '…' : q;
       this._renderBookList();
     }
 
