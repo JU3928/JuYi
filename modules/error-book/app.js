@@ -447,9 +447,10 @@
       try {
         _appendQuestionCard(items[i], i, items.length);
       } catch (e) {
+        console.error('渲染第' + (i+1) + '题出错:', e, 'item:', items[i]);
         var errDiv = document.createElement('div');
-        errDiv.style.cssText = 'padding:1rem;color:var(--eb-danger);border:1px solid var(--eb-danger);border-radius:8px;margin:0.5rem 0';
-        errDiv.textContent = '⚠️ 渲染第' + (i+1) + '题时出错: ' + (e && e.message);
+        errDiv.style.cssText = 'padding:1rem;color:var(--eb-danger);border:1px solid var(--eb-danger);border-radius:8px;margin:0.5rem 0;font-size:0.85rem;word-break:break-all';
+        errDiv.textContent = '⚠️ 渲染第' + (i+1) + '题出错: ' + (e && (e.message || e.toString()));
         els.pageList.appendChild(errDiv);
       }
     }
