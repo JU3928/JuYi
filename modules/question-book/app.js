@@ -393,11 +393,12 @@
 
       var subjects = groups.filter(function (g) { return g.level === 'subject'; });
       var bookLevel = groups.filter(function (g) { return g.level === 'book'; });
+      var globalBooks = groups.filter(function (g) { return g.level === 'book_global'; });
       var html = '';
 
       // Subject level: checkboxes with labels
       if (subjects.length) {
-        html += '<div style="margin-bottom:4px"><span style="font-size:10px;color:var(--jy-text-muted)">学科：</span>';
+        html += '<div style="margin-bottom:4px"><span style="font-size:10px;color:var(--jy-text-muted)">板块：</span>';
         for (var si = 0; si < subjects.length; si++) {
           html += '<label class="filter-chip group-chip" style="cursor:pointer">' +
             '<input type="checkbox" id="chip_' + si + '" class="group-check" style="margin-right:3px;accent-color:var(--jy-primary);vertical-align:middle">' +
@@ -406,11 +407,24 @@
         html += '</div>';
       }
 
-      // Book level: checkboxes with labels
+      // Global book level: "书名：" across all subjects
+      var offset = subjects.length;
+      if (globalBooks.length) {
+        html += '<div style="margin-bottom:4px"><span style="font-size:10px;color:var(--jy-text-muted)">书名：</span>';
+        for (var gi = 0; gi < globalBooks.length; gi++) {
+          var idx = offset + gi;
+          html += '<label class="filter-chip group-chip" style="cursor:pointer">' +
+            '<input type="checkbox" id="chip_' + idx + '" class="group-check" style="margin-right:3px;accent-color:var(--jy-primary);vertical-align:middle">' +
+            globalBooks[gi].label + ' (' + globalBooks[gi].ids.length + ')</label>';
+        }
+        html += '</div>';
+        offset += globalBooks.length;
+      }
+
+      // Book level within each subject
       if (bookLevel.length) {
         var byParent = {};
         bookLevel.forEach(function (b) { var p = b.parent || '_'; if (!byParent[p]) byParent[p] = []; byParent[p].push(b); });
-        var offset = subjects.length;
         Object.keys(byParent).forEach(function (parent) {
           var items = byParent[parent];
           var prefixLabel = parent === '_' ? '' : parent;
@@ -507,6 +521,21 @@
             groups.push({ key: 'b_' + pref + bn, label: entry.label, ids: entry.ids.slice(), level: 'book', parent: pref });
           }
         });
+      });
+
+      // Step 4: Cross-subject book-level groups (e.g. "660" across 极限+微分)
+      var globalBookMap = {}; // bookNum → ids[]
+      roots.forEach(function (r) {
+        var m = r.root.match(/\d+/);
+        if (!m) return;
+        var bookNum = m[0];
+        if (!globalBookMap[bookNum]) globalBookMap[bookNum] = [];
+        if (globalBookMap[bookNum].indexOf(r.id) === -1) globalBookMap[bookNum].push(r.id);
+      });
+      Object.keys(globalBookMap).forEach(function (bn) {
+        if (globalBookMap[bn].length >= 2) {
+          groups.push({ key: 'g_' + bn, label: bn, ids: globalBookMap[bn].slice(), level: 'book_global' });
+        }
       });
 
       return groups;
