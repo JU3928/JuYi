@@ -83,6 +83,7 @@
       reviewProgress: { keyPath: 'subject', autoIncrement: false, indexes: [] },
     });
     state.allItems = await db.getAll(STORE) || [];
+    console.log('error-book: 加载了 ' + state.allItems.length + ' 条错题记录');
     _calcStats();
   }
 
@@ -425,29 +426,36 @@
   function _renderBookPages(subjectName) {
     els.shelfView.style.display = 'none';
     els.bookView.style.display = '';
-    els.pageList.innerHTML = '';
+    els.pageList.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--eb-text-muted)">加载中...</div>';
 
     els.bookViewTitle.textContent = _getSubjectName(subjectName);
     els.bookProgress.textContent = state.bookItems.length + ' 题';
 
     var items = state.bookItems;
-    if (!items.length) {
+    if (!items || !items.length) {
       els.pageList.innerHTML = '<div class="eb-empty-text" style="padding:2rem;text-align:center">该科目暂无题目</div>';
       return;
     }
 
+    els.pageList.innerHTML = '';
     _batchRender(items, 0);
   }
 
   function _batchRender(items, start) {
     var end = Math.min(start + BATCH_SIZE, items.length);
     for (var i = start; i < end; i++) {
-      _appendQuestionCard(items[i], i, items.length);
+      try {
+        _appendQuestionCard(items[i], i, items.length);
+      } catch (e) {
+        var errDiv = document.createElement('div');
+        errDiv.style.cssText = 'padding:1rem;color:var(--eb-danger);border:1px solid var(--eb-danger);border-radius:8px;margin:0.5rem 0';
+        errDiv.textContent = '⚠️ 渲染第' + (i+1) + '题时出错: ' + (e && e.message);
+        els.pageList.appendChild(errDiv);
+      }
     }
     if (end < items.length) {
       requestAnimationFrame(function () { _batchRender(items, end); });
     } else {
-      // Bind scroll observer for progress
       _bindScrollProgress(items);
     }
   }
