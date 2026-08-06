@@ -10,6 +10,35 @@
   const TYPE_LABELS = { 'choice': '选择题', 'open': '非选择题' };
   const OPTIONS = ['A', 'B', 'C', 'D'];
 
+  /* 章节编号提取（复用） */
+  function extractChapterNum(name) {
+    var m = name.match(/^第[一二三四五六七八九十百]+章\s*(\d+(?:\.\d+)*)/);
+    if (m) return numVal(m[1]);
+    m = name.match(/^(\d+(?:\.\d+)*)/);
+    if (m) return numVal(m[1]);
+    m = name.match(/(\d+(?:\.\d+)+)$/);
+    if (m) return numVal(m[1]);
+    m = name.match(/(\d+)$/);
+    if (m) return parseInt(m[1], 10);
+    return -1;
+  }
+  function numVal(v) {
+    var parts = v.split('.');
+    var r = 0;
+    for (var i = 0; i < parts.length; i++) r = r * 1000 + parseInt(parts[i], 10);
+    return r;
+  }
+  function naturalSortByChapter(list) {
+    return list.slice().sort(function (a, b) {
+      var na = extractChapterNum(a.name);
+      var nb = extractChapterNum(b.name);
+      if (na < 0 && nb < 0) return a.name < b.name ? -1 : 1;
+      if (na < 0) return 1;
+      if (nb < 0) return -1;
+      return na - nb;
+    });
+  }
+
   /* ================================================================
    * Utility
    * ================================================================ */
@@ -300,20 +329,51 @@
       if (totalQ === 0) { alert('匹配的做题本暂无可统计的答题记录'); return; }
       var overallRate = totalCorrect / totalQ;
       var cls = overallRate >= 0.8 ? '--high' : (overallRate >= 0.6 ? '--mid' : '--low');
+      var sortOrder = 'rate';
+
+      function renderSearchTbody() {
+        var sorted = bookDetails.slice();
+        if (sortOrder === 'rate') {
+          sorted.sort(function (a, b) { return b.rate - a.rate; });
+        } else {
+          sorted = naturalSortByChapter(sorted);
+        }
+        var rows = '';
+        sorted.forEach(function (d) {
+          var dc = d.rate >= 0.8 ? 'is-high' : (d.rate >= 0.6 ? 'is-mid' : 'is-low');
+          rows += '<tr><td>' + esc(d.name) + '</td><td>' + d.correct + '/' + d.total + '</td><td><span class="book-card__stat--score ' + dc + '" style="font-size:var(--jy-font-size-xs)">' + Math.round(d.rate * 100) + '%</span></td></tr>';
+        });
+        return rows;
+      }
+
+      var hasChapter = bookDetails.some(function (d) { return extractChapterNum(d.name) >= 0; });
+      var sortBar = '';
+      if (hasChapter) {
+        sortBar = '<div style="margin-top:var(--jy-space-3);display:flex;gap:var(--jy-space-2);justify-content:center">' +
+          '<button class="jy-btn jy-btn--outline jy-btn--sm composite-sort-btn is-active" data-sort="rate">📊 正确率</button>' +
+          '<button class="jy-btn jy-btn--outline jy-btn--sm composite-sort-btn" data-sort="chapter">📖 章节序</button></div>';
+      }
+
       var html = '<div style="text-align:center;padding:var(--jy-space-4)">' +
         '<div style="font-size:var(--jy-font-size-sm);color:var(--jy-text-muted);margin-bottom:var(--jy-space-3)">搜索「' + esc(q) + '」· 匹配 ' + matched.length + ' 个做题本</div>' +
         '<div class="score-display"><div class="score-display__value score-display__value' + cls + '">' + Math.round(overallRate * 100) + '%</div>' +
         '<div class="score-display__label">综合正确率（' + totalCorrect + '/' + totalQ + '）</div>' +
         '<div class="progress-bar" style="margin-top:var(--jy-space-3)"><div class="progress-bar__fill progress-bar__fill' + cls + '" style="width:' + Math.round(overallRate * 100) + '%"></div></div></div>';
-      html += '<div style="margin-top:var(--jy-space-4)"><table style="width:100%;font-size:var(--jy-font-size-sm)"><thead><tr><th>做题本</th><th>已答</th><th>正确率</th></tr></thead><tbody>';
-      bookDetails.sort(function (a, b) { return b.rate - a.rate; });
-      bookDetails.forEach(function (d) {
-        var dc = d.rate >= 0.8 ? 'is-high' : (d.rate >= 0.6 ? 'is-mid' : 'is-low');
-        html += '<tr><td>' + esc(d.name) + '</td><td>' + d.correct + '/' + d.total + '</td><td><span class="book-card__stat--score ' + dc + '" style="font-size:var(--jy-font-size-xs)">' + Math.round(d.rate * 100) + '%</span></td></tr>';
-      });
-      html += '</tbody></table></div>';
+      html += sortBar;
+      html += '<div style="margin-top:var(--jy-space-3)"><table style="width:100%;font-size:var(--jy-font-size-sm)"><thead><tr><th>做题本</th><th>已答</th><th>正确率</th></tr></thead><tbody id="searchStatsTbody">' + renderSearchTbody() + '</tbody></table></div>';
+
       this.els.compositeBody.innerHTML = html;
       this.els.compositeOverlay.classList.add('is-open');
+
+      this.els.compositeBody.querySelectorAll('.composite-sort-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          sortOrder = this.dataset.sort;
+          this.parentElement.querySelectorAll('.composite-sort-btn').forEach(function (b) { b.classList.remove('is-active'); });
+          this.classList.add('is-active');
+          var tb = document.getElementById('searchStatsTbody');
+          if (tb) tb.innerHTML = renderSearchTbody();
+        });
+      });
     }
 
     _buildBookCard(book) {
@@ -724,37 +784,6 @@
           rows += '<tr><td>' + esc(d.name) + '</td><td>' + d.correct + '/' + d.total + '</td><td><span class="book-card__stat--score ' + dCls + '" style="font-size:var(--jy-font-size-xs)">' + Math.round(d.rate * 100) + '%</span></td></tr>';
         });
         return rows;
-      }
-
-      function extractChapterNum(name) {
-        var m = name.match(/^第[一二三四五六七八九十百]+章\s*(\d+(?:\.\d+)*)/);
-        if (m) return numVal(m[1]);
-        m = name.match(/^(\d+(?:\.\d+)*)/);
-        if (m) return numVal(m[1]);
-        // "数据结构王道3.1" / "极限660" — number at the end
-        m = name.match(/(\d+(?:\.\d+)+)$/);
-        if (m) return numVal(m[1]);
-        m = name.match(/(\d+)$/);
-        if (m) return parseInt(m[1], 10);
-        return -1;
-      }
-
-      function numVal(v) {
-        var parts = v.split('.');
-        var r = 0;
-        for (var i = 0; i < parts.length; i++) r = r * 1000 + parseInt(parts[i], 10);
-        return r;
-      }
-
-      function naturalSortByChapter(list) {
-        return list.slice().sort(function (a, b) {
-          var na = extractChapterNum(a.name);
-          var nb = extractChapterNum(b.name);
-          if (na < 0 && nb < 0) return a.name < b.name ? -1 : 1;
-          if (na < 0) return 1;
-          if (nb < 0) return -1;
-          return na - nb;
-        });
       }
 
       var hasChapter = bookDetails.some(function (d) { return extractChapterNum(d.name) >= 0; });
