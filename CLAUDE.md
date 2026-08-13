@@ -59,17 +59,54 @@ modules/<name>/
 
 Experimental tools under `lab/toys/<name>/`. Same patterns as modules but linked from `lab/index.html` rather than root. References `shared/base.css` with depth-adjusted paths (e.g., `../../../shared/base.css` for `lab/toys/moment-lottery/`).
 
+### New module / toy checklist (mandatory)
+
+When creating `modules/<name>/` or `lab/toys/<name>/`, complete ALL of these:
+
+- **Files**: `index.html` + `styles.css` + `app.js` (IIFE `;(function(){ 'use strict'; ... })();`). No npm/CDN/frameworks.
+- **base.css depth**: `../../shared/base.css` for modules, `../../../shared/base.css` for lab toys. (错题图鉴 is the documented exception — own `--eb-*` theme.)
+- **DB**: use `shared/db-core.js` `JuYiDB`; own IndexedDB name `JuYiXXX`; never use store count as DB version.
+- **innerHTML**: always `sanitizeHtml()` from `shared/utils.js`; plain text via `textContent`. `fmtDate` is NOT in utils.js — define per module.
+- **Dark mode**: `html[data-theme]` + `localStorage.jy_theme` toggle button; CSS uses `var(--jy-*)` only.
+- **Export/import**: JSON backup with `_format: 'JuYiXXX/1'` marker.
+- **Register EVERYWHERE** (most commonly forgotten):
+  - [ ] Navigation card in root `index.html` (modules) or `lab/index.html` (toys) — copy must describe only implemented features
+  - [ ] `SYS_DB_NAMES` in root `index.html`
+  - [ ] `SYS_LS_PREFIXES` for any new localStorage keys
+  - [ ] CLAUDE.md `Current modules` table
+  - [ ] `tests/smoke_test.py` PAGES list
+- **Verify**: `python tests/smoke_test.py` all green; manual dark-mode toggle; system export/import round-trip includes the new DB.
+
+**Known pitfalls** (from history):
+- Mobile scrolling needs `display:flex; flex-direction:column; flex:1; min-height:0` on scroll containers.
+- `transitionend` is unreliable — use nested `setTimeout`.
+- Storing images as base64 in IndexedDB bloats backups; downscale large images first.
+- Chinese filenames are fine (`.nojekyll` blocks Jekyll), but avoid special characters.
+
 ### Current modules
 
 | Module | Directory | DB Name | Key features |
 |--------|-----------|---------|-------------|
 | 错题本 | `modules/error-notebook/` | `JuYiDB` | Rich-text error notes, review mode |
+| 错题图鉴 | `modules/error-book/` | reads `JuYiDB` | Shelf view, page-flip animation, cross-module jump |
 | 拾贝 | `modules/shell/` | `JuYiShell` | Knowledge cards, daily AI quotes |
 | 健身 | `modules/fitness/` | `JuYiFitness` | Weight tracking, exercise log |
 | 做题本 | `modules/question-book/` | `JuYiQuestionBook` | Structured Q&A with answer checking |
 | 战报板 | `modules/battle-report/` | `JuYiBattleReport` | Rating charts, algorithm templates |
 | 计划表 | `modules/schedule/` | localStorage only | Daily schedule, check-in, calendar |
 | 抽奖器 | `lab/toys/moment-lottery/` | `JuYiLabLottery` | Avatar detection, lottery animations |
+| 万能图片 | `lab/toys/image-tools/` | `JuYiLabImageTools` | Clipboard paste → download |
+| 网页助手 | `lab/toys/web-assistant/` | `JuYiWebAssist` | Firecrawl web clippings, local full-text search |
+
+Notes:
+- 错题图鉴 is a documented exception: it does **not** link `shared/base.css` — it uses its own `--eb-*` book theme.
+- `birthday/` is a standalone personal birthday-card page (countdown + flip wishes), intentionally not linked from the hub.
+
+---
+
+## Testing
+
+`tests/smoke_test.py` is the automated smoke test (Python + Playwright, dev-side tooling — the zero-dependency constraint applies to product code only). It loads all 13 pages headlessly checking for console errors, verifies key DOM elements, mobile overflow, and theme toggle. Falls back to system Edge when Playwright's Chromium isn't installed. **Run `python tests/smoke_test.py` after any change that touches shared files or page structure; all checks must pass before committing.** See `tests/README.md` for install and extension instructions.
 
 ---
 
