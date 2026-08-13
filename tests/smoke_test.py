@@ -35,6 +35,7 @@ PAGES = [
     ("万能图片",     "lab/toys/image-tools/index.html",     "body"),
     ("网页助手",     "lab/toys/web-assistant/index.html",   "body"),
     ("抽奖器",       "lab/toys/moment-lottery/index.html",  "body"),
+    ("五子棋",       "lab/toys/gomoku/index.html",          "#gomokuApp"),
     ("生日页",       "birthday/index.html",                 "#hero"),
 ]
 
@@ -43,6 +44,7 @@ MOBILE_CHECK_PAGES = [
     ("做题本",   "modules/question-book/index.html"),
     ("错题本",   "modules/error-notebook/index.html"),
     ("错题图鉴", "modules/error-book/index.html"),
+    ("五子棋",   "lab/toys/gomoku/index.html"),
 ]
 
 FAILURES = []
@@ -283,6 +285,60 @@ def test_redo_mobile(context):
     page.close()
 
 
+def test_gomoku_unit(context):
+    """五子棋引擎单测页（test.html）必须全绿。"""
+    page = context.new_page()
+    errors, failed = collect_errors(page)
+    page.goto(file_url("lab/toys/gomoku/test.html"))
+    page.wait_for_load_state("load")
+    page.wait_for_timeout(500)
+    summary = page.locator("#summary").inner_text()
+    if "全部通过" not in summary:
+        FAILURES.append("[五子棋单测] " + summary)
+    else:
+        PASSES.append("五子棋引擎单测全部通过")
+    for e in errors:
+        FAILURES.append("[五子棋单测] " + e)
+    page.close()
+
+
+def test_gomoku_e2e(context):
+    """五子棋 e2e：玩家落子 → AI 回应 → 悔棋。"""
+    page = context.new_page()
+    errors, failed = collect_errors(page)
+    page.goto(file_url("lab/toys/gomoku/index.html"))
+    page.wait_for_load_state("load")
+    page.wait_for_timeout(2000)
+    page.select_option("#difficultySelect", "easy")
+
+    # 与 app.js 相同的几何公式（LOGICAL=600, MARGIN=30），点天元 (7,7)
+    center = page.evaluate("""() => {
+        const c = document.getElementById('boardCanvas');
+        const r = c.getBoundingClientRect();
+        const scale = r.width / 600;
+        return { x: r.left + (30 + (600 - 60) / 14 * 7) * scale,
+                 y: r.top  + (30 + (600 - 60) / 14 * 7) * scale };
+    }""")
+    page.mouse.click(center["x"], center["y"])
+    page.wait_for_timeout(1400)  # 等 AI 落子
+    count = page.inner_text("#moveCount")
+    if "2" not in count:
+        FAILURES.append("[五子棋] AI 未落子，手数显示: " + count)
+        page.close()
+        return
+
+    page.click("#btnUndo")
+    page.wait_for_timeout(300)
+    after_undo = page.inner_text("#moveCount")
+    if "0" not in after_undo:
+        FAILURES.append("[五子棋] 悔棋未生效，手数显示: " + after_undo)
+    else:
+        PASSES.append("五子棋 e2e 通过（玩家落子→AI 回应→悔棋）")
+    for e in errors:
+        FAILURES.append("[五子棋] " + e)
+    page.close()
+
+
 def main():
     with sync_playwright() as p:
         browser = launch_browser(p)
@@ -301,6 +357,8 @@ def main():
         test_redo_unit(context)
         test_redo_flow(context)
         test_redo_migration(context)
+        test_gomoku_unit(context)
+        test_gomoku_e2e(context)
         browser.close()
 
     print("=" * 60)

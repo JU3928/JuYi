@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>五子棋引擎单测</title>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 24px; max-width: 760px; margin: 0 auto; }
+    h1 { font-size: 18px; }
+    #summary { font-size: 16px; font-weight: 700; padding: 12px; border-radius: 8px; }
+    #details { white-space: pre-wrap; color: #c0392b; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <h1>五子棋引擎单测（gomoku-engine.js）</h1>
+  <div id="summary">运行中…</div>
+  <div id="details"></div>
+
+  <script src="gomoku-engine.js"></script>
+  <script>
+  ;(function () {
+    'use strict';
+    var E = window.GomokuEngine;
+    var B = E.BLACK, W = E.WHITE, EMPTY = E.EMPTY, N = E.SIZE;
+    var passed = 0, failed = 0, fails = [];
+
+    function t(name, fn) {
+      try { fn(); passed++; }
+      catch (e) { failed++; fails.push(name + ' — ' + e.message); }
+    }
+    function eq(a, b, msg) {
+      if (a !== b) throw new Error((msg || '') + ' 期望 ' + b + ' 实际 ' + a);
+    }
+    function ok(v, msg) { if (!v) throw new Error(msg || '断言失败'); }
+
+    function put(board, x, y, p) { board[y][x] = p; }
+
+    /* ---------- 棋盘基础 ---------- */
+    t('createBoard 生成 15×15 空盘', function () {
+      var b = E.createBoard();
+      eq(b.length, 15);
+      for (var y = 0; y < N; y++) for (var x = 0; x < N; x++) eq(b[y][x], EMPTY, '(' + x + ',' + y + ')');
+    });
+
+    t('横五连获胜', function () {
+      var b = E.createBoard();
+      put(b, 3, 7, B); put(b, 4, 7, B); put(b, 5, 7, B); put(b, 6, 7, B); put(b, 7, 7, B);
+      ok(E.checkWin(b, 7, 7, B), '应判胜');
+    });
+
+    t('竖五连获胜', function () {
+      var b = E.createBoard();
+      put(b, 5, 2, W); put(b, 5, 3, W); put(b, 5, 4, W); put(b, 5, 5, W); put(b, 5, 6, W);
+      ok(E.checkWin(b, 5, 4, W), '应判胜');
+    });
+
+    t('斜线五连获胜（↘）', function () {
+      var b = E.createBoard();
+      for (var i = 0; i < 5; i++) put(b, 3 + i, 3 + i, B);
+      ok(E.checkWin(b, 5, 5, B), '应判胜');
+    });
+
+    t('反斜线五连获胜（↙）', function () {
+      var b = E.createBoard();
+      for (var i = 0; i < 5; i++) put(b, 10 - i, 3 + i, W);
+      ok(E.checkWin(b, 8, 5, W), '应判胜');
+    });
+
+    t('四连不算胜', function () {
+      var b = E.createBoard();
+      put(b, 3, 7, B); put(b, 4, 7, B); put(b, 5, 7, B); put(b, 6, 7, B);
+      ok(!E.checkWin(b, 5, 7, B), '四连不应判胜');
+    });
+
+    t('五连被对方隔断不算胜', function () {
+      var b = E.createBoard();
+      put(b, 3, 7, B); put(b, 4, 7, B); put(b, 5, 7, W); put(b, 6, 7, B); put(b, 7, 7, B);
+      ok(!E.checkWin(b, 4, 7, B), '断连不应判胜');
+    });
+
+    t('长连（六连）也算胜', function () {
+      var b = E.createBoard();
+      for (var i = 0; i < 6; i++) put(b, 2 + i, 7, B);
+      ok(E.checkWin(b, 4, 7, B), '长连应判胜');
+    });
+
+    t('isFull 检测', function () {
+      var b = E.createBoard();
+      ok(!E.isFull(b), '空盘不应满');
+      for (var y = 0; y < N; y++) for (var x = 0; x < N; x++) put(b, x, y, x % 2 ? B : W);
+      ok(E.isFull(b), '满盘应判满');
+    });
+
+    /* ---------- 候选点 ---------- */
+    t('空盘候选只有天元', function () {
+      var cs = E.candidates(E.createBoard());
+      eq(cs.length, 1);
+      eq(cs[0].x, 7); eq(cs[0].y, 7);
+    });
+
+    t('候选点包含周围空点且不含已占点', function () {
+      var b = E.createBoard();
+      put(b, 7, 7, B);
+      var cs = E.candidates(b);
+      ok(cs.length >= 4, '应有多于 4 个候选，实际 ' + cs.length);
+      var hasCenter = cs.some(function (c) { return c.x === 7 && c.y === 7; });
+      ok(!hasCenter, '已占点不应成为候选');
+      ok(cs.some(function (c) { return c.x === 7 && c.y === 6; }), '相邻空点应在候选中');
+    });
+
+    /* ---------- 启发评估 ---------- */
+    t('attackScore：活三 > 眠三', function () {
+      var openB = E.createBoard();
+      put(openB, 7, 7, B); put(openB, 8, 7, B); put(openB, 9, 7, B);
+      var closedB = E.createBoard();
+      put(closedB, 7, 7, B); put(closedB, 8, 7, B); put(closedB, 9, 7, B);
+      put(closedB, 10, 7, W); // 右端被堵
+      var so = E.attackScore(openB, 8, 7, B);
+      var sc = E.attackScore(closedB, 8, 7, B);
+      ok(so > sc, '活三 ' + so + ' 应大于眠三 ' + sc);
+    });
+
+    t('attackScore：活四 > 活三', function () {
+      var b = E.createBoard();
+      put(b, 7, 7, B); put(b, 8, 7, B); put(b, 9, 7, B);
+      var three = E.attackScore(b, 8, 7, B);
+      put(b, 10, 7, B);
+      var four = E.attackScore(b, 8, 7, B);
+      ok(four > three, '活四 ' + four + ' 应大于活三 ' + three);
+    });
+
+    t('wouldWin：模拟落子不改动原棋盘', function () {
+      var b = E.createBoard();
+      put(b, 3, 5, B); put(b, 4, 5, B); put(b, 5, 5, B); put(b, 6, 5, B);
+      ok(E.wouldWin(b, 7, 5, B), '应可获胜');
+      eq(b[5][7], EMPTY, '原棋盘不应被修改');
+    });
+
+    /* ---------- 简单档 ---------- */
+    t('easy：空盘落天元', function () {
+      var m = E.aiMove(E.createBoard(), B, 'easy');
+      eq(m.x, 7); eq(m.y, 7);
+    });
+
+    t('easy：返回合法空点（随机 30 次）', function () {
+      var b = E.createBoard();
+      put(b, 7, 7, B); put(b, 8, 7, W); put(b, 6, 6, B);
+      for (var i = 0; i < 30; i++) {
+        var m = E.aiMove(b, W, 'easy');
+        ok(E.inBounds(m.x, m.y), '越界 (' + m.x + ',' + m.y + ')');
+        eq(b[m.y][m.x], EMPTY, '落在已占点 (' + m.x + ',' + m.y + ')');
+      }
+    });
+
+    /* ---------- 中等档 ---------- */
+    t('medium：有杀招时立即获胜', function () {
+      var b = E.createBoard();
+      put(b, 3, 5, B); put(b, 4, 5, B); put(b, 5, 5, B); put(b, 6, 5, B); // 黑活四
+      var m = E.aiMove(b, B, 'medium');
+      eq(m.y, 5);
+      ok(m.x === 2 || m.x === 7, '应下在两端，实际 (' + m.x + ',' + m.y + ')');
+    });
+
+    t('medium：必须堵对方活四', function () {
+      var b = E.createBoard();
+      put(b, 4, 8, W); put(b, 5, 8, W); put(b, 6, 8, W); put(b, 7, 8, W); // 白活四
+      var m = E.aiMove(b, B, 'medium');
+      eq(m.y, 8);
+      ok(m.x === 3 || m.x === 8, '应堵在两端，实际 (' + m.x + ',' + m.y + ')');
+    });
+
+    t('medium：空盘落天元', function () {
+      var m = E.aiMove(E.createBoard(), W, 'medium');
+      eq(m.x, 7); eq(m.y, 7);
+    });
+
+    /* ---------- 困难档 ---------- */
+    t('hard：有杀招时立即获胜', function () {
+      var b = E.createBoard();
+      put(b, 3, 5, B); put(b, 4, 5, B); put(b, 5, 5, B); put(b, 6, 5, B);
+      var m = E.aiMove(b, B, 'hard');
+      eq(m.y, 5);
+      ok(m.x === 2 || m.x === 7, '应下在两端，实际 (' + m.x + ',' + m.y + ')');
+    });
+
+    t('hard：必须堵对方活四', function () {
+      var b = E.createBoard();
+      put(b, 4, 8, W); put(b, 5, 8, W); put(b, 6, 8, W); put(b, 7, 8, W);
+      var m = E.aiMove(b, B, 'hard');
+      eq(m.y, 8);
+      ok(m.x === 3 || m.x === 8, '应堵在两端，实际 (' + m.x + ',' + m.y + ')');
+    });
+
+    t('hard：无立即威胁时返回合法点', function () {
+      var m = E.aiMove(E.createBoard(), B, 'hard');
+      ok(E.inBounds(m.x, m.y), '越界 (' + m.x + ',' + m.y + ')');
+      eq(m.x, 7); eq(m.y, 7); // 空盘必然天元
+    });
+
+    t('hard：残局中返回合法空点', function () {
+      var b = E.createBoard();
+      put(b, 7, 7, B); put(b, 8, 7, W); put(b, 6, 6, B); put(b, 7, 6, W);
+      put(b, 8, 8, B); put(b, 5, 5, W);
+      var m = E.aiMove(b, B, 'hard');
+      ok(E.inBounds(m.x, m.y), '越界 (' + m.x + ',' + m.y + ')');
+      eq(b[m.y][m.x], EMPTY, '落在已占点 (' + m.x + ',' + m.y + ')');
+    });
+
+    /* ---------- 兜底 ---------- */
+    t('未知难度按 medium 兜底，返回合法点', function () {
+      var b = E.createBoard();
+      put(b, 3, 5, B); put(b, 4, 5, B); put(b, 5, 5, B); put(b, 6, 5, B);
+      var m = E.aiMove(b, B, 'unknown');
+      ok(E.inBounds(m.x, m.y), '越界');
+      eq(b[m.y][m.x], EMPTY, '落在已占点');
+    });
+
+    t('aiMove 不修改传入棋盘', function () {
+      var b = E.createBoard();
+      put(b, 7, 7, B);
+      E.aiMove(b, W, 'medium');
+      E.aiMove(b, W, 'hard');
+      eq(b[7][7], B, '原黑子应保留');
+      var emptyCount = 0;
+      for (var y = 0; y < N; y++) for (var x = 0; x < N; x++) if (b[y][x] === EMPTY) emptyCount++;
+      eq(emptyCount, N * N - 1, '应只有 1 颗子');
+    });
+
+    /* ---------- 汇总 ---------- */
+    var s = document.getElementById('summary');
+    if (failed === 0) {
+      s.textContent = '全部通过：' + passed + ' 项';
+      s.style.background = '#e8f8ec';
+      s.style.color = '#1a7f37';
+    } else {
+      s.textContent = '失败 ' + failed + ' / ' + (passed + failed) + ' 项';
+      s.style.background = '#fdecea';
+      s.style.color = '#c0392b';
+      document.getElementById('details').textContent = fails.join('\n');
+    }
+  })();
+  </script>
+</body>
+</html>

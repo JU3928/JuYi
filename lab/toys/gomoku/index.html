@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>五子棋 — JuYi 实验室</title>
+  <link rel="stylesheet" href="../../../shared/base.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <div id="gomokuApp" class="gmk">
+    <header class="gmk__header">
+      <div class="gmk__title-row">
+        <h1 class="gmk__title">⚫⚪ 五子棋</h1>
+        <span id="difficultyTag" class="gmk__tag">中等</span>
+      </div>
+      <a class="jy-btn jy-btn--ghost jy-btn--sm" href="../../index.html">← 返回实验室</a>
+    </header>
+
+    <!-- 控制栏 -->
+    <div class="gmk__controls">
+      <div class="gmk__control">
+        <label class="jy-label" for="difficultySelect">AI 难度</label>
+        <select id="difficultySelect" class="jy-select">
+          <option value="easy">😀 简单</option>
+          <option value="medium" selected>🤔 中等</option>
+          <option value="hard">😈 困难</option>
+        </select>
+      </div>
+      <div class="gmk__control">
+        <label class="jy-label" for="firstSelect">先手</label>
+        <select id="firstSelect" class="jy-select">
+          <option value="player" selected>我先（黑棋）</option>
+          <option value="ai">AI 先（黑棋）</option>
+        </select>
+      </div>
+      <div class="gmk__control gmk__control--grow"></div>
+      <button id="btnUndo" class="jy-btn jy-btn--outline">↩ 悔棋</button>
+      <button id="btnNew" class="jy-btn jy-btn--primary">🔄 新游戏</button>
+      <button id="btnTheme" class="jy-btn jy-btn--ghost jy-btn--icon" title="切换暗色模式">🌙</button>
+    </div>
+
+    <!-- 棋盘 -->
+    <div class="gmk__board-wrap">
+      <canvas id="boardCanvas"></canvas>
+      <div id="resultBanner" class="gmk__banner" style="display:none">
+        <div id="resultText" class="gmk__banner-text"></div>
+        <div class="gmk__banner-actions">
+          <button id="btnAgain" class="jy-btn jy-btn--primary">再来一局</button>
+          <button id="btnBannerClose" class="jy-btn jy-btn--ghost">查看棋盘</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 状态栏 -->
+    <div class="gmk__status">
+      <span id="turnText" class="gmk__status-text">轮到你（黑棋）</span>
+      <span id="moveCount" class="gmk__status-count">已下 0 手</span>
+    </div>
+
+    <!-- 战绩 -->
+    <section class="gmk__stats">
+      <h2 class="gmk__stats-title">📊 战绩</h2>
+      <div id="statsPanel" class="gmk__stats-row"></div>
+      <p class="gmk__stats-hint">按 AI 难度分档记录胜负（只存本机浏览器）</p>
+    </section>
+
+    <!-- 备份 -->
+    <footer class="gmk__footer">
+      <button id="btnExport" class="jy-btn jy-btn--outline jy-btn--sm">💾 导出备份</button>
+      <button id="btnImport" class="jy-btn jy-btn--outline jy-btn--sm">📥 导入恢复</button>
+      <input type="file" id="importFileInput" accept=".json" class="jy-sr-only">
+    </footer>
+  </div>
+
+  <script src="../../../shared/db-core.js"></script>
+  <script src="../../../shared/utils.js"></script>
+  <script src="gomoku-engine.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

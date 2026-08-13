@@ -97,6 +97,7 @@ When creating `modules/<name>/` or `lab/toys/<name>/`, complete ALL of these:
 | 抽奖器 | `lab/toys/moment-lottery/` | `JuYiLabLottery` | Avatar detection, lottery animations |
 | 万能图片 | `lab/toys/image-tools/` | `JuYiLabImageTools` | Clipboard paste → download |
 | 网页助手 | `lab/toys/web-assistant/` | `JuYiWebAssist` | Firecrawl web clippings, local full-text search |
+| 五子棋 | `lab/toys/gomoku/` | `JuYiGomoku` | 3-level AI (random/heuristic/minimax+αβ), undo, per-difficulty records |
 
 Notes:
 - 错题图鉴 is a documented exception: it does **not** link `shared/base.css` — it uses its own `--eb-*` book theme.
@@ -106,7 +107,7 @@ Notes:
 
 ## Testing
 
-`tests/smoke_test.py` is the automated smoke test (Python + Playwright, dev-side tooling — the zero-dependency constraint applies to product code only). It loads all 13 pages headlessly checking for console errors, verifies key DOM elements, mobile overflow, and theme toggle. Falls back to system Edge when Playwright's Chromium isn't installed. **Run `python tests/smoke_test.py` after any change that touches shared files or page structure; all checks must pass before committing.** See `tests/README.md` for install and extension instructions.
+`tests/smoke_test.py` is the automated smoke test (Python + Playwright, dev-side tooling — the zero-dependency constraint applies to product code only). It loads all 14 pages headlessly checking for console errors, verifies key DOM elements, mobile overflow, and theme toggle. Falls back to system Edge when Playwright's Chromium isn't installed. **Run `python tests/smoke_test.py` after any change that touches shared files or page structure; all checks must pass before committing.** See `tests/README.md` for install and extension instructions.
 
 ---
 

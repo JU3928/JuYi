@@ -1,0 +1,133 @@
+/* ==================== 五子棋 — 模块样式 ==================== */
+/* 依赖 shared/base.css 的设计变量（--jy-*） */
+
+:root {
+  --gomoku-board: #e8c98e;
+  --gomoku-line: #9a7b4f;
+  --gomoku-star: #9a7b4f;
+}
+
+[data-theme="dark"] {
+  --gomoku-board: #41474f;
+  --gomoku-line: #69707c;
+  --gomoku-star: #69707c;
+}
+
+.gmk {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: var(--jy-space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--jy-space-4);
+  min-height: 100vh;
+}
+
+/* ---------- 头部 ---------- */
+.gmk__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.gmk__title-row { display: flex; align-items: center; gap: var(--jy-space-3); }
+.gmk__title { font-size: var(--jy-font-size-xl); font-weight: 700; }
+.gmk__tag {
+  padding: .1rem .5rem;
+  border-radius: 99px;
+  font-size: var(--jy-font-size-xs);
+  font-weight: 600;
+  background: var(--jy-primary-soft, #e8ebfd);
+  color: var(--jy-primary);
+}
+
+/* ---------- 控制栏 ---------- */
+.gmk__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--jy-space-3);
+}
+.gmk__control { display: flex; flex-direction: column; gap: var(--jy-space-1); }
+.gmk__control--grow { flex: 1; }
+
+/* ---------- 棋盘 ---------- */
+.gmk__board-wrap {
+  position: relative;
+  border-radius: var(--jy-radius-lg);
+  box-shadow: var(--jy-shadow-md);
+  overflow: hidden;
+  background: var(--gomoku-board);
+}
+#boardCanvas {
+  display: block;
+  width: min(92vw, 580px);
+  height: auto;
+  aspect-ratio: 1 / 1;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+/* ---------- 结算横幅 ---------- */
+.gmk__banner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--jy-space-4);
+  background: var(--jy-bg);
+  background: color-mix(in srgb, var(--jy-bg) 82%, transparent);
+  backdrop-filter: blur(3px);
+}
+.gmk__banner-text { font-size: var(--jy-font-size-xl); font-weight: 700; }
+.gmk__banner-actions { display: flex; gap: var(--jy-space-3); }
+
+/* ---------- 状态栏 ---------- */
+.gmk__status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--jy-space-3) var(--jy-space-4);
+  background: var(--jy-surface);
+  border: 1px solid var(--jy-border);
+  border-radius: var(--jy-radius);
+}
+.gmk__status-text { font-weight: 600; }
+.gmk__status-count { color: var(--jy-text-muted); font-size: var(--jy-font-size-sm); }
+
+/* ---------- 战绩 ---------- */
+.gmk__stats {
+  padding: var(--jy-space-4);
+  background: var(--jy-surface);
+  border: 1px solid var(--jy-border);
+  border-radius: var(--jy-radius);
+}
+.gmk__stats-title { font-size: var(--jy-font-size-base); font-weight: 600; margin-bottom: var(--jy-space-3); }
+.gmk__stats-row { display: flex; flex-wrap: wrap; gap: var(--jy-space-3); }
+.gmk__stats-chip {
+  padding: var(--jy-space-2) var(--jy-space-3);
+  border-radius: var(--jy-radius);
+  background: var(--jy-bg);
+  border: 1px solid var(--jy-border);
+  font-size: var(--jy-font-size-sm);
+}
+.gmk__stats-chip strong { color: var(--jy-primary); }
+.gmk__stats-chip .gmk__win { color: var(--jy-success); font-weight: 600; }
+.gmk__stats-chip .gmk__lose { color: var(--jy-danger); font-weight: 600; }
+.gmk__stats-hint { margin-top: var(--jy-space-3); color: var(--jy-text-muted); font-size: var(--jy-font-size-xs); }
+
+/* ---------- 底部 ---------- */
+.gmk__footer {
+  display: flex;
+  gap: var(--jy-space-3);
+  justify-content: center;
+  padding-bottom: var(--jy-space-6);
+}
+
+/* ---------- 移动端 ---------- */
+@media (max-width: 480px) {
+  .gmk { padding: var(--jy-space-3); gap: var(--jy-space-3); }
+  .gmk__controls { gap: var(--jy-space-2); }
+  .gmk__controls .jy-btn { flex: 1; }
+}

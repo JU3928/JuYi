@@ -1,6 +1,6 @@
 # JuYi 冒烟测试
 
-全站自动化冒烟测试：13 个页面零错误加载 + 移动端布局 + 主题切换 + 错题本重做全流程 e2e。
+全站自动化冒烟测试：14 个页面零错误加载 + 移动端布局 + 主题切换 + 错题本重做全流程 e2e + 五子棋引擎单测与 e2e。
 
 ## 为什么存在
 
@@ -28,12 +28,14 @@ python tests/smoke_test.py
 
 | 检查 | 内容 |
 |------|------|
-| 全页面加载 | 13 个页面（主页、实验室、7 模块、3 玩具、生日页）零 console error / pageerror / 请求失败 |
+| 全页面加载 | 14 个页面（主页、实验室、7 模块、4 玩具、生日页）零 console error / pageerror / 请求失败 |
 | 关键元素 | 每个页面初始化后主容器存在（能抓住 `xxx is not defined` 类初始化崩溃） |
 | 移动端布局 | 375px 视口下做题本/错题本/错题图鉴无横向溢出 |
 | 主题切换 | 点击切换后 `html[data-theme]` 与 `localStorage.jy_theme` 同步 |
 | 重做算法单测 | `modules/error-notebook/test.html` 摘要必须为「全部通过」 |
 | 重做流程 e2e | 错题本内建题 → 进重做 → 自评两题 → 结束页 → 列表徽章 |
+| 五子棋引擎单测 | `lab/toys/gomoku/test.html` 摘要必须为「全部通过」 |
+| 五子棋 e2e | 玩家落子 → AI 回应 → 悔棋 |
 
 **数据安全**：Playwright 每次使用全新临时浏览器配置，IndexedDB/localStorage 为空，不会触碰你本机浏览器的真实数据。
 
