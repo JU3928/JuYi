@@ -58,6 +58,15 @@ html { font-size: 16px; }
 .eb-btn--ghost:hover { background: var(--eb-accent-soft); }
 .eb-btn--accent { background: var(--eb-accent); color: #fff; border-color: var(--eb-accent); }
 
+/* ========================== 首页按钮 ========================== */
+.eb-home-btn {
+  position: fixed; top: var(--eb-space-4); right: var(--eb-space-4);
+  z-index: 20;
+  text-decoration: none;
+  box-shadow: var(--eb-shadow);
+}
+.eb-home-btn:hover { text-decoration: none; }
+
 /* ========================== 区域标题 ========================== */
 .eb-section-title {
   font-family: var(--eb-font-serif);
