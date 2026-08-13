@@ -63,6 +63,7 @@
           </select>
           <button id="btnAdd" class="jy-btn jy-btn--primary">＋ 添加错题</button>
           <button id="btnStartReview" class="jy-btn jy-btn--primary" style="background:var(--jy-success)">▶ 开始复习</button>
+          <button id="btnStartRedo" class="jy-btn jy-btn--primary" style="background:var(--jy-warning)">🎲 重做</button>
         </div>
       </header>
 
@@ -98,6 +99,33 @@
           <div id="reviewCompleteBanner" style="display:none;text-align:center;padding:12px">
             <button id="btnReviewReset" class="jy-btn jy-btn--primary">🔄 重新开始</button>
           </div>
+        </div>
+      </div>
+
+      <!-- 重做模式 -->
+      <div id="redoMode" class="review-mode" style="display:none">
+        <div class="review-mode__header">
+          <span class="review-mode__title">🎲 重做</span>
+          <span id="redoProgress" class="review-mode__counter"></span>
+          <span style="flex:1"></span>
+          <button id="btnExitRedo" class="jy-btn jy-btn--ghost jy-btn--sm">✕ 退出重做</button>
+        </div>
+        <div class="review-mode__body">
+          <div class="review-card">
+            <div id="redoCardContent" class="review-card__question"></div>
+            <div class="review-card__meta-line">
+              <span id="redoCardBadge"></span>
+              <span id="redoCardDate" class="jy-text-muted jy-text-sm"></span>
+            </div>
+            <div class="review-card__actions">
+              <button id="btnRedoMastered" class="jy-btn redo-btn--mastered">✅ 掌握</button>
+              <button id="btnRedoFuzzy" class="jy-btn redo-btn--fuzzy">🤔 模糊</button>
+              <button id="btnRedoFailed" class="jy-btn redo-btn--failed">❌ 未掌握</button>
+              <button id="btnRedoShowAnswer" class="jy-btn review-btn--answer">💡 查看解析</button>
+              <button id="btnRedoSkip" class="jy-btn review-btn--skip">⏭ 跳过</button>
+            </div>
+          </div>
+          <div id="redoEndScreen" style="display:none"></div>
         </div>
       </div>
     </main>
@@ -233,6 +261,49 @@
     </div>
   </div>
 
+  <!-- ==================== 重做设置弹窗 ==================== -->
+  <div id="redoSetupOverlay" class="jy-overlay">
+    <div class="jy-modal" style="max-width:520px">
+      <div class="jy-modal__header">
+        <span class="jy-modal__title">🎲 重做设置</span>
+        <button class="jy-btn jy-btn--icon modal-close-btn">✕</button>
+      </div>
+      <div class="jy-modal__body">
+        <div id="redoResumeBanner" class="redo-resume-banner" style="display:none">
+          <span id="redoResumeText"></span>
+          <div style="display:flex;gap:var(--jy-space-2)">
+            <button id="btnRedoResume" class="jy-btn jy-btn--primary jy-btn--sm">继续上次</button>
+            <button id="btnRedoDiscard" class="jy-btn jy-btn--ghost jy-btn--sm">放弃进度</button>
+          </div>
+        </div>
+        <div class="jy-form-group">
+          <label class="jy-label">抽题数量</label>
+          <input type="number" id="redoCount" class="jy-input" value="10" min="1" max="200">
+        </div>
+        <div class="jy-form-group">
+          <label class="jy-label">科目</label>
+          <div id="redoSubjectChips" class="redo-chips"></div>
+        </div>
+        <div class="jy-form-group">
+          <label class="jy-label">难题范围</label>
+          <select id="redoHardFilter" class="jy-select">
+            <option value="all">不限</option>
+            <option value="hard">仅难题</option>
+            <option value="normal">仅普通</option>
+          </select>
+        </div>
+        <div class="jy-form-group" style="display:flex;align-items:center;gap:var(--jy-space-2)">
+          <input type="checkbox" id="redoWeakOnly" checked style="width:18px;height:18px;cursor:pointer">
+          <label class="jy-label" for="redoWeakOnly" style="margin:0;cursor:pointer">只抽弱题（排除已掌握的）</label>
+        </div>
+      </div>
+      <div class="jy-modal__footer">
+        <button class="jy-btn jy-btn--ghost modal-close-btn">取消</button>
+        <button id="btnRedoStart" class="jy-btn jy-btn--primary">🎲 开始重做</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ==================== 复习-查看解析弹窗 ==================== -->
   <div id="answerOverlay" class="jy-overlay">
     <div class="jy-modal" style="max-width:800px">
@@ -249,6 +320,7 @@
 
   <script src="../../shared/db-core.js"></script>
   <script src="../../shared/utils.js"></script>
+  <script src="redo-queue.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

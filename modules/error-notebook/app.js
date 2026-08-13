@@ -7,6 +7,8 @@
   const PROGRESS_STORE = 'reviewProgress';
   const LS_SUBJECTS = 'jy_error_notebook_subjects';
   const LS_THEME = 'jy_theme';
+  const LS_REDO_STATE = 'jy_error_notebook_redo_state';
+  const REDO_LEVEL_LABEL = { mastered: '已掌握', fuzzy: '模糊', failed: '未掌握' };
 
   const DEFAULT_SUBJECTS = [
     { name: '政治', color: '#dc2626' },
@@ -47,6 +49,19 @@
         items: [],
         currentIndex: -1,
       };
+
+      // 重做状态
+      this.redo = {
+        active: false,
+        settings: null,   // { count, weakOnly, hardFilter, subjects:[] }
+        queue: [],        // 剩余题目 id 列表
+        index: 0,
+        results: [],      // { id, level } 本次已评
+        skipped: 0,
+        total: 0,
+      };
+      // 重做设置面板的科目选择（未确认前）
+      this.redoSetupSubjects = new Set();
     }
 
     /* ==================== 初始化 ==================== */
@@ -62,6 +77,10 @@
       await this.reload();
       this._cacheDom();
       this._bindEvents();
+      // 手机屏宽下默认收起侧边栏（fixed 抽屉，避免遮挡主区按钮）
+      if (window.innerWidth <= 768) {
+        this.els.sidebar.classList.add('is-collapsed');
+      }
       this._renderAll();
 
       // 支持从 error-book 跳转定位（?id=123）
@@ -100,6 +119,9 @@
         let dirty = false;
         if (item.isHard === undefined) { item.isHard = false; dirty = true; }
         if (!item.createdAt) { item.createdAt = item.created_at ? new Date(item.created_at).getTime() : Date.now(); dirty = true; }
+        if (item.redoMastery === undefined) { item.redoMastery = null; dirty = true; }
+        if (item.redoCount === undefined) { item.redoCount = 0; dirty = true; }
+        if (item.lastRedoAt === undefined) { item.lastRedoAt = 0; dirty = true; }
         if (dirty) { await this.db.put(STORE, item); changed = true; }
       }
       if (changed) console.log('数据迁移完成: 已补充 isHard/createdAt 字段');
@@ -147,7 +169,7 @@
         sidebar: $('#sidebar'), btnToggleSidebar: $('#btnToggleSidebar'), btnOpenSidebar: $('#btnOpenSidebar'),
         subjectFilterList: $('#subjectFilterList'), tagFilterList: $('#tagFilterList'), statsPanel: $('#statsPanel'),
         searchInput: $('#searchInput'), btnClearSearch: $('#btnClearSearch'), sortSelect: $('#sortSelect'),
-        btnAdd: $('#btnAdd'), btnStartReview: $('#btnStartReview'),
+        btnAdd: $('#btnAdd'), btnStartReview: $('#btnStartReview'), btnStartRedo: $('#btnStartRedo'),
         cardList: $('#cardList'), emptyState: $('#emptyState'),
         editOverlay: $('#editOverlay'), editModalTitle: $('#editModalTitle'), editForm: $('#editForm'),
         editId: $('#editId'), editSubject: $('#editSubject'), editIsHard: $('#editIsHard'),
@@ -167,6 +189,18 @@
         btnShowAnswer: $('#btnShowAnswer'), btnSkip: $('#btnSkip'), btnExitReview: $('#btnExitReview'),
         answerOverlay: $('#answerOverlay'), answerBody: $('#answerBody'),
         reviewCompleteBanner: $('#reviewCompleteBanner'),
+        // 重做模式
+        redoMode: $('#redoMode'), redoProgress: $('#redoProgress'),
+        redoCardContent: $('#redoCardContent'), redoCardBadge: $('#redoCardBadge'), redoCardDate: $('#redoCardDate'),
+        btnRedoMastered: $('#btnRedoMastered'), btnRedoFuzzy: $('#btnRedoFuzzy'), btnRedoFailed: $('#btnRedoFailed'),
+        btnRedoShowAnswer: $('#btnRedoShowAnswer'), btnRedoSkip: $('#btnRedoSkip'), btnExitRedo: $('#btnExitRedo'),
+        redoEndScreen: $('#redoEndScreen'),
+        // 重做设置弹窗
+        redoSetupOverlay: $('#redoSetupOverlay'), redoCount: $('#redoCount'),
+        redoSubjectChips: $('#redoSubjectChips'), redoHardFilter: $('#redoHardFilter'),
+        redoWeakOnly: $('#redoWeakOnly'), btnRedoStart: $('#btnRedoStart'),
+        redoResumeBanner: $('#redoResumeBanner'), redoResumeText: $('#redoResumeText'),
+        btnRedoResume: $('#btnRedoResume'), btnRedoDiscard: $('#btnRedoDiscard'),
       };
     }
 
@@ -180,10 +214,21 @@
       E.sortSelect.addEventListener('change', () => this._onSortChange());
       E.btnAdd.addEventListener('click', () => this._openEditModal(null));
       E.btnStartReview.addEventListener('click', () => this._startReview());
+      // 重做模式
+      E.btnStartRedo.addEventListener('click', () => this._openRedoSetup());
+      E.btnRedoStart.addEventListener('click', () => this._startRedoFromSetup());
+      E.btnRedoResume.addEventListener('click', () => this._resumeRedo());
+      E.btnRedoDiscard.addEventListener('click', () => this._discardRedoState());
+      E.btnExitRedo.addEventListener('click', () => this._exitRedo());
+      E.btnRedoMastered.addEventListener('click', () => this._redoAnswer('mastered'));
+      E.btnRedoFuzzy.addEventListener('click', () => this._redoAnswer('fuzzy'));
+      E.btnRedoFailed.addEventListener('click', () => this._redoAnswer('failed'));
+      E.btnRedoShowAnswer.addEventListener('click', () => this._redoShowAnswer());
+      E.btnRedoSkip.addEventListener('click', () => this._redoSkip());
       E.btnSave.addEventListener('click', () => this._onSave());
       E.editForm.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.target.closest('.rich-editor__content')) { e.preventDefault(); this._onSave(); } });
       E.modalCloseBtns.forEach(b => b.addEventListener('click', () => this._closeAllModals()));
-      [E.editOverlay, E.detailOverlay, E.subjectsOverlay, E.confirmOverlay, E.answerOverlay]
+      [E.editOverlay, E.detailOverlay, E.subjectsOverlay, E.confirmOverlay, E.answerOverlay, E.redoSetupOverlay]
         .forEach(ov => ov.addEventListener('click', e => { if (e.target === ov) this._closeAllModals(); }));
       document.addEventListener('keydown', e => { if (e.key === 'Escape') this._closeAllModals(); });
       E.btnMarkReview.addEventListener('click', () => this._onMarkReview());
@@ -296,11 +341,14 @@
       const tags = (item.tags || []).map(t => `<span class="jy-tag">${esc(t)}</span>`).join('');
       const created = fmtDate(item.createdAt);
       const review = item.lastReviewedAt ? `<span class="card__review-badge">🔄 ${fmtDate(item.lastReviewedAt)}</span>` : '';
+      const redo = item.redoCount
+        ? `<span class="card__review-badge card__redo-badge">🎲 重${item.redoCount} · ${esc(REDO_LEVEL_LABEL[item.redoMastery] || '未记录')}</span>`
+        : '';
       return `<div class="card" data-id="${item.id}">
         <div class="card__header"><span class="card__subject" style="background:${color}">${esc(item.subject)}</span>${badge}</div>
         <div class="card__preview">${esc(text)}${hasImg}</div>
         ${tags ? `<div class="card__tags">${tags}</div>` : ''}
-        <div class="card__footer"><span>${created}</span>${review}</div></div>`;
+        <div class="card__footer"><span>${created}</span>${review}${redo}</div></div>`;
     }
 
     _getFilteredItems() {
@@ -461,6 +509,232 @@
       this._renderAll();
     }
 
+    /* ==================== 重做模式 ==================== */
+    _openRedoSetup() {
+      if (this.items.length === 0) { alert('还没有错题，请先添加','error'); return; }
+      this.redoSetupSubjects = new Set();
+      this._buildRedoSubjectChips();
+      const saved = this._getSavedRedoState();
+      if (saved && saved.queue.length > 0) {
+        this.els.redoResumeText.textContent = `上次重做中断于第 ${saved.index} / ${saved.total} 题`;
+        this.els.redoResumeBanner.style.display = 'flex';
+      } else {
+        this.els.redoResumeBanner.style.display = 'none';
+      }
+      this._openOverlay(this.els.redoSetupOverlay);
+    }
+
+    _buildRedoSubjectChips() {
+      const c = this.els.redoSubjectChips;
+      const counts = this._countBy('subject');
+      const chip = (label, active, count, onClick) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'redo-chip' + (active ? ' is-active' : '');
+        b.innerHTML = `${esc(label)}${count !== undefined ? ` <span class="redo-chip__count">${count}</span>` : ''}`;
+        b.addEventListener('click', onClick);
+        return b;
+      };
+      c.innerHTML = '';
+      c.appendChild(chip('全部', this.redoSetupSubjects.size === 0, this.items.length, () => {
+        this.redoSetupSubjects.clear(); this._buildRedoSubjectChips();
+      }));
+      for (const subj of this.subjects) {
+        const active = this.redoSetupSubjects.has(subj.name);
+        c.appendChild(chip(subj.name, active, counts[subj.name] || 0, () => {
+          active ? this.redoSetupSubjects.delete(subj.name) : this.redoSetupSubjects.add(subj.name);
+          this._buildRedoSubjectChips();
+        }));
+      }
+    }
+
+    _getSavedRedoState() {
+      try {
+        const raw = localStorage.getItem(LS_REDO_STATE);
+        if (!raw) return null;
+        const s = JSON.parse(raw);
+        if (!s || !Array.isArray(s.queue) || typeof s.index !== 'number') return null;
+        return s;
+      } catch (_) { return null; }
+    }
+
+    _saveRedoState() {
+      if (!this.redo.active) return;
+      localStorage.setItem(LS_REDO_STATE, JSON.stringify({
+        queue: this.redo.queue, index: this.redo.index,
+        results: this.redo.results, skipped: this.redo.skipped,
+        total: this.redo.total, settings: this.redo.settings,
+        savedAt: Date.now(),
+      }));
+    }
+
+    _clearRedoState() { localStorage.removeItem(LS_REDO_STATE); }
+
+    _discardRedoState() {
+      this._clearRedoState();
+      this.els.redoResumeBanner.style.display = 'none';
+    }
+
+    _startRedoFromSetup() {
+      const count = Math.max(1, Math.min(200, parseInt(this.els.redoCount.value, 10) || 10));
+      const hardFilter = this.els.redoHardFilter.value;
+      const weakOnly = this.els.redoWeakOnly.checked;
+      const subjects = [...this.redoSetupSubjects];
+
+      let pool = this.items;
+      if (subjects.length > 0) pool = pool.filter(i => subjects.includes(i.subject));
+      if (hardFilter === 'hard') pool = pool.filter(i => i.isHard);
+      if (hardFilter === 'normal') pool = pool.filter(i => !i.isHard);
+
+      const queueItems = computeRedoQueue(pool, { count, weakOnly });
+      if (queueItems.length === 0) { alert('没有符合条件的题目','error'); return; }
+
+      this._closeAllModals();
+      this._startRedo({
+        queue: queueItems.map(i => i.id),
+        settings: { count, weakOnly, hardFilter, subjects },
+        index: 0, results: [], skipped: 0, total: queueItems.length,
+      });
+    }
+
+    _resumeRedo() {
+      const saved = this._getSavedRedoState();
+      if (!saved) return;
+      const existingIds = new Set(this.items.map(i => i.id));
+      const queue = saved.queue.filter(id => existingIds.has(id));
+      if (queue.length === 0) { this._discardRedoState(); alert('上次队列中的题目已被删除','error'); return; }
+      this._closeAllModals();
+      this._startRedo({
+        queue, settings: saved.settings || { count: queue.length, weakOnly: true, hardFilter: 'all', subjects: [] },
+        index: saved.index, results: saved.results || [], skipped: saved.skipped || 0,
+        total: saved.total || queue.length,
+      });
+    }
+
+    _startRedo(state) {
+      this.redo = { active: true, ...state };
+      this.els.cardList.style.display = 'none';
+      this.els.emptyState.style.display = 'none';
+      this.els.redoMode.style.display = 'flex';
+      this.els.redoEndScreen.style.display = 'none';
+      this._renderRedoCard();
+      this._saveRedoState();
+    }
+
+    _renderRedoCard() {
+      const { queue, index } = this.redo;
+      if (index >= queue.length) { this._showRedoEnd(); return; }
+      const item = this.items.find(i => i.id === queue[index]);
+      if (!item) { // 题目已被删除 → 跳过
+        this.redo.index++;
+        this._saveRedoState();
+        this._renderRedoCard();
+        return;
+      }
+      const card = this.els.redoMode.querySelector('.review-card');
+      if (card) card.style.display = '';
+      this.els.redoCardContent.innerHTML = sanitizeHtml(item.question || '<span class="jy-text-muted">暂无题目</span>');
+      this.els.redoCardBadge.innerHTML = `<span class="card__subject" style="background:${this._getSubjectColor(item.subject)}">${esc(item.subject)}</span>`
+        + (item.isHard ? '<span class="card__badge card__badge--hard">难题</span>' : '<span class="card__badge card__badge--normal">普通</span>');
+      this.els.redoCardDate.textContent = `创建于 ${fmtDate(item.createdAt)} · 已重做 ${item.redoCount || 0} 次`;
+      this.els.redoProgress.textContent = `${index + 1} / ${this.redo.total}`;
+    }
+
+    async _redoAnswer(level) {
+      const { queue, index } = this.redo;
+      if (index >= queue.length) return;
+      const item = this.items.find(i => i.id === queue[index]);
+      if (item) {
+        item.redoMastery = level;
+        item.redoCount = (item.redoCount || 0) + 1;
+        item.lastRedoAt = Date.now();
+        await this.db.put(STORE, item);
+        this.redo.results.push({ id: item.id, level });
+      }
+      this.redo.index++;
+      this._saveRedoState();
+      this._renderRedoCard();
+    }
+
+    _redoSkip() {
+      this.redo.skipped++;
+      this.redo.index++;
+      this._saveRedoState();
+      this._renderRedoCard();
+    }
+
+    _redoShowAnswer() {
+      const { queue, index } = this.redo;
+      if (index >= queue.length) return;
+      const item = this.items.find(i => i.id === queue[index]);
+      if (!item) return;
+      this.els.answerBody.innerHTML = sanitizeHtml(item.answer || '<span class="jy-text-muted">暂无解析</span>');
+      this._openOverlay(this.els.answerOverlay);
+    }
+
+    _showRedoEnd() {
+      const { results, skipped, total } = this.redo;
+      const countOf = l => results.filter(r => r.level === l).length;
+      const mastered = countOf('mastered'), fuzzy = countOf('fuzzy'), failed = countOf('failed');
+      const weak = results.filter(r => r.level === 'fuzzy' || r.level === 'failed')
+        .map(r => this.items.find(i => i.id === r.id))
+        .filter(Boolean);
+
+      let h = `<div class="redo-end">
+        <div class="redo-end__title">🎉 本次重做完成</div>
+        <div class="redo-end__stats">
+          <div class="redo-end__stat"><strong>${total}</strong><span>总题数</span></div>
+          <div class="redo-end__stat redo-end__stat--ok"><strong>${mastered}</strong><span>✅ 掌握</span></div>
+          <div class="redo-end__stat redo-end__stat--fuzzy"><strong>${fuzzy}</strong><span>🤔 模糊</span></div>
+          <div class="redo-end__stat redo-end__stat--bad"><strong>${failed}</strong><span>❌ 未掌握</span></div>
+          <div class="redo-end__stat"><strong>${skipped}</strong><span>⏭ 跳过</span></div>
+        </div>`;
+      if (weak.length > 0) {
+        h += `<div class="redo-end__weak">
+          <div class="redo-end__weak-title">📌 弱题清单（下次重做将优先出现）</div>
+          ${weak.map(w => {
+            const preview = stripHtml(w.question);
+            const text = preview.length > 60 ? preview.slice(0, 60) + '…' : preview;
+            return `<div class="redo-weak-item" data-id="${w.id}">
+              <span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${this._getSubjectColor(w.subject)}"></span>
+              <span class="redo-weak-item__text">${esc(text)}</span>
+              <span class="jy-text-muted jy-text-xs">${esc(w.subject)}</span>
+            </div>`;
+          }).join('')}
+        </div>`;
+      }
+      h += `<div class="redo-end__actions">
+        <button id="btnRedoFinish" class="jy-btn jy-btn--primary">✅ 完成</button>
+      </div></div>`;
+
+      this.els.redoEndScreen.innerHTML = h;
+      this.els.redoEndScreen.style.display = '';
+      this.els.redoEndScreen.querySelectorAll('.redo-weak-item').forEach(el => {
+        el.addEventListener('click', () => {
+          const item = this.items.find(i => i.id === parseInt(el.dataset.id, 10));
+          if (item) this._openDetailModal(item);
+        });
+      });
+      this.els.redoEndScreen.querySelector('#btnRedoFinish').addEventListener('click', () => this._exitRedo(true));
+      const card = this.els.redoMode.querySelector('.review-card');
+      if (card) card.style.display = 'none';
+      this.els.redoProgress.textContent = '✓';
+      this._clearRedoState();
+    }
+
+    async _exitRedo(finished) {
+      if (!finished) {
+        const ok = confirm('重做尚未完成。\n确定退出吗？本次进度将被丢弃。');
+        if (!ok) return;
+        this._clearRedoState();
+      }
+      this.redo.active = false;
+      this.els.redoMode.style.display = 'none';
+      this.els.cardList.style.display = '';
+      await this.reload();
+      this._renderAll();
+    }
+
     async _onResetProgress() {
       const subject = this._getActiveSubject();
       if (!subject) { alert('请先选择一个科目','error'); return; }
@@ -507,6 +781,9 @@
       const source = item.source || '—';
       const created = fmtDate(item.createdAt, true);
       const lastReview = item.lastReviewedAt ? fmtDate(item.lastReviewedAt, true) : '尚未复习';
+      const lastRedo = item.redoCount
+        ? `🎲 重做 ${item.redoCount} 次 · 最近${REDO_LEVEL_LABEL[item.redoMastery] || '未记录'}（${fmtDate(item.lastRedoAt, true)}）`
+        : '尚未重做';
 
       b.innerHTML = `
         <div class="detail-section"><span class="detail-section__label">📌 题目</span><div class="detail-section__content">${sanitizeHtml(item.question || '<span class="jy-text-muted">暂无</span>')}</div></div>
@@ -518,6 +795,7 @@
           <span class="detail-meta__item">📖 来源：${esc(source)}</span>
           <span class="detail-meta__item">📅 添加：${created}</span>
           <span class="detail-meta__item">🔄 最近复习：${lastReview}</span>
+          <span class="detail-meta__item">${lastRedo}</span>
         </div>`;
       b.setAttribute('data-detail-id', item.id);
       this._openOverlay(this.els.detailOverlay);
@@ -552,7 +830,7 @@
 
     _openOverlay(ov) { ov.classList.add('is-open'); document.body.style.overflow = 'hidden'; }
     _closeAllModals() {
-      [this.els.editOverlay, this.els.detailOverlay, this.els.subjectsOverlay, this.els.confirmOverlay, this.els.answerOverlay]
+      [this.els.editOverlay, this.els.detailOverlay, this.els.subjectsOverlay, this.els.confirmOverlay, this.els.answerOverlay, this.els.redoSetupOverlay]
         .forEach(ov => ov.classList.remove('is-open'));
       document.body.style.overflow = this.review.active ? 'hidden' : '';
       this.editingId = null;
@@ -584,10 +862,16 @@
         item.id = existing.id;
         item.createdAt = existing.createdAt || Date.now();
         item.lastReviewedAt = existing.lastReviewedAt || null;
+        item.redoMastery = existing.redoMastery || null;
+        item.redoCount = existing.redoCount || 0;
+        item.lastRedoAt = existing.lastRedoAt || 0;
         await this.db.put(STORE, item);
       } else {
         item.createdAt = Date.now();
         item.lastReviewedAt = null;
+        item.redoMastery = null;
+        item.redoCount = 0;
+        item.lastRedoAt = 0;
         await this.db.add(STORE, item);
       }
       this._closeAllModals();

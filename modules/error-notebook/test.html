@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>错题本 · 重做队列算法测试</title>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 24px; max-width: 720px; margin: 0 auto; }
+    h1 { font-size: 1.2rem; }
+    #result { white-space: pre-wrap; line-height: 1.7; font-size: 0.9rem; }
+    .pass { color: #059669; }
+    .fail { color: #dc2626; }
+    .summary { font-weight: 700; font-size: 1.05rem; margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+<h1>重做队列算法单测（computeRedoQueue）</h1>
+<div class="summary" id="summary">运行中...</div>
+<div id="result"></div>
+
+<script src="redo-queue.js"></script>
+<script>
+;(function () {
+  'use strict';
+
+  var pass = 0, fail = 0;
+  var lines = [];
+
+  function t(name, fn) {
+    try { fn(); pass++; lines.push('<span class="pass">✓ ' + name + '</span>'); }
+    catch (e) { fail++; lines.push('<span class="fail">✗ ' + name + ' — ' + e.message + '</span>'); }
+  }
+  function eq(actual, expected, msg) {
+    var a = JSON.stringify(actual), b = JSON.stringify(expected);
+    if (a !== b) throw new Error((msg ? msg + '：' : '') + '期望 ' + b + '，实际 ' + a);
+  }
+  function ok(v, msg) { if (!v) throw new Error(msg || '断言失败'); }
+
+  /** 构造测试题目 */
+  function item(over) {
+    var base = { id: 1, subject: '数学', question: '<p>x</p>', answer: '', redoCount: 0, redoMastery: null, lastRedoAt: 0 };
+    for (var k in over) base[k] = over[k];
+    return base;
+  }
+
+  /* ---------- 用例 ---------- */
+
+  t('空列表返回空数组', function () {
+    eq(computeRedoQueue([], { count: 10 }), []);
+  });
+
+  t('非数组输入返回空数组', function () {
+    eq(computeRedoQueue(null, { count: 10 }), []);
+    eq(computeRedoQueue('x', { count: 10 }), []);
+  });
+
+  t('count<=0 返回空数组', function () {
+    eq(computeRedoQueue([item({ id: 1 })], { count: 0 }), []);
+  });
+
+  t('返回数量不超过 count', function () {
+    var items = []; for (var i = 1; i <= 20; i++) items.push(item({ id: i }));
+    eq(computeRedoQueue(items, { count: 5 }).length, 5);
+  });
+
+  t('优先级：从未重做 > 未掌握 > 模糊 > 掌握', function () {
+    var items = [
+      item({ id: 'mastered', redoCount: 1, redoMastery: 'mastered', lastRedoAt: 100 }),
+      item({ id: 'fuzzy',    redoCount: 1, redoMastery: 'fuzzy',    lastRedoAt: 100 }),
+      item({ id: 'failed',   redoCount: 1, redoMastery: 'failed',   lastRedoAt: 100 }),
+      item({ id: 'never',    redoCount: 0, redoMastery: null,       lastRedoAt: 0 }),
+    ];
+    var ids = computeRedoQueue(items, { count: 10 }).map(function (i) { return i.id; });
+    eq(ids, ['never', 'failed', 'fuzzy', 'mastered']);
+  });
+
+  t('同组按 lastRedoAt 升序（最久未做在前）', function () {
+    var items = [
+      item({ id: 'new',  redoCount: 1, redoMastery: 'failed', lastRedoAt: 900 }),
+      item({ id: 'mid',  redoCount: 1, redoMastery: 'failed', lastRedoAt: 500 }),
+      item({ id: 'old',  redoCount: 1, redoMastery: 'failed', lastRedoAt: 100 }),
+    ];
+    var ids = computeRedoQueue(items, { count: 10 }).map(function (i) { return i.id; });
+    eq(ids, ['old', 'mid', 'new']);
+  });
+
+  t('lastRedoAt 为 0 的从未重做题在同组中排最前', function () {
+    var items = [
+      item({ id: 'a', redoCount: 1, redoMastery: 'fuzzy', lastRedoAt: 100 }),
+      item({ id: 'b', redoCount: 0, redoMastery: null,   lastRedoAt: 0 }),
+    ];
+    var ids = computeRedoQueue(items, { count: 10 }).map(function (i) { return i.id; });
+    eq(ids, ['b', 'a']);
+  });
+
+  t('weakOnly=true 排除「掌握」题', function () {
+    var items = [
+      item({ id: 'mastered', redoCount: 1, redoMastery: 'mastered', lastRedoAt: 100 }),
+      item({ id: 'weak',     redoCount: 1, redoMastery: 'failed',   lastRedoAt: 100 }),
+    ];
+    var ids = computeRedoQueue(items, { count: 10, weakOnly: true }).map(function (i) { return i.id; });
+    eq(ids, ['weak']);
+  });
+
+  t('weakOnly=true 弱题不足时不补掌握题', function () {
+    var items = [
+      item({ id: 'm1', redoCount: 1, redoMastery: 'mastered', lastRedoAt: 100 }),
+      item({ id: 'm2', redoCount: 1, redoMastery: 'mastered', lastRedoAt: 200 }),
+      item({ id: 'w1', redoCount: 1, redoMastery: 'fuzzy',    lastRedoAt: 100 }),
+    ];
+    eq(computeRedoQueue(items, { count: 5, weakOnly: true }).length, 1);
+  });
+
+  t('weakOnly=false 弱题不足时用掌握题补位', function () {
+    var items = [
+      item({ id: 'm1', redoCount: 1, redoMastery: 'mastered', lastRedoAt: 100 }),
+      item({ id: 'w1', redoCount: 1, redoMastery: 'fuzzy',    lastRedoAt: 100 }),
+    ];
+    var ids = computeRedoQueue(items, { count: 5, weakOnly: false }).map(function (i) { return i.id; });
+    eq(ids, ['w1', 'm1']);
+  });
+
+  t('边缘：redoCount>0 但 mastery=null 归入「从未重做」组', function () {
+    var items = [
+      item({ id: 'edge',   redoCount: 3, redoMastery: null,     lastRedoAt: 50 }),
+      item({ id: 'failed', redoCount: 1, redoMastery: 'failed', lastRedoAt: 100 }),
+    ];
+    var ids = computeRedoQueue(items, { count: 10 }).map(function (i) { return i.id; });
+    eq(ids, ['edge', 'failed']);
+  });
+
+  t('不修改原数组', function () {
+    var items = [item({ id: 2, lastRedoAt: 200 }), item({ id: 1, lastRedoAt: 100 })];
+    computeRedoQueue(items, { count: 10 });
+    eq(items.map(function (i) { return i.id; }), [2, 1]);
+  });
+
+  /* ---------- 汇总 ---------- */
+  document.getElementById('result').innerHTML = lines.join('\n');
+  document.getElementById('summary').innerHTML =
+    fail === 0
+      ? '<span class="pass">全部通过：' + pass + ' 项</span>'
+      : '<span class="fail">失败 ' + fail + ' / ' + (pass + fail) + ' 项</span>';
+})();
+</script>
+</body>
+</html>

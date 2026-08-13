@@ -190,6 +190,84 @@
 }
 .review-btn--skip:hover { background: var(--jy-accent-soft) !important; }
 
+/* ======================== 重做模式 ======================== */
+.redo-btn--mastered {
+  background: var(--jy-success) !important; color: #fff !important;
+  padding: 0.65rem 1.5rem !important; font-size: var(--jy-font-size-md) !important; font-weight: 600 !important;
+}
+.redo-btn--mastered:hover { opacity: 0.9; }
+
+.redo-btn--fuzzy {
+  background: var(--jy-warning) !important; color: #fff !important;
+  padding: 0.65rem 1.5rem !important; font-size: var(--jy-font-size-md) !important; font-weight: 600 !important;
+}
+.redo-btn--fuzzy:hover { opacity: 0.9; }
+
+.redo-btn--failed {
+  background: var(--jy-danger) !important; color: #fff !important;
+  padding: 0.65rem 1.5rem !important; font-size: var(--jy-font-size-md) !important; font-weight: 600 !important;
+}
+.redo-btn--failed:hover { opacity: 0.9; }
+
+.card__redo-badge { color: var(--jy-warning); font-weight: 600; }
+
+/* ---- 重做设置弹窗 ---- */
+.redo-chips { display: flex; flex-wrap: wrap; gap: var(--jy-space-2); }
+.redo-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 0.3rem 0.8rem; font-size: var(--jy-font-size-sm);
+  border: 1px solid var(--jy-border); border-radius: 99px;
+  background: var(--jy-surface); color: var(--jy-text-primary);
+  cursor: pointer; transition: all 0.15s; font-family: inherit;
+}
+.redo-chip:hover { border-color: var(--jy-primary); }
+.redo-chip.is-active { background: var(--jy-primary); border-color: var(--jy-primary); color: #fff; }
+.redo-chip.is-active .redo-chip__count { color: rgba(255,255,255,0.85); }
+.redo-chip__count { color: var(--jy-text-muted); font-size: var(--jy-font-size-xs); }
+
+.redo-resume-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--jy-space-3);
+  flex-wrap: wrap;
+  padding: var(--jy-space-3) var(--jy-space-4); margin-bottom: var(--jy-space-4);
+  background: var(--jy-warning-soft, rgba(217,119,6,0.08)); border: 1px solid var(--jy-warning);
+  border-radius: var(--jy-radius); font-size: var(--jy-font-size-sm);
+}
+[data-theme="dark"] .redo-resume-banner { background: rgba(217,119,6,0.15); }
+
+/* ---- 重做结束页 ---- */
+.redo-end {
+  width: 100%; max-width: 900px;
+  background: var(--jy-surface); border: 1px solid var(--jy-border);
+  border-radius: var(--jy-radius-xl); padding: var(--jy-space-8);
+  box-shadow: var(--jy-shadow-md);
+}
+.redo-end__title { font-size: var(--jy-font-size-xl); font-weight: 700; text-align: center; margin-bottom: var(--jy-space-5); }
+.redo-end__stats {
+  display: flex; flex-wrap: wrap; gap: var(--jy-space-3); justify-content: center;
+  margin-bottom: var(--jy-space-5);
+}
+.redo-end__stat {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  min-width: 84px; padding: var(--jy-space-3);
+  background: var(--jy-bg); border: 1px solid var(--jy-border); border-radius: var(--jy-radius);
+}
+.redo-end__stat strong { font-size: var(--jy-font-size-2xl); }
+.redo-end__stat span { font-size: var(--jy-font-size-xs); color: var(--jy-text-secondary); }
+.redo-end__stat--ok strong { color: var(--jy-success); }
+.redo-end__stat--fuzzy strong { color: var(--jy-warning); }
+.redo-end__stat--bad strong { color: var(--jy-danger); }
+.redo-end__weak { margin-bottom: var(--jy-space-5); }
+.redo-end__weak-title { font-weight: 600; margin-bottom: var(--jy-space-2); }
+.redo-weak-item {
+  display: flex; align-items: center; gap: var(--jy-space-2);
+  padding: var(--jy-space-2) var(--jy-space-3); margin-bottom: var(--jy-space-1);
+  border: 1px solid var(--jy-border); border-radius: var(--jy-radius-sm);
+  cursor: pointer; transition: all 0.15s;
+}
+.redo-weak-item:hover { border-color: var(--jy-primary); background: var(--jy-bg-secondary); }
+.redo-weak-item__text { flex: 1; font-size: var(--jy-font-size-sm); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.redo-end__actions { display: flex; justify-content: center; }
+
 /* ======================== 详情弹窗 ======================== */
 .detail-section { margin-bottom: var(--jy-space-5); }
 .detail-section__label {
