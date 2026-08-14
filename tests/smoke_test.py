@@ -426,8 +426,25 @@ def test_shell_file_delete(context):
         cleanup()
         return
 
-    # 点卡片打开查看弹窗
-    page.click(".card--file")
+    # 缩略图点击 → 直接弹出放大层 → 点击关闭（不打开查看弹窗）
+    zoom_ok = True
+    page.click(".card--file .card__thumb")
+    page.wait_for_timeout(300)
+    if not page.locator(".image-zoom-overlay.is-open").count():
+        FAILURES.append("[拾贝删文件] 缩略图点击未弹出放大层")
+        zoom_ok = False
+    else:
+        page.click(".image-zoom-overlay")
+        page.wait_for_timeout(200)
+        if page.locator(".image-zoom-overlay").count():
+            FAILURES.append("[拾贝删文件] 放大层点击后未关闭")
+            zoom_ok = False
+    if page.locator("#fileViewerOverlay.is-open").count():
+        FAILURES.append("[拾贝删文件] 点缩略图误开了查看弹窗")
+        zoom_ok = False
+
+    # 点卡片信息区打开查看弹窗
+    page.click(".card--file .card__file-info")
     page.wait_for_timeout(400)
     cls = page.get_attribute("#fileViewerOverlay", "class") or ""
     if "is-open" not in cls:
@@ -437,11 +454,10 @@ def test_shell_file_delete(context):
         return
 
     # 查看弹窗内点击图片 → 应弹出放大层 → 再点击关闭
-    zoom_ok = True
     page.click("#fileViewerBody img")
     page.wait_for_timeout(300)
     if not page.locator(".image-zoom-overlay.is-open").count():
-        FAILURES.append("[拾贝删文件] 图片点击未弹出放大层")
+        FAILURES.append("[拾贝删文件] 查看弹窗内图片点击未弹出放大层")
         zoom_ok = False
     else:
         page.click(".image-zoom-overlay")
@@ -502,7 +518,7 @@ def test_shell_large_file(context):
         cleanup()
         return
 
-    page.click(".card--file")
+    page.click(".card--file .card__file-info")
     page.wait_for_timeout(600)
     if not page.locator("#fileViewerOverlay.is-open").count():
         FAILURES.append("[拾贝大文件] 查看弹窗未打开")

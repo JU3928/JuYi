@@ -521,6 +521,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: zoom-in;
 }
 .card--file .card__thumb img {
   width: 100%;

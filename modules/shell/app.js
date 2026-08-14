@@ -973,10 +973,15 @@
 
       // Bind card click
       this.$cardGrid.querySelectorAll('.card').forEach(function (el) {
-        el.addEventListener('click', function () {
+        el.addEventListener('click', function (e) {
           var id = parseInt(this.dataset.id);
           var card = self.cards.find(function (c) { return c.id === id; });
           if (!card) return;
+          // 点击缩略图直接放大（与错题本一致），点卡片其他区域才打开查看弹窗
+          if (card.type === 'file' && e.target.closest('.card__thumb')) {
+            var img = e.target.closest('.card__thumb').querySelector('img');
+            if (img) { self._zoomImage(img.src); return; }
+          }
           if (card.type === 'file') self._openFileViewer(card);
           else self._openDetail(card);
         });
