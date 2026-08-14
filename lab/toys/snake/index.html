@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>贪吃蛇 — JuYi 实验室</title>
+  <link rel="stylesheet" href="../../../shared/base.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <div id="snakeApp" class="snk">
+    <header class="snk__header">
+      <div class="snk__title-row">
+        <h1 class="snk__title">🐍 贪吃蛇</h1>
+      </div>
+      <a class="jy-btn jy-btn--ghost jy-btn--sm" href="../../index.html">← 返回实验室</a>
+    </header>
+
+    <!-- 控制栏 -->
+    <div class="snk__controls">
+      <div class="snk__control">
+        <label class="jy-label" for="speedSelect">速度</label>
+        <select id="speedSelect" class="jy-select">
+          <option value="slow">🐢 慢</option>
+          <option value="medium" selected>🐇 中</option>
+          <option value="fast">⚡ 快</option>
+        </select>
+      </div>
+      <div class="snk__control snk__control--grow"></div>
+      <button id="btnPause" class="jy-btn jy-btn--outline">⏸ 暂停</button>
+      <button id="btnRestart" class="jy-btn jy-btn--primary">🔄 重开</button>
+      <button id="btnTheme" class="jy-btn jy-btn--ghost jy-btn--icon" title="切换暗色模式">🌙</button>
+    </div>
+
+    <!-- 棋盘 -->
+    <div class="snk__board-wrap">
+      <canvas id="boardCanvas"></canvas>
+      <!-- 暂停遮罩 -->
+      <div id="pauseOverlay" class="snk__overlay" style="display:none">
+        <div class="snk__overlay-text">⏸ 已暂停</div>
+        <button id="btnResume" class="jy-btn jy-btn--primary">继续</button>
+      </div>
+      <!-- 结算遮罩 -->
+      <div id="overOverlay" class="snk__overlay" style="display:none">
+        <div id="overTitle" class="snk__overlay-text"></div>
+        <div id="overDetail" class="snk__overlay-detail"></div>
+        <div class="snk__overlay-actions">
+          <button id="btnAgain" class="jy-btn jy-btn--primary">再来一局</button>
+          <button id="btnOverClose" class="jy-btn jy-btn--ghost">看看棋盘</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 状态栏 -->
+    <div class="snk__status">
+      <span id="scoreText" class="snk__status-score">🍎 <span id="score">0</span></span>
+      <span id="highText" class="snk__status-high">🏆 最高 <span id="highScore">0</span></span>
+      <span id="stepsText" class="snk__status-steps">步数 <span id="steps">0</span></span>
+    </div>
+
+    <!-- 虚拟方向键（移动端） -->
+    <div class="snk__dpad">
+      <div></div>
+      <button class="snk__dpad-btn" data-dir="up" aria-label="上">▲</button>
+      <div></div>
+      <button class="snk__dpad-btn" data-dir="left" aria-label="左">◀</button>
+      <button class="snk__dpad-btn snk__dpad-btn--center" data-dir="pause" aria-label="暂停/继续">⏯</button>
+      <button class="snk__dpad-btn" data-dir="right" aria-label="右">▶</button>
+      <div></div>
+      <button class="snk__dpad-btn" data-dir="down" aria-label="下">▼</button>
+      <div></div>
+    </div>
+
+    <!-- 战绩 -->
+    <section class="snk__stats">
+      <h2 class="snk__stats-title">📊 战绩</h2>
+      <div id="statsPanel" class="snk__stats-row"></div>
+      <p class="snk__stats-hint">按速度分档记录最高分与局数（只存本机浏览器）</p>
+    </section>
+
+    <!-- 备份 -->
+    <footer class="snk__footer">
+      <button id="btnExport" class="jy-btn jy-btn--outline jy-btn--sm">💾 导出备份</button>
+      <button id="btnImport" class="jy-btn jy-btn--outline jy-btn--sm">📥 导入恢复</button>
+      <input type="file" id="importFileInput" accept=".json" class="jy-sr-only">
+    </footer>
+  </div>
+
+  <script src="../../../shared/db-core.js"></script>
+  <script src="../../../shared/utils.js"></script>
+  <script src="snake-engine.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -36,6 +36,7 @@ PAGES = [
     ("网页助手",     "lab/toys/web-assistant/index.html",   "body"),
     ("抽奖器",       "lab/toys/moment-lottery/index.html",  "body"),
     ("五子棋",       "lab/toys/gomoku/index.html",          "#gomokuApp"),
+    ("贪吃蛇",       "lab/toys/snake/index.html",           "#snakeApp"),
     ("生日页",       "birthday/index.html",                 "#hero"),
 ]
 
@@ -45,6 +46,7 @@ MOBILE_CHECK_PAGES = [
     ("错题本",   "modules/error-notebook/index.html"),
     ("错题图鉴", "modules/error-book/index.html"),
     ("五子棋",   "lab/toys/gomoku/index.html"),
+    ("贪吃蛇",   "lab/toys/snake/index.html"),
 ]
 
 FAILURES = []
@@ -339,6 +341,57 @@ def test_gomoku_e2e(context):
     page.close()
 
 
+def test_snake_unit(context):
+    """贪吃蛇引擎单测页（test.html）必须全绿。"""
+    page = context.new_page()
+    errors, failed = collect_errors(page)
+    page.goto(file_url("lab/toys/snake/test.html"))
+    page.wait_for_load_state("load")
+    page.wait_for_timeout(500)
+    summary = page.locator("#summary").inner_text()
+    if "全部通过" not in summary:
+        FAILURES.append("[贪吃蛇单测] " + summary)
+    else:
+        PASSES.append("贪吃蛇引擎单测全部通过")
+    for e in errors:
+        FAILURES.append("[贪吃蛇单测] " + e)
+    page.close()
+
+
+def test_snake_e2e(context):
+    """贪吃蛇 e2e：暂停 → 继续 → 键盘转向。"""
+    page = context.new_page()
+    errors, failed = collect_errors(page)
+    page.goto(file_url("lab/toys/snake/index.html"))
+    page.wait_for_load_state("load")
+    page.wait_for_timeout(1000)
+    page.select_option("#speedSelect", "slow")
+    page.wait_for_timeout(300)
+
+    page.keyboard.press("Space")  # 暂停
+    page.wait_for_timeout(300)
+    if not page.locator("#pauseOverlay").is_visible():
+        FAILURES.append("[贪吃蛇] 暂停未生效")
+        page.close()
+        return
+    page.keyboard.press("Space")  # 继续
+    page.wait_for_timeout(300)
+    if page.locator("#pauseOverlay").is_visible():
+        FAILURES.append("[贪吃蛇] 继续未生效")
+        page.close()
+        return
+
+    page.keyboard.press("ArrowUp")
+    page.wait_for_timeout(400)
+    if not page.locator("#score").is_visible():
+        FAILURES.append("[贪吃蛇] 分数未显示")
+    else:
+        PASSES.append("贪吃蛇 e2e 通过（暂停→继续→键盘转向）")
+    for e in errors:
+        FAILURES.append("[贪吃蛇] " + e)
+    page.close()
+
+
 def main():
     with sync_playwright() as p:
         browser = launch_browser(p)
@@ -359,6 +412,8 @@ def main():
         test_redo_migration(context)
         test_gomoku_unit(context)
         test_gomoku_e2e(context)
+        test_snake_unit(context)
+        test_snake_e2e(context)
         browser.close()
 
     print("=" * 60)

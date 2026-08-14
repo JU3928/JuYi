@@ -1,0 +1,149 @@
+/* ==================== 贪吃蛇 — 模块样式 ==================== */
+/* 依赖 shared/base.css 的设计变量（--jy-*） */
+
+:root {
+  --snake-bg: #e9f2ea;
+  --snake-grid: #d8e6da;
+  --snake-body: #4caf50;
+  --snake-head: #2e7d32;
+  --snake-food: #e74c3c;
+  --snake-food-core: #c0392b;
+}
+
+[data-theme="dark"] {
+  --snake-bg: #20262e;
+  --snake-grid: #2c343e;
+  --snake-body: #66bb6a;
+  --snake-head: #43a047;
+  --snake-food: #ff6b6b;
+  --snake-food-core: #e74c3c;
+}
+
+.snk {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: var(--jy-space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--jy-space-4);
+  min-height: 100vh;
+}
+
+/* ---------- 头部 ---------- */
+.snk__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.snk__title { font-size: var(--jy-font-size-xl); font-weight: 700; }
+
+/* ---------- 控制栏 ---------- */
+.snk__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--jy-space-3);
+}
+.snk__control { display: flex; flex-direction: column; gap: var(--jy-space-1); }
+.snk__control--grow { flex: 1; }
+
+/* ---------- 棋盘 ---------- */
+.snk__board-wrap {
+  position: relative;
+  border-radius: var(--jy-radius-lg);
+  box-shadow: var(--jy-shadow-md);
+  overflow: hidden;
+  background: var(--snake-bg);
+}
+#boardCanvas {
+  display: block;
+  width: min(92vw, 580px);
+  height: auto;
+  aspect-ratio: 1 / 1;
+  touch-action: none; /* 触屏滑动转向由 JS 处理 */
+}
+
+/* ---------- 遮罩 ---------- */
+.snk__overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--jy-space-4);
+  background: var(--jy-bg);
+  background: color-mix(in srgb, var(--jy-bg) 80%, transparent);
+  backdrop-filter: blur(3px);
+}
+.snk__overlay-text { font-size: var(--jy-font-size-xl); font-weight: 700; }
+.snk__overlay-detail { color: var(--jy-text-secondary); }
+.snk__overlay-actions { display: flex; gap: var(--jy-space-3); }
+
+/* ---------- 状态栏 ---------- */
+.snk__status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--jy-space-3) var(--jy-space-4);
+  background: var(--jy-surface);
+  border: 1px solid var(--jy-border);
+  border-radius: var(--jy-radius);
+}
+.snk__status-score { font-weight: 700; color: var(--snake-food-core, var(--jy-danger)); }
+.snk__status-high { color: var(--jy-text-secondary); }
+.snk__status-steps { color: var(--jy-text-muted); font-size: var(--jy-font-size-sm); }
+
+/* ---------- 虚拟方向键（移动端也显示，桌面可忽略） ---------- */
+.snk__dpad {
+  display: grid;
+  grid-template-columns: repeat(3, 56px);
+  grid-template-rows: repeat(3, 56px);
+  gap: var(--jy-space-2);
+  justify-content: center;
+}
+.snk__dpad-btn {
+  border: 1px solid var(--jy-border);
+  background: var(--jy-surface);
+  color: var(--jy-text-primary);
+  border-radius: var(--jy-radius);
+  font-size: var(--jy-font-size-lg);
+  cursor: pointer;
+  box-shadow: var(--jy-shadow-sm);
+  -webkit-tap-highlight-color: transparent;
+}
+.snk__dpad-btn:active { transform: scale(0.94); background: var(--jy-bg); }
+.snk__dpad-btn--center { font-size: var(--jy-font-size-base); }
+
+/* ---------- 战绩 ---------- */
+.snk__stats {
+  padding: var(--jy-space-4);
+  background: var(--jy-surface);
+  border: 1px solid var(--jy-border);
+  border-radius: var(--jy-radius);
+}
+.snk__stats-title { font-size: var(--jy-font-size-base); font-weight: 600; margin-bottom: var(--jy-space-3); }
+.snk__stats-row { display: flex; flex-wrap: wrap; gap: var(--jy-space-3); }
+.snk__stats-chip {
+  padding: var(--jy-space-2) var(--jy-space-3);
+  border-radius: var(--jy-radius);
+  background: var(--jy-bg);
+  border: 1px solid var(--jy-border);
+  font-size: var(--jy-font-size-sm);
+}
+.snk__stats-chip strong { color: var(--jy-primary); }
+.snk__stats-hint { margin-top: var(--jy-space-3); color: var(--jy-text-muted); font-size: var(--jy-font-size-xs); }
+
+/* ---------- 底部 ---------- */
+.snk__footer {
+  display: flex;
+  gap: var(--jy-space-3);
+  justify-content: center;
+  padding-bottom: var(--jy-space-6);
+}
+
+/* ---------- 移动端 ---------- */
+@media (max-width: 480px) {
+  .snk { padding: var(--jy-space-3); gap: var(--jy-space-3); }
+  .snk__controls .jy-btn { flex: 1; }
+}
