@@ -226,6 +226,7 @@
       this.$fileViewerOverlay = d.getElementById('fileViewerOverlay');
       this.$fileViewerTitle = d.getElementById('fileViewerTitle');
       this.$fileViewerBody = d.getElementById('fileViewerBody');
+      this.$btnDeleteFile = d.getElementById('btnDeleteFile');
       this.$btnDownloadFile = d.getElementById('btnDownloadFile');
       this._currentFileData = null; // for download
     }
@@ -315,6 +316,9 @@
       // File viewer
       if (this.$btnDownloadFile) {
         this.$btnDownloadFile.addEventListener('click', function () { self._downloadCurrentFile(); });
+      }
+      if (this.$btnDeleteFile) {
+        this.$btnDeleteFile.addEventListener('click', function () { self._deleteCurrentFile(); });
       }
 
       // Drag & drop file import on card grid
@@ -659,6 +663,14 @@
       a.click();
     }
 
+    _deleteCurrentFile() {
+      var id = this._viewingFileId;
+      this.$fileViewerOverlay.classList.remove('is-open');
+      this._viewingFileId = null;
+      if (id == null) return;
+      this._confirmDelete(id);
+    }
+
     /* ---- Card CRUD ---- */
     _openModal(card) {
       this.editingId = card ? card.id : null;
@@ -726,7 +738,8 @@
     _confirmDelete(id) {
       this.pendingDeleteId = id;
       var card = this.cards.find(function (c) { return c.id === id; });
-      this.$deleteMsg.textContent = '确定删除卡片「' + (card ? card.title : '') + '」？此操作不可撤销。';
+      var name = card ? (card.type === 'file' ? (card.fileName || card.title) : card.title) : '';
+      this.$deleteMsg.textContent = '确定删除' + (card && card.type === 'file' ? '文件' : '卡片') + '「' + name + '」？此操作不可撤销。';
       this.$deleteOverlay.classList.add('is-open');
     }
 

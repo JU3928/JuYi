@@ -392,6 +392,71 @@ def test_snake_e2e(context):
     page.close()
 
 
+def test_shell_file_delete(context):
+    """拾贝回归测试：导入文件必须能删除（查看弹窗 → 删除 → 确认）。"""
+    import base64
+    import tempfile
+
+    page = context.new_page()
+    errors, failed = collect_errors(page)
+    page.goto(file_url("modules/shell/index.html"))
+    page.wait_for_load_state("load")
+    page.wait_for_timeout(2500)
+
+    # 1×1 PNG 临时文件，模拟用户导入
+    PNG_1PX = base64.b64decode(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJ"
+        "AAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+    )
+    tmp = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
+    tmp.write(PNG_1PX)
+    tmp.close()
+
+    def cleanup():
+        try:
+            os.unlink(tmp.name)
+        except OSError:
+            pass
+
+    page.set_input_files("#fileInput", tmp.name)
+    page.wait_for_timeout(1500)
+    if not page.locator(".card--file").count():
+        FAILURES.append("[拾贝删文件] 导入后未见文件卡片")
+        page.close()
+        cleanup()
+        return
+
+    # 点卡片打开查看弹窗
+    page.click(".card--file")
+    page.wait_for_timeout(400)
+    cls = page.get_attribute("#fileViewerOverlay", "class") or ""
+    if "is-open" not in cls:
+        FAILURES.append("[拾贝删文件] 文件查看弹窗未打开")
+        page.close()
+        cleanup()
+        return
+
+    # 查看弹窗内删除 → 确认弹窗 → 确认
+    page.click("#btnDeleteFile")
+    page.wait_for_timeout(300)
+    if not page.locator("#deleteOverlay.is-open").count():
+        FAILURES.append("[拾贝删文件] 删除确认弹窗未打开")
+        page.close()
+        cleanup()
+        return
+    page.click("#btnConfirmDelete")
+    page.wait_for_timeout(800)
+
+    if page.locator(".card--file").count():
+        FAILURES.append("[拾贝删文件] 确认后文件卡片仍存在")
+    else:
+        PASSES.append("拾贝文件导入→查看→删除 全流程通过")
+    cleanup()
+    for e in errors:
+        FAILURES.append("[拾贝删文件] " + e)
+    page.close()
+
+
 def main():
     with sync_playwright() as p:
         browser = launch_browser(p)
@@ -414,6 +479,7 @@ def main():
         test_gomoku_e2e(context)
         test_snake_unit(context)
         test_snake_e2e(context)
+        test_shell_file_delete(context)
         browser.close()
 
     print("=" * 60)
