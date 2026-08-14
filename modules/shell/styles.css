@@ -400,6 +400,7 @@
   max-width: 100%;
   border-radius: var(--jy-radius-sm);
   margin: 0.5rem 0;
+  cursor: zoom-in;
 }
 
 /* ======================== 存储警告横幅 ======================== */

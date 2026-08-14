@@ -330,6 +330,12 @@
           if (e.target.tagName === 'IMG') self._zoomImage(e.target.src);
         });
       }
+      // 卡片详情弹窗内图片点击放大（与错题本一致）
+      if (this.$detailContent) {
+        this.$detailContent.addEventListener('click', function (e) {
+          if (e.target.tagName === 'IMG') self._zoomImage(e.target.src);
+        });
+      }
 
       // Drag & drop file import on card grid
       if (this.$cardGrid) {

@@ -546,6 +546,57 @@ def test_shell_large_file(context):
     page.close()
 
 
+def test_shell_detail_img_zoom(context):
+    """拾贝回归：普通卡片正文里的图片，详情弹窗中悬停放大镜 + 点击全屏放大（与错题本一致）。"""
+    import base64
+
+    PNG_1PX = base64.b64decode(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJ"
+        "AAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+    )
+    data_url = "data:image/png;base64," + base64.b64encode(PNG_1PX).decode()
+
+    page = context.new_page()
+    errors, failed = collect_errors(page)
+    page.goto(file_url("modules/shell/index.html"))
+    page.wait_for_load_state("load")
+    page.wait_for_timeout(2500)
+
+    # 新建一张正文带图片的普通卡片
+    page.click("#btnAdd")
+    page.wait_for_timeout(300)
+    page.fill("#editTitle", "图片放大测试卡")
+    page.evaluate("""src => { document.getElementById('editContent').innerHTML = '<img src="' + src + '" alt="">'; }""", data_url)
+    page.click("#btnSave")
+    page.wait_for_timeout(600)
+
+    # 打开详情弹窗
+    page.click(".card--note")
+    page.wait_for_timeout(400)
+    if not page.locator("#detailOverlay.is-open").count():
+        FAILURES.append("[拾贝详情放大] 详情弹窗未打开")
+        page.close()
+        return
+    cursor = page.evaluate("() => { const i = document.querySelector('#detailContent img'); return i ? getComputedStyle(i).cursor : 'NO-IMG'; }")
+    if cursor != "zoom-in":
+        FAILURES.append("[拾贝详情放大] 详情图片悬停光标不是 zoom-in，而是: " + cursor)
+    else:
+        page.click("#detailContent img")
+        page.wait_for_timeout(300)
+        if not page.locator(".image-zoom-overlay.is-open").count():
+            FAILURES.append("[拾贝详情放大] 点击正文图片未弹出放大层")
+        else:
+            page.click(".image-zoom-overlay")
+            page.wait_for_timeout(200)
+            if page.locator(".image-zoom-overlay").count():
+                FAILURES.append("[拾贝详情放大] 放大层点击后未关闭")
+            else:
+                PASSES.append("拾贝正文图片放大 通过（详情弹窗悬停放大镜+点击全屏）")
+    for e in errors:
+        FAILURES.append("[拾贝详情放大] " + e)
+    page.close()
+
+
 def main():
     with sync_playwright() as p:
         browser = launch_browser(p)
@@ -570,6 +621,7 @@ def main():
         test_snake_e2e(context)
         test_shell_file_delete(context)
         test_shell_large_file(context)
+        test_shell_detail_img_zoom(context)
         browser.close()
 
     print("=" * 60)
