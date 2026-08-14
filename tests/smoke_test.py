@@ -436,6 +436,20 @@ def test_shell_file_delete(context):
         cleanup()
         return
 
+    # 查看弹窗内点击图片 → 应弹出放大层 → 再点击关闭
+    zoom_ok = True
+    page.click("#fileViewerBody img")
+    page.wait_for_timeout(300)
+    if not page.locator(".image-zoom-overlay.is-open").count():
+        FAILURES.append("[拾贝删文件] 图片点击未弹出放大层")
+        zoom_ok = False
+    else:
+        page.click(".image-zoom-overlay")
+        page.wait_for_timeout(200)
+        if page.locator(".image-zoom-overlay").count():
+            FAILURES.append("[拾贝删文件] 放大层点击后未关闭")
+            zoom_ok = False
+
     # 查看弹窗内删除 → 确认弹窗 → 确认
     page.click("#btnDeleteFile")
     page.wait_for_timeout(300)
@@ -449,8 +463,10 @@ def test_shell_file_delete(context):
 
     if page.locator(".card--file").count():
         FAILURES.append("[拾贝删文件] 确认后文件卡片仍存在")
+    elif zoom_ok:
+        PASSES.append("拾贝文件导入→查看→图片放大→删除 全流程通过")
     else:
-        PASSES.append("拾贝文件导入→查看→删除 全流程通过")
+        PASSES.append("拾贝文件导入→查看→删除 通过（图片放大项失败，见上方 FAIL）")
     cleanup()
     for e in errors:
         FAILURES.append("[拾贝删文件] " + e)

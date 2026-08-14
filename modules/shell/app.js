@@ -324,6 +324,12 @@
       if (this.$btnDeleteFile) {
         this.$btnDeleteFile.addEventListener('click', function () { self._deleteCurrentFile(); });
       }
+      // 查看弹窗内图片点击放大
+      if (this.$fileViewerBody) {
+        this.$fileViewerBody.addEventListener('click', function (e) {
+          if (e.target.tagName === 'IMG') self._zoomImage(e.target.src);
+        });
+      }
 
       // Drag & drop file import on card grid
       if (this.$cardGrid) {
@@ -687,6 +693,17 @@
       this._viewingFileId = null;
       if (id == null) return;
       this._confirmDelete(id);
+    }
+
+    _zoomImage(src) {
+      var old = document.querySelector('.image-zoom-overlay');
+      if (old) old.remove();
+      var ov = document.createElement('div');
+      ov.className = 'image-zoom-overlay';
+      ov.innerHTML = '<img src="' + src + '" alt="">';
+      ov.addEventListener('click', function () { ov.remove(); });
+      document.body.appendChild(ov);
+      requestAnimationFrame(function () { ov.classList.add('is-open'); });
     }
 
     /* ---- Card CRUD ---- */
