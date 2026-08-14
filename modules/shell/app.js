@@ -10,6 +10,10 @@
 
   const PRESET_CATEGORIES = ['数学公式', '408专业课', '英语美言'];
 
+  // 大文件保护：base64 dataURL 约膨胀 1.33 倍，超大文件内联渲染会卡死页面
+  const FILE_PREVIEW_LIMIT = 10 * 1024 * 1024;    // 超过 10MB 不内联预览，改为下载提示
+  const FILE_IMPORT_WARN = 50 * 1024 * 1024;      // 超过 50MB 导入前二次确认
+
   /* ================================================================
    * English motivational quote bank (考研英语)
    * Each entry: { en, zh, theme }
@@ -532,6 +536,10 @@
       var self = this;
       for (var i = 0; i < files.length; i++) {
         var file = files[i];
+        if (file.size > FILE_IMPORT_WARN &&
+            !confirm(file.name + ' 有 ' + (file.size / 1024 / 1024).toFixed(0) + ' MB，转存后体积会再膨胀约 1/3，且无法在线预览。确定仍要导入吗？')) {
+          continue;
+        }
         var reader = new FileReader();
         var result = await new Promise(function (resolve) {
           reader.onload = function (e) { resolve({ name: file.name, type: file.type, data: e.target.result, size: file.size }); };
@@ -635,8 +643,18 @@
       var isPDF = /\.pdf$/i.test(card.fileName || '');
       var isImage = (card.fileType || '').indexOf('image/') === 0;
       var isXMind = /\.xmind$/i.test(card.fileName || '');
+      var tooBig = (card.fileSize || 0) > FILE_PREVIEW_LIMIT;
 
-      if (isImage) {
+      if (tooBig && (isImage || isPDF)) {
+        // 超大文件不内联渲染（200MB PDF 的 base64 字符串会把页面卡死）
+        var sizeMB = (card.fileSize / 1024 / 1024).toFixed(0);
+        body.innerHTML = '<div style="text-align:center;padding:3rem 2rem">' +
+          '<div style="font-size:3rem;margin-bottom:1rem">⚠️</div>' +
+          '<p style="font-size:var(--jy-font-size-lg);font-weight:600;margin-bottom:.5rem">文件过大，无法在线预览</p>' +
+          '<p style="color:var(--jy-text-secondary)">' + esc(card.fileName || '未知文件') + '（约 ' + sizeMB + ' MB）</p>' +
+          '<p style="color:var(--jy-text-muted);margin-top:1rem">为避免页面卡死已关闭预览。<br>请点击下方「💾 下载原文件」在本地查看，不再需要时点击「🗑 删除」。</p>' +
+          '</div>';
+      } else if (isImage) {
         body.innerHTML = '<img src="' + card.fileData + '" style="max-width:100%;max-height:65vh;display:block;margin:0 auto" alt="">';
       } else if (isPDF) {
         body.innerHTML = '<iframe src="' + card.fileData + '" style="width:100%;height:65vh;border:none" title="PDF"></iframe>';
@@ -973,7 +991,7 @@
       var sizeStr = card.fileSize ? (card.fileSize > 1024 * 1024 ? (card.fileSize / 1024 / 1024).toFixed(1) + ' MB' : (card.fileSize / 1024).toFixed(0) + ' KB') : '';
 
       var previewHTML = '';
-      if (isImage) {
+      if (isImage && (card.fileSize || 0) <= FILE_PREVIEW_LIMIT) {
         previewHTML = '<div class="card__thumb"><img src="' + card.fileData + '" alt="" loading="lazy"></div>';
       } else {
         previewHTML = '<div class="card__icon-big">' + icon + '</div>';

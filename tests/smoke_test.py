@@ -457,6 +457,63 @@ def test_shell_file_delete(context):
     page.close()
 
 
+def test_shell_large_file(context):
+    """拾贝大文件保护：超过 10MB 的文件不得内联渲染（防 200MB PDF 卡死），且能删除。"""
+    import tempfile
+
+    page = context.new_page()
+    errors, failed = collect_errors(page)
+    page.goto(file_url("modules/shell/index.html"))
+    page.wait_for_load_state("load")
+    page.wait_for_timeout(2500)
+
+    # 12MB 假 PDF（超过 10MB 预览上限，低于 50MB 导入确认线）
+    tmp = tempfile.NamedTemporaryFile(suffix=".pdf", delete=False)
+    tmp.write(b"%PDF-1.4\n" + b"\0" * (12 * 1024 * 1024))
+    tmp.close()
+
+    def cleanup():
+        try:
+            os.unlink(tmp.name)
+        except OSError:
+            pass
+
+    page.set_input_files("#fileInput", tmp.name)
+    page.wait_for_timeout(3000)
+    if not page.locator(".card--file").count():
+        FAILURES.append("[拾贝大文件] 导入后未见文件卡片")
+        page.close()
+        cleanup()
+        return
+
+    page.click(".card--file")
+    page.wait_for_timeout(600)
+    if not page.locator("#fileViewerOverlay.is-open").count():
+        FAILURES.append("[拾贝大文件] 查看弹窗未打开")
+        page.close()
+        cleanup()
+        return
+    body_text = page.locator("#fileViewerBody").inner_text()
+    if "无法在线预览" not in body_text:
+        FAILURES.append("[拾贝大文件] 大文件未走降级提示，弹窗内容: " + body_text[:80])
+    elif page.locator("#fileViewerBody iframe").count():
+        FAILURES.append("[拾贝大文件] 大文件仍被塞进 iframe 内联渲染")
+    else:
+        # 降级提示下依然可以删除
+        page.click("#btnDeleteFile")
+        page.wait_for_timeout(300)
+        page.click("#btnConfirmDelete")
+        page.wait_for_timeout(800)
+        if page.locator(".card--file").count():
+            FAILURES.append("[拾贝大文件] 删除后文件卡片仍存在")
+        else:
+            PASSES.append("拾贝大文件降级提示 + 删除 通过（不内联渲染）")
+    cleanup()
+    for e in errors:
+        FAILURES.append("[拾贝大文件] " + e)
+    page.close()
+
+
 def main():
     with sync_playwright() as p:
         browser = launch_browser(p)
@@ -480,6 +537,7 @@ def main():
         test_snake_unit(context)
         test_snake_e2e(context)
         test_shell_file_delete(context)
+        test_shell_large_file(context)
         browser.close()
 
     print("=" * 60)
