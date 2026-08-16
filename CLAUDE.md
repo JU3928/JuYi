@@ -144,11 +144,16 @@ Modules supporting rich text (错题本, 拾贝) use `contenteditable` divs with
 
 Root `index.html` provides a system-level export/import that packages **all** IndexedDB databases and module-related localStorage keys into one JSON file (`_format: 'JuYiSysBackup/1'`). This is in addition to per-module export/import.
 
-### Cloud sync (optional, `sync/`)
+### Cloud sync (optional)
 
-`sync/` contains a zero-dependency Cloudflare Worker + KV sync backend (`GET/PUT /api/sync`, `X-Sync-Key` auth). The root homepage's 「⛅ 云同步」 panel talks to it. Rules:
+The root homepage's 「⛅ 云同步」 panel supports two backends:
 
-- Sync keys live in localStorage: `jy_sync_url`, `jy_sync_key`, `jy_sync_snapshot`. They are **excluded from backups** via `SYS_LS_EXCLUDE` (along with `wa_api_key`).
+- **GitHub private Gist（默认，无需任何新账号/服务器）** — the page talks to `api.github.com/gists` directly with a scoped Personal Access Token (`jy_sync_gist_token` + `jy_sync_gist_id`); a one-click 「✨ 一键创建云端文件」 button creates the private gist. Gist file size limit is ~10MB — keep backups under it (downscale images / incremental export).
+- **Cloudflare Worker + KV（自建，`sync/`）** — `GET/PUT /api/sync`, `X-Sync-Key` auth; deploy instructions in `sync/README.md`.
+
+Rules:
+
+- Sync localStorage keys: `jy_sync_mode`, `jy_sync_gist_token`, `jy_sync_gist_id`, `jy_sync_url`, `jy_sync_key`, `jy_sync_snapshot`. They are **excluded from backups** via `SYS_LS_EXCLUDE` (along with `wa_api_key`).
 - Sync uses the same `JuYiSysBackup/1` JSON format; pull takes a local snapshot first (`jy_sync_snapshot`) so a wrong pull is reversible.
 - No module may depend on sync being configured.
 

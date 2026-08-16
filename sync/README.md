@@ -1,12 +1,27 @@
-# ⛅ JuYi 云同步后端
+# ⛅ JuYi 云同步
 
-JuYi 的「一个密钥互通所有设备」同步层——一个零依赖的 Cloudflare Worker + KV，与前端首页的「⛅ 云同步」面板配套。
+JuYi 的「一个密钥互通所有设备」同步层。首页「⛅ 云同步」面板支持两种后端：
 
-## 为什么存在
+| 模式 | 需要什么 | 适用场景 |
+|---|---|---|
+| **GitHub 私有 Gist（默认推荐）** | 已有 GitHub 账号即可，无需任何服务器 | 绝大多数用户 |
+| Cloudflare Worker + KV（本目录代码） | 一个 Cloudflare 免费账号 | 想自建、或备份超过 Gist 10MB 单文件上限时 |
 
-JuYi 核心模块保持「双击即用、零框架、离线可用」；云同步是**可选基础设施**，解决多设备/换手机时的数据迁移问题。数据仍以现有 `JuYiSysBackup/1` JSON 格式在设备与云端之间传输，不引入任何账号体系。
+## 方式一：GitHub 私有 Gist（零部署，推荐）
 
-## 一次性部署（约 5 分钟）
+1. 到 GitHub → Settings → Developer settings → **Fine-grained personal access tokens**（或 classic token），新建一个**只勾选 Gist 权限**的 Token（务必只勾 gist）。
+2. 打开 JuYi 首页 → 「⛅ 云同步」→ 粘入 Token → 点「✨ 一键创建云端文件」（会自动创建一个**私有** Gist 并保存 Gist ID）。
+3. 点「⬆️ 推送到云端」；换设备后粘同一个 Token + Gist ID 点「⬇️ 从云端拉取」。
+
+原理：页面直接调用 `api.github.com/gists`（GitHub 官方支持浏览器 CORS），读写一个私有 Gist 里的 `juyi-backup.json`。**没有中间服务器、没有新账号。**
+
+限制与注意：
+
+- Gist 单文件上限约 10MB：备份超限时先做图片降采样/增量导出。
+- Token 只存本机 localStorage（`jy_sync_gist_token`），已加入备份黑名单，不会随备份导出；泄露后到 GitHub 后台吊销即可。
+- Gist 为私有（`public: false`），不会出现在你的公开仓库里。
+
+## 方式二：Cloudflare Worker + KV（自建，本目录）
 
 ```bash
 # 0. 安装 wrangler（开发机工具，与产品零依赖原则无关）

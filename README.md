@@ -167,7 +167,7 @@ JuYi/
 - **数据库名**：各模块使用独立数据库（如 `JuYiDB`、`JuYiFitness` 等），互不干扰
 - **容量**：通常 > 100MB，足够存储上千条带图记录
 - **迁移**：各模块内置 JSON 导出/导入功能（图片以 base64 内嵌）
-- **云同步**：首页「⛅ 云同步」把整库备份推到自建的 Cloudflare Worker + KV，换设备粘一次 Worker 地址+密钥即可拉取（部署见 `sync/README.md`；密钥存本机、不进备份）
+- **云同步**：首页「⛅ 云同步」支持两种后端——**GitHub 私有 Gist（默认推荐，只需一个仅含 gist 权限的 Token，无需任何新账号/服务器）**，或自建 `sync/` 下的 Cloudflare Worker + KV（部署见 `sync/README.md`）。换设备粘一次配置即可拉取；密钥存本机、不进备份
 
 ---
 

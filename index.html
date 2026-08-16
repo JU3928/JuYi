@@ -124,6 +124,13 @@
       color: var(--jy-text-muted);
       margin-top: var(--jy-space-1);
     }
+    .hub__sys-fields {
+      display: flex;
+      align-items: center;
+      gap: var(--jy-space-2);
+      flex-wrap: wrap;
+      justify-content: center;
+    }
     .hub__sys-toast {
       position: fixed;
       bottom: var(--jy-space-6);
@@ -245,13 +252,24 @@
 
     <div class="hub__sys">
       <span class="hub__sys-label">⛅ 云同步</span>
-      <input id="syncUrl" class="jy-input" placeholder="Worker 地址 https://xxx.workers.dev" style="width:auto;max-width:300px;font-size:var(--jy-font-size-xs)">
-      <input id="syncKey" class="jy-input" type="password" placeholder="同步密钥" style="width:auto;max-width:150px;font-size:var(--jy-font-size-xs)">
+      <select id="syncMode" class="jy-select" style="width:auto;font-size:var(--jy-font-size-xs)">
+        <option value="gist">GitHub 私有 Gist（推荐，无需新账号）</option>
+        <option value="worker">Cloudflare Worker（自建）</option>
+      </select>
+      <span id="syncGistFields" class="hub__sys-fields">
+        <input id="syncGistToken" class="jy-input" type="password" placeholder="GitHub Token（仅需 gist 权限）" style="width:auto;max-width:220px;font-size:var(--jy-font-size-xs)">
+        <input id="syncGistId" class="jy-input" placeholder="Gist ID（留空可一键创建）" style="width:auto;max-width:170px;font-size:var(--jy-font-size-xs)">
+        <button id="btnSyncCreate" class="jy-btn jy-btn--outline jy-btn--sm">✨ 一键创建云端文件</button>
+      </span>
+      <span id="syncWorkerFields" class="hub__sys-fields" style="display:none">
+        <input id="syncUrl" class="jy-input" placeholder="Worker 地址 https://xxx.workers.dev" style="width:auto;max-width:280px;font-size:var(--jy-font-size-xs)">
+        <input id="syncKey" class="jy-input" type="password" placeholder="同步密钥" style="width:auto;max-width:150px;font-size:var(--jy-font-size-xs)">
+      </span>
       <button id="btnSyncSave" class="jy-btn jy-btn--outline jy-btn--sm">💾 保存配置</button>
       <button id="btnSyncPull" class="jy-btn jy-btn--outline jy-btn--sm">⬇️ 从云端拉取</button>
       <button id="btnSyncPush" class="jy-btn jy-btn--outline jy-btn--sm">⬆️ 推送到云端</button>
       <button id="btnSyncRestore" class="jy-btn jy-btn--ghost jy-btn--sm" style="display:none">↩️ 恢复拉取前快照</button>
-      <span class="hub__sys-hint">需先部署仓库内 sync/ 目录的 Worker（见 sync/README.md）；密钥只存本机并已从备份中排除</span>
+      <span class="hub__sys-hint">Gist 模式：用 GitHub Token 直接读写私有 Gist，无需任何服务器；密钥只存本机并已从备份中排除</span>
     </div>
 
     <div class="hub__footer">
@@ -305,7 +323,7 @@
     ];
 
     /** localStorage 键黑名单：即使命中前缀也不导出（防密钥/敏感信息泄露） */
-    var SYS_LS_EXCLUDE = ['jy_sync_key', 'wa_api_key'];
+    var SYS_LS_EXCLUDE = ['jy_sync_key', 'jy_sync_gist_token', 'jy_sync_gist_id', 'wa_api_key'];
 
     /** Open an IndexedDB and read all stores → { storeName: [items] } */
     function sysReadDB(name) {
@@ -500,25 +518,53 @@
       this.value = '';
     });
 
-    /* ========== ⛅ 云同步 ========== */
+    /* ========== ⛅ 云同步（Gist 模式为默认，Worker 模式可选） ========== */
+    var LS_SYNC_MODE = 'jy_sync_mode';
     var LS_SYNC_URL = 'jy_sync_url';
     var LS_SYNC_KEY = 'jy_sync_key';
+    var LS_SYNC_GIST_TOKEN = 'jy_sync_gist_token';
+    var LS_SYNC_GIST_ID = 'jy_sync_gist_id';
     var LS_SYNC_SNAPSHOT = 'jy_sync_snapshot';
 
+    var GIST_API = 'https://api.github.com/gists';
+    var GIST_FILE = 'juyi-backup.json';
+
+    var syncModeSel = document.getElementById('syncMode');
+    var syncGistFields = document.getElementById('syncGistFields');
+    var syncWorkerFields = document.getElementById('syncWorkerFields');
+    var syncGistTokenInput = document.getElementById('syncGistToken');
+    var syncGistIdInput = document.getElementById('syncGistId');
     var syncUrlInput = document.getElementById('syncUrl');
     var syncKeyInput = document.getElementById('syncKey');
     var btnSyncRestore = document.getElementById('btnSyncRestore');
 
+    function syncApplyMode(mode) {
+      var isGist = mode !== 'worker';
+      syncGistFields.style.display = isGist ? '' : 'none';
+      syncWorkerFields.style.display = isGist ? 'none' : '';
+    }
+    syncModeSel.value = localStorage.getItem(LS_SYNC_MODE) === 'worker' ? 'worker' : 'gist';
+    syncApplyMode(syncModeSel.value);
+    syncModeSel.addEventListener('change', function () { syncApplyMode(this.value); });
+
+    if (localStorage.getItem(LS_SYNC_GIST_TOKEN)) syncGistTokenInput.value = localStorage.getItem(LS_SYNC_GIST_TOKEN);
+    if (localStorage.getItem(LS_SYNC_GIST_ID)) syncGistIdInput.value = localStorage.getItem(LS_SYNC_GIST_ID);
     if (localStorage.getItem(LS_SYNC_URL)) syncUrlInput.value = localStorage.getItem(LS_SYNC_URL);
     if (localStorage.getItem(LS_SYNC_KEY)) syncKeyInput.value = localStorage.getItem(LS_SYNC_KEY);
     btnSyncRestore.style.display = localStorage.getItem(LS_SYNC_SNAPSHOT) ? '' : 'none';
 
+    /** 按当前模式读取配置；不完整时 toast 提示并返回 null */
     function syncCfg() {
-      var url = (syncUrlInput.value || '').trim().replace(/\/+$/, '');
-      var key = (syncKeyInput.value || '').trim();
-      if (!url) { sysToast('请先填写 Worker 地址', 'err'); return null; }
-      if (!key) { sysToast('请先填写同步密钥', 'err'); return null; }
-      return { url: url, key: key };
+      if (syncModeSel.value === 'worker') {
+        var url = (syncUrlInput.value || '').trim().replace(/\/+$/, '');
+        var key = (syncKeyInput.value || '').trim();
+        if (!url) { sysToast('请先填写 Worker 地址', 'err'); return null; }
+        if (!key) { sysToast('请先填写同步密钥', 'err'); return null; }
+        return { mode: 'worker', url: url, key: key };
+      }
+      var token = (syncGistTokenInput.value || '').trim();
+      if (!token) { sysToast('请先填写 GitHub Token（仅需 gist 权限）', 'err'); return null; }
+      return { mode: 'gist', token: token, gistId: (syncGistIdInput.value || '').trim() };
     }
 
     function syncResetBtn(btn, label) {
@@ -526,12 +572,113 @@
       btn.textContent = label;
     }
 
+    /** 拉取云端备份 → 解析为对象（覆盖前快照在调用方处理） */
+    function syncFetchBackup(cfg) {
+      if (cfg.mode === 'worker') {
+        return fetch(cfg.url + '/api/sync', { method: 'GET', headers: { 'x-sync-key': cfg.key } }).then(function (resp) {
+          if (resp.status === 404) throw new Error('云端暂无备份数据，请先在另一台设备上「推送到云端」');
+          if (!resp.ok) throw new Error('云端返回 ' + resp.status);
+          return resp.json();
+        });
+      }
+      if (!cfg.gistId) throw new Error('请先填写 Gist ID，或点击「✨ 一键创建云端文件」');
+      return fetch(GIST_API + '/' + cfg.gistId, {
+        headers: {
+          'authorization': 'Bearer ' + cfg.token,
+          'accept': 'application/vnd.github.raw+json',
+        },
+      }).then(function (resp) {
+        if (resp.status === 401) throw new Error('GitHub Token 无效或无 gist 权限');
+        if (resp.status === 404) throw new Error('Gist 不存在，请检查 Gist ID 或重新一键创建');
+        if (!resp.ok) throw new Error('GitHub 返回 ' + resp.status);
+        return resp.text();
+      }).then(function (text) {
+        if (!text) throw new Error('云端文件为空，请先在另一台设备上「推送到云端」');
+        var data = JSON.parse(text);
+        if (data._format !== 'JuYiSysBackup/1') throw new Error('云端文件不是 JuYi 备份格式');
+        return data;
+      });
+    }
+
+    /** 上传备份到云端 */
+    function syncPushBackup(cfg, json) {
+      if (cfg.mode === 'worker') {
+        return fetch(cfg.url + '/api/sync', {
+          method: 'PUT',
+          headers: { 'content-type': 'application/json', 'x-sync-key': cfg.key },
+          body: json,
+        }).then(function (resp) {
+          if (!resp.ok) throw new Error('云端返回 ' + resp.status);
+          return resp.json();
+        });
+      }
+      if (!cfg.gistId) throw new Error('请先填写 Gist ID，或点击「✨ 一键创建云端文件」');
+      return fetch(GIST_API + '/' + cfg.gistId, {
+        method: 'PATCH',
+        headers: {
+          'authorization': 'Bearer ' + cfg.token,
+          'content-type': 'application/json',
+          'accept': 'application/vnd.github+json',
+        },
+        body: JSON.stringify({ files: (function () { var f = {}; f[GIST_FILE] = { content: json }; return f; })() }),
+      }).then(function (resp) {
+        if (resp.status === 401) throw new Error('GitHub Token 无效或无 gist 权限');
+        if (resp.status === 404) throw new Error('Gist 不存在，请检查 Gist ID 或重新一键创建');
+        if (!resp.ok) throw new Error('GitHub 返回 ' + resp.status);
+        return resp.json();
+      });
+    }
+
     document.getElementById('btnSyncSave').addEventListener('click', function () {
       var cfg = syncCfg();
       if (!cfg) return;
-      localStorage.setItem(LS_SYNC_URL, cfg.url);
-      localStorage.setItem(LS_SYNC_KEY, cfg.key);
+      localStorage.setItem(LS_SYNC_MODE, cfg.mode);
+      if (cfg.mode === 'worker') {
+        localStorage.setItem(LS_SYNC_URL, cfg.url);
+        localStorage.setItem(LS_SYNC_KEY, cfg.key);
+      } else {
+        localStorage.setItem(LS_SYNC_GIST_TOKEN, cfg.token);
+        if (cfg.gistId) localStorage.setItem(LS_SYNC_GIST_ID, cfg.gistId);
+      }
       sysToast('✅ 云同步配置已保存（密钥仅存本机，不进备份）', 'ok');
+    });
+
+    document.getElementById('btnSyncCreate').addEventListener('click', function () {
+      var token = (syncGistTokenInput.value || '').trim();
+      if (!token) { sysToast('请先填写 GitHub Token', 'err'); return; }
+      var btn = this;
+      btn.disabled = true;
+      btn.textContent = '⏳ 创建中...';
+      fetch(GIST_API, {
+        method: 'POST',
+        headers: {
+          'authorization': 'Bearer ' + token,
+          'content-type': 'application/json',
+          'accept': 'application/vnd.github+json',
+        },
+        body: JSON.stringify({
+          description: 'JuYi 云备份（由 JuYi 首页云同步自动管理）',
+          public: false,
+          files: (function () { var f = {}; f[GIST_FILE] = { content: JSON.stringify({ _format: 'JuYiSysBackup/1', exportedAt: new Date().toISOString(), indexedDB: {}, localStorage: {} }) }; return f; })(),
+        }),
+      }).then(function (resp) {
+        if (resp.status === 401) throw new Error('GitHub Token 无效或无 gist 权限');
+        if (!resp.ok) throw new Error('GitHub 返回 ' + resp.status);
+        return resp.json();
+      }).then(function (gist) {
+        if (!gist.id) throw new Error('创建失败：未返回 Gist ID');
+        syncGistIdInput.value = gist.id;
+        localStorage.setItem(LS_SYNC_GIST_ID, gist.id);
+        localStorage.setItem(LS_SYNC_GIST_TOKEN, token);
+        localStorage.setItem(LS_SYNC_MODE, 'gist');
+        sysToast('✅ 云端文件已创建（私有 Gist ' + gist.id.slice(0, 10) + '…），已自动保存配置', 'ok');
+        btn.disabled = false;
+        btn.textContent = '✨ 一键创建云端文件';
+      }).catch(function (err) {
+        sysToast('创建失败：' + err.message, 'err');
+        btn.disabled = false;
+        btn.textContent = '✨ 一键创建云端文件';
+      });
     });
 
     document.getElementById('btnSyncPush').addEventListener('click', function () {
@@ -541,16 +688,10 @@
       btn.disabled = true;
       btn.textContent = '⏳ 上传中...';
       sysExportData().then(function (data) {
-        return fetch(cfg.url + '/api/sync', {
-          method: 'PUT',
-          headers: { 'content-type': 'application/json', 'x-sync-key': cfg.key },
-          body: JSON.stringify(data),
-        });
-      }).then(function (resp) {
-        if (!resp.ok) throw new Error('云端返回 ' + resp.status);
-        return resp.json();
+        return syncPushBackup(cfg, JSON.stringify(data));
       }).then(function (info) {
-        sysToast('✅ 推送成功（' + Math.round((info.bytes || 0) / 1024) + ' KB 已上传云端）', 'ok');
+        var kb = cfg.mode === 'worker' ? Math.round((info.bytes || 0) / 1024) : Math.round(JSON.stringify(info).length / 1024);
+        sysToast('✅ 推送成功（' + kb + ' KB 已上传云端）', 'ok');
         syncResetBtn(btn, '⬆️ 推送到云端');
       }).catch(function (err) {
         sysToast('推送失败：' + err.message, 'err');
@@ -564,12 +705,7 @@
       var btn = this;
       btn.disabled = true;
       btn.textContent = '⏳ 拉取中...';
-      fetch(cfg.url + '/api/sync', { method: 'GET', headers: { 'x-sync-key': cfg.key } })
-        .then(function (resp) {
-          if (resp.status === 404) throw new Error('云端暂无备份数据，先在另一台设备上「推送到云端」');
-          if (!resp.ok) throw new Error('云端返回 ' + resp.status);
-          return resp.json();
-        })
+      syncFetchBackup(cfg)
         .then(function (data) {
           // 覆盖前把本地现状存为快照，拉错可后悔
           return sysExportData().then(function (local) {
