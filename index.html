@@ -266,6 +266,7 @@
         <input id="syncKey" class="jy-input" type="password" placeholder="同步密钥" style="width:auto;max-width:150px;font-size:var(--jy-font-size-xs)">
       </span>
       <button id="btnSyncSave" class="jy-btn jy-btn--outline jy-btn--sm">💾 保存配置</button>
+      <button id="btnSyncStatus" class="jy-btn jy-btn--outline jy-btn--sm">🔍 云端状态</button>
       <button id="btnSyncPull" class="jy-btn jy-btn--outline jy-btn--sm">⬇️ 从云端拉取</button>
       <button id="btnSyncPush" class="jy-btn jy-btn--outline jy-btn--sm">⬆️ 推送到云端</button>
       <button id="btnSyncRestore" class="jy-btn jy-btn--ghost jy-btn--sm" style="display:none">↩️ 恢复拉取前快照</button>
@@ -707,6 +708,55 @@
         sysToast('创建失败：' + err.message, 'err');
         btn.disabled = false;
         btn.textContent = '✨ 一键创建云端文件';
+      });
+    });
+
+    document.getElementById('btnSyncStatus').addEventListener('click', function () {
+      var cfg = syncCfg();
+      if (!cfg) return;
+      if (cfg.mode !== 'gist') {
+        sysToast('Worker 模式请用浏览器访问 ' + cfg.url + '/api/sync 查看', 'err');
+        return;
+      }
+      if (!cfg.gistId) { sysToast('请先填写 Gist ID', 'err'); return; }
+      var btn = this;
+      btn.disabled = true;
+      btn.textContent = '⏳ 查询中...';
+      fetch(GIST_API + '/' + cfg.gistId, {
+        headers: { 'authorization': 'Bearer ' + cfg.token, 'accept': 'application/vnd.github+json' },
+      }).then(function (resp) {
+        if (resp.status === 401) throw new Error('Token 无效或无 gist 权限');
+        if (resp.status === 404) throw new Error('Gist 不存在（ID 可能填错）');
+        if (!resp.ok) throw new Error('GitHub 返回 ' + resp.status);
+        return resp.json();
+      }).then(function (gist) {
+        var file = (gist.files || {})[GIST_FILE];
+        if (!file) throw new Error('该 Gist 里没有 juyi-backup.json（现有文件：' + Object.keys(gist.files || {}).join('、') + '）');
+        var sizeKb = Math.round((file.size || 0) / 1024);
+        var dbCount = 0, recCount = 0, exportedAt = '';
+        try {
+          var d = JSON.parse(file.content || '{}');
+          exportedAt = d.exportedAt ? d.exportedAt.replace('T', ' ').slice(0, 19) : '';
+          var idb = d.indexedDB || {};
+          Object.keys(idb).forEach(function (n) {
+            var st = idb[n] || {};
+            Object.keys(st).forEach(function (sn) {
+              var arr = st[sn] || [];
+              if (arr.length > 0) { dbCount++; recCount += arr.length; }
+            });
+          });
+        } catch (e) { /* content 可能被截断，仅统计不到 */ }
+        if (recCount === 0) {
+          sysToast('⚠️ 云端只有空占位（' + sizeKb + ' KB）——桌面端还没有成功「推送到云端」！', 'err');
+        } else {
+          sysToast('✅ 云端有数据：' + sizeKb + ' KB · ' + dbCount + ' 个库 / ' + recCount + ' 条记录 · 备份于 ' + exportedAt, 'ok');
+        }
+        btn.disabled = false;
+        btn.textContent = '🔍 云端状态';
+      }).catch(function (err) {
+        sysToast('查询失败：' + err.message, 'err');
+        btn.disabled = false;
+        btn.textContent = '🔍 云端状态';
       });
     });
 
