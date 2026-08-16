@@ -6,9 +6,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-JuYi is a **zero-dependency, pure frontend** personal toolbox. Every module is a self-contained HTML/CSS/JS file set that runs by double-clicking its `index.html` — no server, no build step, no npm.
+JuYi is a **frontend-first** personal toolbox. Every module is a self-contained HTML/CSS/JS file set that runs by double-clicking its `index.html` — no server, no build step, no npm, fully offline-capable. An **optional cloud sync layer** (`sync/`, Cloudflare Worker + KV) provides multi-device sync; the core product never requires it.
 
-**Key constraint**: No third-party libraries, frameworks, CDN resources, or npm packages. All code is vanilla JS using browser-native APIs (Canvas, IndexedDB, DOM).
+**Key constraints**:
+- **Frontend stays zero-framework**: no third-party libraries, frameworks, CDN resources, or npm packages in product frontend code. All UI logic is vanilla JS using browser-native APIs (Canvas, IndexedDB, DOM, fetch).
+- **Backend is allowed but optional & minimal**: infrastructure may only be added under `sync/` (or clearly marked), must be optional for every module, and must keep the double-click/offline experience intact.
+- Every module still works standalone with no network.
 
 ---
 
@@ -140,6 +143,14 @@ Modules supporting rich text (错题本, 拾贝) use `contenteditable` divs with
 ### System backup
 
 Root `index.html` provides a system-level export/import that packages **all** IndexedDB databases and module-related localStorage keys into one JSON file (`_format: 'JuYiSysBackup/1'`). This is in addition to per-module export/import.
+
+### Cloud sync (optional, `sync/`)
+
+`sync/` contains a zero-dependency Cloudflare Worker + KV sync backend (`GET/PUT /api/sync`, `X-Sync-Key` auth). The root homepage's 「⛅ 云同步」 panel talks to it. Rules:
+
+- Sync keys live in localStorage: `jy_sync_url`, `jy_sync_key`, `jy_sync_snapshot`. They are **excluded from backups** via `SYS_LS_EXCLUDE` (along with `wa_api_key`).
+- Sync uses the same `JuYiSysBackup/1` JSON format; pull takes a local snapshot first (`jy_sync_snapshot`) so a wrong pull is reversible.
+- No module may depend on sync being configured.
 
 ### Auto-detection (Canvas image processing)
 

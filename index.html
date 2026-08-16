@@ -243,6 +243,17 @@
       <input type="file" id="sysImportFile" accept=".json" style="display:none">
     </div>
 
+    <div class="hub__sys">
+      <span class="hub__sys-label">⛅ 云同步</span>
+      <input id="syncUrl" class="jy-input" placeholder="Worker 地址 https://xxx.workers.dev" style="width:auto;max-width:300px;font-size:var(--jy-font-size-xs)">
+      <input id="syncKey" class="jy-input" type="password" placeholder="同步密钥" style="width:auto;max-width:150px;font-size:var(--jy-font-size-xs)">
+      <button id="btnSyncSave" class="jy-btn jy-btn--outline jy-btn--sm">💾 保存配置</button>
+      <button id="btnSyncPull" class="jy-btn jy-btn--outline jy-btn--sm">⬇️ 从云端拉取</button>
+      <button id="btnSyncPush" class="jy-btn jy-btn--outline jy-btn--sm">⬆️ 推送到云端</button>
+      <button id="btnSyncRestore" class="jy-btn jy-btn--ghost jy-btn--sm" style="display:none">↩️ 恢复拉取前快照</button>
+      <span class="hub__sys-hint">需先部署仓库内 sync/ 目录的 Worker（见 sync/README.md）；密钥只存本机并已从备份中排除</span>
+    </div>
+
     <div class="hub__footer">
       <a href="lab/index.html" style="color:var(--jy-text-muted);text-decoration:none;font-size:var(--jy-font-size-sm)">🧪 实验室 — 更多实验性小工具</a>
     </div>
@@ -292,6 +303,9 @@
       'jy_gomoku_',
       'jy_snake_'
     ];
+
+    /** localStorage 键黑名单：即使命中前缀也不导出（防密钥/敏感信息泄露） */
+    var SYS_LS_EXCLUDE = ['jy_sync_key', 'wa_api_key'];
 
     /** Open an IndexedDB and read all stores → { storeName: [items] } */
     function sysReadDB(name) {
@@ -379,12 +393,8 @@
       setTimeout(function () { el.remove(); }, 3000);
     }
 
-    /** EXPORT ALL */
-    document.getElementById('btnExportAll').addEventListener('click', function () {
-      var btn = this;
-      btn.disabled = true;
-      btn.textContent = '⏳ 读取中...';
-
+    /** 导出全量数据为对象（不触发下载，供下载与云同步共用） */
+    function sysExportData() {
       var result = { _format: 'JuYiSysBackup/1', exportedAt: new Date().toISOString(), indexedDB: {}, localStorage: {} };
 
       // Step 1: read all IndexedDBs
@@ -394,18 +404,46 @@
         });
       });
 
-      Promise.all(dbPromises).then(function () {
-        // Step 2: collect localStorage
+      return Promise.all(dbPromises).then(function () {
+        // Step 2: collect localStorage（黑名单排除）
         var allKeys = Object.keys(localStorage);
         SYS_LS_PREFIXES.forEach(function (prefix) {
           allKeys.forEach(function (k) {
-            if (k.indexOf(prefix) === 0) {
+            if (k.indexOf(prefix) === 0 && SYS_LS_EXCLUDE.indexOf(k) === -1) {
               result.localStorage[k] = localStorage.getItem(k);
             }
           });
         });
+        return result;
+      });
+    }
 
-        // Step 3: download
+    /** 导入数据对象（覆盖式），供文件导入与云同步共用 */
+    function sysImportData(data) {
+      if (!data || data._format !== 'JuYiSysBackup/1') {
+        return Promise.reject(new Error('备份格式不正确，请选择 JuYi 系统备份文件'));
+      }
+      // Step 1: restore IndexedDB
+      var dbNames = Object.keys(data.indexedDB || {});
+      var dbPromises = dbNames.map(function (name) {
+        return sysWriteDB(name, data.indexedDB[name]);
+      });
+      return Promise.all(dbPromises).then(function () {
+        // Step 2: restore localStorage
+        var ls = data.localStorage || {};
+        Object.keys(ls).forEach(function (k) {
+          localStorage.setItem(k, ls[k]);
+        });
+      });
+    }
+
+    /** EXPORT ALL（下载文件） */
+    document.getElementById('btnExportAll').addEventListener('click', function () {
+      var btn = this;
+      btn.disabled = true;
+      btn.textContent = '⏳ 读取中...';
+
+      sysExportData().then(function (result) {
         var json = JSON.stringify(result, null, 2);
         var blob = new Blob([json], { type: 'application/json' });
         var url = URL.createObjectURL(blob);
@@ -413,7 +451,7 @@
         a.href = url;
         a.download = 'JuYi-backup-' + new Date().toISOString().slice(0, 10) + '.json';
         a.click();
-        URL.revokeObjectURL(url);
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
 
         var dbCount = Object.keys(result.indexedDB).length;
         var lsCount = Object.keys(result.localStorage).length;
@@ -427,7 +465,7 @@
       });
     });
 
-    /** IMPORT ALL */
+    /** IMPORT ALL（文件导入） */
     document.getElementById('btnImportAll').addEventListener('click', function () {
       document.getElementById('sysImportFile').click();
     });
@@ -443,21 +481,7 @@
       reader.onload = function (e) {
         try {
           var data = JSON.parse(e.target.result);
-          if (data._format !== 'JuYiSysBackup/1') { throw new Error('文件格式不正确，请选择 JuYi 系统备份文件'); }
-
-          // Step 1: restore IndexedDB
-          var dbNames = Object.keys(data.indexedDB || {});
-          var dbPromises = dbNames.map(function (name) {
-            return sysWriteDB(name, data.indexedDB[name]);
-          });
-
-          Promise.all(dbPromises).then(function () {
-            // Step 2: restore localStorage
-            var ls = data.localStorage || {};
-            Object.keys(ls).forEach(function (k) {
-              localStorage.setItem(k, ls[k]);
-            });
-
+          sysImportData(data).then(function () {
             sysToast('✅ 导入成功！刷新各模块页面即可看到恢复的数据', 'ok');
             btn.disabled = false;
             btn.textContent = '📥 一键导入';
@@ -466,7 +490,6 @@
             btn.disabled = false;
             btn.textContent = '📥 一键导入';
           });
-
         } catch (err) {
           sysToast('导入失败：' + err.message, 'err');
           btn.disabled = false;
@@ -475,6 +498,116 @@
       };
       reader.readAsText(file);
       this.value = '';
+    });
+
+    /* ========== ⛅ 云同步 ========== */
+    var LS_SYNC_URL = 'jy_sync_url';
+    var LS_SYNC_KEY = 'jy_sync_key';
+    var LS_SYNC_SNAPSHOT = 'jy_sync_snapshot';
+
+    var syncUrlInput = document.getElementById('syncUrl');
+    var syncKeyInput = document.getElementById('syncKey');
+    var btnSyncRestore = document.getElementById('btnSyncRestore');
+
+    if (localStorage.getItem(LS_SYNC_URL)) syncUrlInput.value = localStorage.getItem(LS_SYNC_URL);
+    if (localStorage.getItem(LS_SYNC_KEY)) syncKeyInput.value = localStorage.getItem(LS_SYNC_KEY);
+    btnSyncRestore.style.display = localStorage.getItem(LS_SYNC_SNAPSHOT) ? '' : 'none';
+
+    function syncCfg() {
+      var url = (syncUrlInput.value || '').trim().replace(/\/+$/, '');
+      var key = (syncKeyInput.value || '').trim();
+      if (!url) { sysToast('请先填写 Worker 地址', 'err'); return null; }
+      if (!key) { sysToast('请先填写同步密钥', 'err'); return null; }
+      return { url: url, key: key };
+    }
+
+    function syncResetBtn(btn, label) {
+      btn.disabled = false;
+      btn.textContent = label;
+    }
+
+    document.getElementById('btnSyncSave').addEventListener('click', function () {
+      var cfg = syncCfg();
+      if (!cfg) return;
+      localStorage.setItem(LS_SYNC_URL, cfg.url);
+      localStorage.setItem(LS_SYNC_KEY, cfg.key);
+      sysToast('✅ 云同步配置已保存（密钥仅存本机，不进备份）', 'ok');
+    });
+
+    document.getElementById('btnSyncPush').addEventListener('click', function () {
+      var cfg = syncCfg();
+      if (!cfg) return;
+      var btn = this;
+      btn.disabled = true;
+      btn.textContent = '⏳ 上传中...';
+      sysExportData().then(function (data) {
+        return fetch(cfg.url + '/api/sync', {
+          method: 'PUT',
+          headers: { 'content-type': 'application/json', 'x-sync-key': cfg.key },
+          body: JSON.stringify(data),
+        });
+      }).then(function (resp) {
+        if (!resp.ok) throw new Error('云端返回 ' + resp.status);
+        return resp.json();
+      }).then(function (info) {
+        sysToast('✅ 推送成功（' + Math.round((info.bytes || 0) / 1024) + ' KB 已上传云端）', 'ok');
+        syncResetBtn(btn, '⬆️ 推送到云端');
+      }).catch(function (err) {
+        sysToast('推送失败：' + err.message, 'err');
+        syncResetBtn(btn, '⬆️ 推送到云端');
+      });
+    });
+
+    document.getElementById('btnSyncPull').addEventListener('click', function () {
+      var cfg = syncCfg();
+      if (!cfg) return;
+      var btn = this;
+      btn.disabled = true;
+      btn.textContent = '⏳ 拉取中...';
+      fetch(cfg.url + '/api/sync', { method: 'GET', headers: { 'x-sync-key': cfg.key } })
+        .then(function (resp) {
+          if (resp.status === 404) throw new Error('云端暂无备份数据，先在另一台设备上「推送到云端」');
+          if (!resp.ok) throw new Error('云端返回 ' + resp.status);
+          return resp.json();
+        })
+        .then(function (data) {
+          // 覆盖前把本地现状存为快照，拉错可后悔
+          return sysExportData().then(function (local) {
+            try { localStorage.setItem(LS_SYNC_SNAPSHOT, JSON.stringify(local)); } catch (e) {}
+            btnSyncRestore.style.display = '';
+            return data;
+          });
+        })
+        .then(function (data) {
+          return sysImportData(data);
+        })
+        .then(function () {
+          sysToast('✅ 拉取成功！刷新各模块页面即可看到云端数据', 'ok');
+          syncResetBtn(btn, '⬇️ 从云端拉取');
+        }).catch(function (err) {
+          sysToast('拉取失败：' + err.message, 'err');
+          syncResetBtn(btn, '⬇️ 从云端拉取');
+        });
+    });
+
+    btnSyncRestore.addEventListener('click', function () {
+      var raw = localStorage.getItem(LS_SYNC_SNAPSHOT);
+      if (!raw) { sysToast('没有可恢复的快照', 'err'); return; }
+      var btn = this;
+      btn.disabled = true;
+      try {
+        var data = JSON.parse(raw);
+        sysImportData(data).then(function () {
+          sysToast('✅ 已恢复到拉取前的本机数据', 'ok');
+          btn.disabled = false;
+        }).catch(function (err) {
+          sysToast('恢复失败：' + err.message, 'err');
+          btn.disabled = false;
+        });
+      } catch (err) {
+        sysToast('恢复失败：' + err.message, 'err');
+        btn.disabled = false;
+      }
     });
   </script>
 </body>

@@ -1,6 +1,6 @@
 # JuYi 🏯
 
-纯前端个人工具箱，每个模块可独立运行，数据完全本地。
+前端优先（frontend-first）个人工具箱：每个模块可独立运行、零框架、离线可用，数据本地存储；可选**云同步层**（`sync/`）实现多设备互通。
 
 线上地址：**[ju3928.github.io/JuYi](https://ju3928.github.io/JuYi/)**
 
@@ -11,50 +11,38 @@
 ```
 JuYi/
 ├── README.md
-├── index.html                          # 项目首页（模块导航）
+├── index.html                          # 项目首页（模块导航 + 系统备份 + 云同步）
 ├── shared/                             # 共享层
 │   ├── base.css                        #   设计系统（CSS 令牌 + 通用组件）
-│   └── db-core.js                      #   IndexedDB 异步封装（Promise 风格）
+│   ├── db-core.js                      #   IndexedDB 异步封装（Promise 风格）
+│   ├── utils.js                        #   HTML 净化/转义
+│   └── charts.js                       #   零依赖 Canvas 图表库
+├── sync/                               # 可选云同步后端（Cloudflare Worker + KV）
+│   ├── worker.js                       #   零依赖同步端点（GET/PUT /api/sync，X-Sync-Key 鉴权）
+│   ├── wrangler.toml
+│   └── README.md                       #   一次性部署说明
 ├── birthday/                           # 生日祝福页（独立页面）
 │   ├── index.html
 │   ├── styles.css
 │   └── script.js
 └── modules/
     ├── error-notebook/                 # 错题本
-    │   ├── index.html
-    │   ├── styles.css
-    │   ├── app.js
-    │   └── README.md
-    ├── fitness/                        # 健身
-    │   ├── index.html
-    │   ├── styles.css
-    │   ├── app.js
-    │   └── test.html
+    ├── error-book/                     # 错题图鉴
     ├── shell/                          # 拾贝
-    │   ├── index.html
-    │   ├── styles.css
-    │   └── app.js
+    ├── fitness/                        # 健身
     ├── schedule/                       # 计划表
-    │   ├── index.html
-    │   ├── styles.css
-    │   └── app.js
     ├── question-book/                  # 做题本
-    │   ├── index.html
-    │   ├── styles.css
-    │   └── app.js
-    └── battle-report/                  # 战报板
-        ├── index.html
-        ├── styles.css
-        └── app.js
+    ├── battle-report/                  # 战报板
+    └── dashboard/                      # 数据中心（跨模块只读聚合）
 ```
 
 ## 运行方式
 
-- **独立运行**：双击任意 `modules/xxx/index.html` 即可，不依赖服务器
+- **独立运行**：双击任意 `modules/xxx/index.html` 即可，不依赖服务器、不依赖网络
 - **首页导航**：打开根目录 `index.html`，通过卡片导航进入各模块
 - **线上访问**：`https://ju3928.github.io/JuYi/`
 
-> ⚠️ 数据存储在浏览器 IndexedDB 中，完全本地。更换设备/域名需通过各模块的导出/导入功能迁移数据。
+> ⚠️ 数据存储在浏览器 IndexedDB 中，完全本地。更换设备/域名可通过各模块导出/导入迁移，或部署 `sync/` 后使用首页「⛅ 云同步」一键互通（详见 `sync/README.md`）。
 
 ## 模块一览
 
@@ -154,12 +142,12 @@ JuYi/
 
 | 技术 | 说明 |
 |------|------|
-| **纯 HTML/CSS/JS** | 零框架、零构建工具、零 npm 依赖 |
-| **Canvas** | 所有图表（曲线图、饼图）原生绘制，不依赖 Chart.js 等库 |
+| **纯 HTML/CSS/JS** | 前端零框架、零构建工具、零 npm 依赖 |
+| **Canvas** | 所有图表（曲线图、饼图、热力日历等）原生绘制，统一封装于 `shared/charts.js` |
 | **IndexedDB** | 浏览器本地数据库，通过 `shared/db-core.js` 统一封装（Promise 风格，自动升级 schema，内置导出导入） |
 | **CSS 变量** | 统一设计令牌（`shared/base.css`），全局暗色模式一键切换 |
 | **暗色模式** | `data-theme` 属性切换，Canvas 图表跟随主题自适应颜色 |
-| **标签系统** | 跨模块统一的标签数据结构，支持 JSON 导出导入 |
+| **云同步（可选）** | `sync/` 下的 Cloudflare Worker + KV，`X-Sync-Key` 鉴权，与首页「⛅ 云同步」面板配套，核心功能不依赖它 |
 
 ### 设计系统
 
@@ -179,6 +167,7 @@ JuYi/
 - **数据库名**：各模块使用独立数据库（如 `JuYiDB`、`JuYiFitness` 等），互不干扰
 - **容量**：通常 > 100MB，足够存储上千条带图记录
 - **迁移**：各模块内置 JSON 导出/导入功能（图片以 base64 内嵌）
+- **云同步**：首页「⛅ 云同步」把整库备份推到自建的 Cloudflare Worker + KV，换设备粘一次 Worker 地址+密钥即可拉取（部署见 `sync/README.md`；密钥存本机、不进备份）
 
 ---
 
@@ -192,9 +181,10 @@ JuYi/
 
 ## 开发约定
 
-- **零依赖**：不引入任何第三方库或框架
-- **模块独立**：每个模块有独立的 HTML/CSS/JS，可单独运行
-- **共享层**：通用样式和数据库封装放在 `shared/`，模块通过相对路径引用
+- **前端零框架**：前端不引入任何第三方库或框架
+- **模块独立**：每个模块有独立的 HTML/CSS/JS，可单独运行、离线可用
+- **后端可选**：基础设施只放 `sync/`（或明确标注），任何模块不得依赖它才能工作
+- **共享层**：通用样式、数据库封装与图表库放在 `shared/`，模块通过相对路径引用
 - **暗色模式**：所有模块必须支持 `data-theme="dark"` 切换
 - **中文优先**：UI 文案使用中文
 
