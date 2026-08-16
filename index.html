@@ -582,20 +582,41 @@
         });
       }
       if (!cfg.gistId) throw new Error('请先填写 Gist ID，或点击「✨ 一键创建云端文件」');
+      // 1) 先取 Gist 文件清单，按文件名精确找到 juyi-backup.json
       return fetch(GIST_API + '/' + cfg.gistId, {
         headers: {
           'authorization': 'Bearer ' + cfg.token,
-          'accept': 'application/vnd.github.raw+json',
+          'accept': 'application/vnd.github+json',
         },
       }).then(function (resp) {
         if (resp.status === 401) throw new Error('GitHub Token 无效或无 gist 权限');
-        if (resp.status === 404) throw new Error('Gist 不存在，请检查 Gist ID 或重新一键创建');
+        if (resp.status === 404) throw new Error('Gist 不存在（ID 可能填错），请到 GitHub「Your gists」核对');
         if (!resp.ok) throw new Error('GitHub 返回 ' + resp.status);
-        return resp.text();
+        return resp.json();
+      }).then(function (gist) {
+        var files = gist.files || {};
+        var file = files[GIST_FILE];
+        if (!file) {
+          var names = Object.keys(files).join('、') || '（空）';
+          throw new Error('该 Gist 里没有 ' + GIST_FILE + ' 文件（现有文件：' + names + '）——很可能 Gist ID 填错了');
+        }
+        if (!file.raw_url) throw new Error('云端文件缺少下载地址');
+        // 2) 用 raw_url 读取完整内容（避免 raw 媒体类型只取第一个文件的歧义）
+        return fetch(file.raw_url, { headers: { 'authorization': 'Bearer ' + cfg.token } }).then(function (r2) {
+          if (!r2.ok) throw new Error('读取云端文件失败：' + r2.status);
+          return r2.text();
+        });
       }).then(function (text) {
-        if (!text) throw new Error('云端文件为空，请先在另一台设备上「推送到云端」');
-        var data = JSON.parse(text);
-        if (data._format !== 'JuYiSysBackup/1') throw new Error('云端文件不是 JuYi 备份格式');
+        if (!text || !text.trim()) throw new Error('云端文件为空——可能另一台设备还没有点过「推送到云端」');
+        var data;
+        try {
+          data = JSON.parse(text);
+        } catch (e) {
+          throw new Error('云端文件内容不是 JSON（开头：' + text.trim().slice(0, 60) + '…）——很可能 Gist ID 填错，指向了别的 Gist');
+        }
+        if (!data || data._format !== 'JuYiSysBackup/1') {
+          throw new Error('云端文件不是 JuYi 备份（_format=' + (data && data._format) + '）——请确认该 Gist 是「JuYi 云备份」');
+        }
         return data;
       });
     }
