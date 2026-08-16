@@ -79,7 +79,7 @@
         this.els.tabs.forEach(t => t.classList.toggle('active', t === tab));
         this._renderPanel();
       }));
-      window.addEventListener('resize', () => { if (window._fitnessApp) window._fitnessApp._drawWeightChart(); });
+      window.addEventListener('resize', () => this._drawWeightChart());
     }
 
     // ---- 渲染 ----
@@ -173,101 +173,41 @@
       p.innerHTML = h;
     }
 
-    // ---- 体重曲线图 ----
+    // ---- 体重曲线图（基于 shared/charts.js）----
     _drawWeightChart() {
       const canvas = this.els.weightChart;
       if (!canvas || this.activeTab !== 'weight') return;
       const data = this._filtered('weight').sort((a, b) => a.date - b.date);
-      const ctx = canvas.getContext('2d');
-      const dpr = window.devicePixelRatio || 1;
-      const rect = canvas.parentElement.getBoundingClientRect();
-      const W = rect.width, H = 340;
-      canvas.width = W * dpr; canvas.height = H * dpr;
-      canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
-      ctx.scale(dpr, dpr);
-      const pad = { top: 30, right: 40, bottom: 45, left: 55 };
-      const pw = W - pad.left - pad.right, ph = H - pad.top - pad.bottom;
-      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-      const s = {
-        bg: isDark ? '#1e293b' : '#ffffff',
-        grid: isDark ? '#334155' : '#e5e7eb',
-        text: isDark ? '#94a3b8' : '#6b7280',
-        line: isDark ? '#818cf8' : '#4f46e5',
-        dot: isDark ? '#a5b4fc' : '#6366f1',
-      };
-      ctx.fillStyle = s.bg; ctx.fillRect(0, 0, W, H);
       canvas.style.display = 'block';
-
-      if (data.length === 0) {
-        ctx.fillStyle = s.text; ctx.font = '14px sans-serif'; ctx.textAlign = 'center';
-        ctx.fillText('暂无体重数据，添加记录后此处显示曲线', W / 2, H / 2);
-        return;
-      }
-
-      const weights = data.map(d => d.weight);
-      const range = Math.max(...weights) - Math.min(...weights);
-      const minW = Math.floor(Math.min(...weights) - (range < 1 ? 1 : range * 0.2));
-      const maxW = Math.ceil(Math.max(...weights) + (range < 1 ? 1 : range * 0.2));
-      const ySteps = 5;
-
-      // Grid + Y axis
-      ctx.strokeStyle = s.grid; ctx.lineWidth = 0.5;
-      for (let i = 0; i <= ySteps; i++) {
-        const y = pad.top + (ph / ySteps) * i;
-        ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
-        ctx.fillStyle = s.text; ctx.font = '11px sans-serif'; ctx.textAlign = 'right';
-        ctx.fillText((maxW - (maxW - minW) / ySteps * i).toFixed(1), pad.left - 8, y + 4);
-      }
-
-      if (data.length === 1) {
-        // Single point: show big dot centered with label
-        const cx = pad.left + pw / 2;
-        const cy = pad.top + ph / 2;
-        ctx.fillStyle = s.line; ctx.beginPath(); ctx.arc(cx, cy, 6, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = s.bg; ctx.beginPath(); ctx.arc(cx, cy, 3, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = s.text; ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center';
-        ctx.fillText(data[0].weight + ' kg', cx, cy - 14);
-        ctx.fillText(fmtDate(data[0].date), cx, H - pad.bottom + 18);
-        return;
-      }
-
-      // X labels
-      ctx.fillStyle = s.text; ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
-      const xStep = data.length > 8 ? Math.ceil(data.length / 8) : 1;
-      for (let i = 0; i < data.length; i += xStep) {
-        const x = pad.left + (pw / (data.length - 1)) * i;
-        ctx.fillText(fmtDate(data[i].date).slice(5), x, H - pad.bottom + 16);
-      }
-
-      // Area fill
-      ctx.fillStyle = isDark ? 'rgba(129,140,248,0.1)' : 'rgba(79,70,229,0.08)';
-      ctx.beginPath();
-      data.forEach((d, i) => {
-        const x = pad.left + (pw / (data.length - 1)) * i;
-        const y = pad.top + ph * (1 - (d.weight - minW) / (maxW - minW));
-        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-      });
-      ctx.lineTo(pad.left + pw, pad.top + ph); ctx.lineTo(pad.left, pad.top + ph); ctx.closePath(); ctx.fill();
-
-      // Line
-      ctx.strokeStyle = s.line; ctx.lineWidth = 2.5; ctx.lineJoin = 'round';
-      ctx.beginPath();
-      data.forEach((d, i) => {
-        const x = pad.left + (pw / (data.length - 1)) * i;
-        const y = pad.top + ph * (1 - (d.weight - minW) / (maxW - minW));
-        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-      });
-      ctx.stroke();
-
-      // Dots + value labels
-      data.forEach((d, i) => {
-        const x = pad.left + (pw / (data.length - 1)) * i;
-        const y = pad.top + ph * (1 - (d.weight - minW) / (maxW - minW));
-        ctx.fillStyle = s.dot; ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = s.bg; ctx.beginPath(); ctx.arc(x, y, 2.5, 0, Math.PI * 2); ctx.fill();
-        // Value label on point
-        ctx.fillStyle = s.text; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
-        ctx.fillText(d.weight.toFixed(1), x, y - 10);
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      JyCharts.line(canvas, {
+        height: 340,
+        pad: { top: 30, right: 40, bottom: 45, left: 55 },
+        colors: {
+          bg: isDark ? '#1e293b' : '#ffffff',
+          grid: isDark ? '#334155' : '#e5e7eb',
+          text: isDark ? '#94a3b8' : '#6b7280',
+        },
+        series: [{
+          data: data.map(d => ({ x: d.date, y: d.weight, datum: d })),
+          color: isDark ? '#818cf8' : '#4f46e5',
+          dotColor: isDark ? '#a5b4fc' : '#6366f1',
+          area: isDark ? 'rgba(129,140,248,0.1)' : 'rgba(79,70,229,0.08)',
+        }],
+        xMode: 'index',
+        yTicks: 5,
+        minMargin: 1, // 体重区间小于 1kg 时仍保留 ±1kg 边距
+        yTickFormat: v => v.toFixed(1),
+        xTickFormat: x => fmtDate(x).slice(5),
+        xTickEvery: data.length > 8 ? Math.ceil(data.length / 8) : 1,
+        yFont: '11px sans-serif',
+        xFont: '11px sans-serif',
+        xLabelOffset: 29,
+        emptyText: '暂无体重数据，添加记录后此处显示曲线',
+        dotR: 5,
+        dotLabel: d => d.weight.toFixed(1),
+        singleLabel: d => d.weight + ' kg',
+        singleDateLabel: d => fmtDate(d.date),
       });
     }
 
@@ -372,7 +312,6 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     const app = new FitnessApp();
-    window._fitnessApp = app;
     app.init().then(() => {
       const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
       app.els.btnToggleTheme.textContent = isDark ? '☀️ 明亮模式' : '🌙 暗色模式';

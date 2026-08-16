@@ -1,0 +1,193 @@
+/* ===================================================================
+ * 数据中心 styles — 基于 shared/base.css 设计令牌
+ * =================================================================== */
+
+.db-app {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: var(--jy-space-6) var(--jy-space-6) var(--jy-space-12);
+}
+
+/* ---- 顶栏 ---- */
+.db-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--jy-space-4);
+  flex-wrap: wrap;
+  margin-bottom: var(--jy-space-6);
+}
+.db-topbar__title {
+  font-size: var(--jy-font-size-xl);
+  font-weight: 700;
+}
+.db-topbar__subtitle {
+  color: var(--jy-text-secondary);
+  font-size: var(--jy-font-size-sm);
+  margin-top: 2px;
+}
+.db-topbar__actions {
+  display: flex;
+  gap: var(--jy-space-2);
+}
+
+/* ---- 总览卡片 ---- */
+.db-overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--jy-space-3);
+  margin-bottom: var(--jy-space-4);
+}
+.db-overview-card {
+  background: var(--jy-surface);
+  border: 1px solid var(--jy-border);
+  border-radius: var(--jy-radius);
+  padding: var(--jy-space-3) var(--jy-space-4);
+  box-shadow: var(--jy-shadow-sm);
+}
+.db-overview-card__value {
+  font-size: var(--jy-font-size-xl);
+  font-weight: 700;
+  color: var(--jy-primary);
+}
+.db-overview-card__label {
+  font-size: var(--jy-font-size-xs);
+  color: var(--jy-text-secondary);
+  margin-top: 2px;
+}
+
+/* ---- 区块卡片 ---- */
+.db-card {
+  background: var(--jy-surface);
+  border: 1px solid var(--jy-border);
+  border-radius: var(--jy-radius-lg);
+  padding: var(--jy-space-5);
+  margin-bottom: var(--jy-space-4);
+  box-shadow: var(--jy-shadow-sm);
+}
+.db-card__title {
+  font-size: var(--jy-font-size-lg);
+  font-weight: 600;
+  margin-bottom: var(--jy-space-4);
+}
+
+/* ---- 图盒子 ---- */
+.db-chartbox {
+  background: var(--jy-bg-secondary);
+  border: 1px solid var(--jy-border-light);
+  border-radius: var(--jy-radius);
+  padding: var(--jy-space-3);
+  min-width: 0;
+}
+.db-chartbox__title {
+  font-size: var(--jy-font-size-sm);
+  font-weight: 600;
+  color: var(--jy-text-secondary);
+  margin-bottom: var(--jy-space-2);
+}
+.db-chartbox canvas {
+  display: block;
+  max-width: 100%;
+}
+
+.db-error-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--jy-space-4);
+}
+.db-error-grid .db-chartbox--wide {
+  grid-column: 1 / -1;
+}
+
+.db-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--jy-space-4);
+}
+
+.db-gomoku-grid {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: var(--jy-space-4);
+}
+
+/* ---- 五子棋按难度统计 ---- */
+.db-gomoku-stats {
+  display: flex;
+  flex-direction: column;
+  gap: var(--jy-space-2);
+  padding: var(--jy-space-2) 0;
+}
+.db-gomoku-row {
+  display: flex;
+  align-items: center;
+  gap: var(--jy-space-3);
+  font-size: var(--jy-font-size-sm);
+}
+.db-gomoku-row__name {
+  width: 52px;
+  color: var(--jy-text-secondary);
+}
+.db-gomoku-row__bar {
+  flex: 1;
+  height: 10px;
+  background: var(--jy-bg-tertiary);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.db-gomoku-row__fill {
+  height: 100%;
+  background: var(--jy-success);
+  border-radius: 99px;
+}
+.db-gomoku-row__text {
+  width: 90px;
+  color: var(--jy-text-muted);
+  font-size: var(--jy-font-size-xs);
+  text-align: right;
+}
+
+/* ---- 热力日历 ---- */
+.db-heat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--jy-space-4);
+}
+.db-heat-item__title {
+  font-size: var(--jy-font-size-sm);
+  font-weight: 600;
+  color: var(--jy-text-secondary);
+  margin-bottom: var(--jy-space-2);
+}
+
+/* ---- 时间轴 ---- */
+.db-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--jy-space-2);
+}
+.db-timeline-item {
+  display: flex;
+  align-items: baseline;
+  gap: var(--jy-space-3);
+  font-size: var(--jy-font-size-sm);
+  padding: var(--jy-space-2) var(--jy-space-3);
+  background: var(--jy-bg-secondary);
+  border-radius: var(--jy-radius);
+  border: 1px solid var(--jy-border-light);
+}
+.db-timeline-item__icon { flex-shrink: 0; }
+.db-timeline-item__date {
+  flex-shrink: 0;
+  color: var(--jy-text-muted);
+  font-size: var(--jy-font-size-xs);
+  font-family: var(--jy-font-mono);
+}
+.db-timeline-item__text { color: var(--jy-text-primary); }
+
+/* ---- 移动端 ---- */
+@media (max-width: 768px) {
+  .db-app { padding: var(--jy-space-4) var(--jy-space-4) var(--jy-space-8); }
+  .db-error-grid, .db-two-col, .db-gomoku-grid { grid-template-columns: 1fr; }
+  .db-error-grid .db-chartbox--wide { grid-column: auto; }
+}

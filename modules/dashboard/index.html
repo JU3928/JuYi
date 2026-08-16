@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>数据中心 — JuYi</title>
+  <link rel="stylesheet" href="../../shared/base.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="db-app">
+
+  <header class="db-topbar">
+    <div>
+      <h1 class="db-topbar__title">📊 数据中心</h1>
+      <p class="db-topbar__subtitle">跨模块只读总览 · 数据来自各模块本地库，不会修改任何数据</p>
+    </div>
+    <div class="db-topbar__actions">
+      <a href="../index.html" class="jy-btn jy-btn--ghost jy-btn--sm">🏠 首页</a>
+      <button id="btnToggleTheme" class="jy-btn jy-btn--outline jy-btn--sm">🌙 暗色模式</button>
+    </div>
+  </header>
+
+  <!-- ====== 总览卡片 ====== -->
+  <section class="db-overview" id="overview"></section>
+
+  <!-- ====== 错题分析 ====== -->
+  <section class="db-card" id="sec-error">
+    <h2 class="db-card__title">📒 错题分析</h2>
+    <div class="db-error-grid">
+      <div class="db-chartbox" id="box-error-subjects">
+        <div class="db-chartbox__title">科目分布</div>
+        <canvas id="c-error-subjects" height="200"></canvas>
+      </div>
+      <div class="db-chartbox" id="box-error-radar">
+        <div class="db-chartbox__title">科目掌握度（重做自评）</div>
+        <canvas id="c-error-radar" height="240"></canvas>
+      </div>
+      <div class="db-chartbox db-chartbox--wide" id="box-error-tags">
+        <div class="db-chartbox__title">标签词云</div>
+        <canvas id="c-error-tags" height="200"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== 做题本 ====== -->
+  <section class="db-card" id="sec-books">
+    <h2 class="db-card__title">📝 做题本正确率</h2>
+    <div class="db-chartbox">
+      <canvas id="c-books" height="240"></canvas>
+    </div>
+  </section>
+
+  <!-- ====== 健身 ====== -->
+  <section class="db-card" id="sec-fitness">
+    <h2 class="db-card__title">🏃 健身</h2>
+    <div class="db-two-col">
+      <div class="db-chartbox" id="box-weight">
+        <div class="db-chartbox__title">体重曲线</div>
+        <canvas id="c-weight" height="300"></canvas>
+      </div>
+      <div class="db-chartbox" id="box-exercise">
+        <div class="db-chartbox__title">运动时长（分钟，按项目汇总）</div>
+        <canvas id="c-exercise" height="300"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== 战报板 ====== -->
+  <section class="db-card" id="sec-battle">
+    <h2 class="db-card__title">⚔️ Rating 趋势</h2>
+    <div class="db-chartbox">
+      <canvas id="c-ratings" height="260"></canvas>
+    </div>
+  </section>
+
+  <!-- ====== 五子棋 ====== -->
+  <section class="db-card" id="sec-gomoku">
+    <h2 class="db-card__title">🎯 五子棋战绩</h2>
+    <div class="db-gomoku-grid">
+      <div class="db-chartbox">
+        <div class="db-chartbox__title">胜负平分布</div>
+        <canvas id="c-gomoku" height="200"></canvas>
+      </div>
+      <div class="db-chartbox" id="box-gomoku-stats">
+        <div class="db-chartbox__title">按难度胜率</div>
+        <div id="gomokuStats" class="db-gomoku-stats"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== 打卡热力 ====== -->
+  <section class="db-card" id="sec-heat">
+    <h2 class="db-card__title">📅 打卡热力（近三个月）</h2>
+    <div class="db-heat-grid" id="heatGrid"></div>
+  </section>
+
+  <!-- ====== 拾贝 ====== -->
+  <section class="db-card" id="sec-shell">
+    <h2 class="db-card__title">🐚 拾贝分类</h2>
+    <div class="db-chartbox">
+      <canvas id="c-shell" height="200"></canvas>
+    </div>
+  </section>
+
+  <!-- ====== 全局时间轴 ====== -->
+  <section class="db-card" id="sec-timeline">
+    <h2 class="db-card__title">🕐 最近活动</h2>
+    <div class="db-timeline" id="timeline"></div>
+  </section>
+
+  <!-- ====== 全空态 ====== -->
+  <div id="emptyAll" class="jy-empty" style="display:none">
+    <div class="jy-empty__icon">📭</div>
+    <div class="jy-empty__text">各模块还没有数据</div>
+    <div class="jy-empty__sub">去错题本、做题本、健身等模块记录数据后，这里会自动汇总</div>
+  </div>
+
+</div>
+
+<script src="../../shared/charts.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

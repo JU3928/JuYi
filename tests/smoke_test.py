@@ -32,9 +32,10 @@ PAGES = [
     ("做题本",       "modules/question-book/index.html",    "#app"),
     ("战报板",       "modules/battle-report/index.html",    "#br-app"),
     ("计划表",       "modules/schedule/index.html",         ".app-layout"),
-    ("万能图片",     "lab/toys/image-tools/index.html",     "body"),
-    ("网页助手",     "lab/toys/web-assistant/index.html",   "body"),
-    ("抽奖器",       "lab/toys/moment-lottery/index.html",  "body"),
+    ("数据中心",     "modules/dashboard/index.html",        ".db-app"),
+    ("万能图片",     "lab/toys/image-tools/index.html",     ".it-app"),
+    ("网页助手",     "lab/toys/web-assistant/index.html",   ".wa-app"),
+    ("抽奖器",       "lab/toys/moment-lottery/index.html",  ".ml-app"),
     ("五子棋",       "lab/toys/gomoku/index.html",          "#gomokuApp"),
     ("贪吃蛇",       "lab/toys/snake/index.html",           "#snakeApp"),
     ("生日页",       "birthday/index.html",                 "#hero"),
@@ -47,6 +48,7 @@ MOBILE_CHECK_PAGES = [
     ("错题图鉴", "modules/error-book/index.html"),
     ("五子棋",   "lab/toys/gomoku/index.html"),
     ("贪吃蛇",   "lab/toys/snake/index.html"),
+    ("数据中心", "modules/dashboard/index.html"),
 ]
 
 FAILURES = []
@@ -284,6 +286,25 @@ def test_redo_mobile(context):
         FAILURES.append("[重做移动端] 流程中断: %s" % e)
     for e in errors:
         FAILURES.append("[重做移动端] " + e)
+    page.close()
+
+
+def test_fitness_unit(context):
+    """健身模块功能测试页（test.html）必须全绿。"""
+    page = context.new_page()
+    errors, failed = collect_errors(page)
+    page.goto(file_url("modules/fitness/test.html"))
+    page.wait_for_load_state("load")
+    page.wait_for_timeout(500)
+    page.click("button")  # ▶ 开始测试
+    page.wait_for_timeout(2500)
+    summary = page.locator(".summary").inner_text()
+    if "全部通过" not in summary:
+        FAILURES.append("[健身单测] " + summary)
+    else:
+        PASSES.append("健身功能测试全部通过")
+    for e in errors:
+        FAILURES.append("[健身单测] " + e)
     page.close()
 
 
@@ -617,6 +638,7 @@ def main():
         test_redo_migration(context)
         test_gomoku_unit(context)
         test_gomoku_e2e(context)
+        test_fitness_unit(context)
         test_snake_unit(context)
         test_snake_e2e(context)
         test_shell_file_delete(context)

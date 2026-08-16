@@ -54,6 +54,7 @@
     els.coverImage = document.getElementById('coverImage');
     els.bookShelf = document.getElementById('bookShelf');
     els.shelfEmpty = document.getElementById('shelfEmpty');
+    els.statsDashboard = document.getElementById('statsDashboard');
     els.pieCanvas = document.getElementById('pieCanvas');
     els.pieCenter = document.getElementById('pieCenter');
     els.statCards = document.getElementById('statCards');
@@ -143,6 +144,17 @@
    * ================================================================ */
   function _renderAll() {
     _renderShelf();
+    // 统计总览（仪表盘 + 标签云）：有数据才展示
+    var hasItems = state.allItems.length > 0;
+    if (els.statsDashboard) els.statsDashboard.style.display = hasItems ? '' : 'none';
+    if (els.tagCloud) els.tagCloud.style.display = hasItems ? '' : 'none';
+    if (hasItems) {
+      _renderPieChart();
+      _renderStatCards();
+      _renderTagCloud();
+    } else if (els.pieCenter) {
+      els.pieCenter.textContent = '0';
+    }
   }
 
   /* ================================================================
@@ -186,74 +198,28 @@
    * P1: Canvas pie chart
    * ================================================================ */
   function _renderPieChart() {
-    var canvas = els.pieCanvas;
+    if (!els.pieCanvas) return;
     var sm = state.stats.subjectMap;
     var entries = Object.entries(sm);
-    if (!entries.length) {
-      var dprCtx = canvas.getContext('2d');
-      var dprScale = window.devicePixelRatio || 1;
-      var ccw = 320, cch = 320;
-      canvas.width = ccw * dprScale; canvas.height = cch * dprScale;
-      dprCtx.scale(dprScale, dprScale);
-      dprCtx.clearRect(0, 0, ccw, cch);
-      els.pieCenter.textContent = '0';
-      return;
-    }
-
-    var dpr = window.devicePixelRatio || 1;
-    var w = 320, h = 320;
-    canvas.width = w * dpr; canvas.height = h * dpr;
-    var ctx = canvas.getContext('2d');
-    ctx.scale(dpr, dpr);
-    ctx.clearRect(0, 0, w, h);
-
-    var cx = w / 2, cy = h / 2, r = 110, innerR = 55;
-    var total = state.allItems.length;
-    var angle = -Math.PI / 2;
-
-    entries.forEach(function (entry) {
-      var name = entry[0], d = entry[1];
-      var sliceAngle = (d.count / total) * Math.PI * 2;
-      ctx.beginPath();
-      ctx.moveTo(cx, cy);
-      ctx.arc(cx, cy, r, angle, angle + sliceAngle);
-      ctx.closePath();
-      ctx.fillStyle = d.color;
-      ctx.fill();
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      // Label
-      var midAngle = angle + sliceAngle / 2;
-      var lx = cx + Math.cos(midAngle) * (r + 18);
-      var ly = cy + Math.sin(midAngle) * (r + 18);
-      ctx.fillStyle = '#2c2416';
-      ctx.font = '11px ' + getComputedStyle(document.body).fontFamily;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      var pct = Math.round((d.count / total) * 100);
-      if (pct >= 5) ctx.fillText(pct + '%', lx, ly);
-
-      angle += sliceAngle;
+    els.pieCenter.textContent = String(state.allItems.length);
+    JyCharts.donut(els.pieCanvas, {
+      height: 200,
+      thicknessRatio: 0.3,
+      colors: {
+        bg: JyCharts.cssVar('--eb-surface', '#faf8f5'),
+        text: JyCharts.cssVar('--eb-text-secondary', '#5f6b7a'),
+      },
+      items: entries.map(function (entry) {
+        return { label: entry[0], value: entry[1].count, color: entry[1].color };
+      }),
     });
-
-    // Inner circle
-    ctx.beginPath();
-    ctx.arc(cx, cy, innerR, 0, Math.PI * 2);
-    ctx.fillStyle = '#faf8f5';
-    ctx.fill();
-    ctx.strokeStyle = '#e5ddd0';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    els.pieCenter.textContent = total;
   }
 
   /* ================================================================
    * P1: Stat cards
    * ================================================================ */
   function _renderStatCards() {
+    if (!els.statCards) return;
     var sm = state.stats.subjectMap;
     els.statCards.innerHTML =
       '<div class="eb-stat-card"><div class="eb-stat-card__value">' + state.allItems.length + '</div><div class="eb-stat-card__label">总错题数</div></div>' +
@@ -265,6 +231,7 @@
    * P3: Tag cloud
    * ================================================================ */
   function _renderTagCloud() {
+    if (!els.tagCloud) return;
     var tf = state.stats.tagFreq;
     var entries = Object.entries(tf).sort(function (a, b) { return b[1] - a[1]; });
     if (!entries.length) { els.tagCloud.innerHTML = ''; return; }

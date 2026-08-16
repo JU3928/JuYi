@@ -262,6 +262,7 @@
 
   /* ---- Export ---- */
   App.prototype._exportAll = function () {
+    var self = this;
     var out = self.articles.map(function (a) { return '# '+a.title+'\n\n> '+a.url+'\n\n'+a.markdown+'\n\n---\n'; }).join('\n');
     var blob = new Blob([out], { type: 'text/markdown' });
     var url = URL.createObjectURL(blob);
@@ -272,6 +273,7 @@
   };
 
   App.prototype._exportOne = function (id) {
+    var self = this;
     var a = self.articles.find(function (x) { return x.id === id; });
     if (!a) return;
     var out = '# '+a.title+'\n\n> '+a.url+'\n\n'+a.markdown;
@@ -284,6 +286,7 @@
 
   /* ---- Detail ---- */
   App.prototype._openDetail = function (id) {
+    var self = this;
     var a = self.articles.find(function (x) { return x.id === id; });
     if (!a) return;
     this.$detailTitle.textContent = a.title;

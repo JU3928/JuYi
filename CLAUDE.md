@@ -93,6 +93,7 @@ When creating `modules/<name>/` or `lab/toys/<name>/`, complete ALL of these:
 | 健身 | `modules/fitness/` | `JuYiFitness` | Weight tracking, exercise log |
 | 做题本 | `modules/question-book/` | `JuYiQuestionBook` | Structured Q&A with answer checking |
 | 战报板 | `modules/battle-report/` | `JuYiBattleReport` | Rating charts, algorithm templates |
+| 数据中心 | `modules/dashboard/` | reads all (read-only) | Cross-module aggregate: charts, heatmap, timeline |
 | 计划表 | `modules/schedule/` | localStorage only | Daily schedule, check-in, calendar |
 | 抽奖器 | `lab/toys/moment-lottery/` | `JuYiLabLottery` | Avatar detection, lottery animations |
 | 万能图片 | `lab/toys/image-tools/` | `JuYiLabImageTools` | Clipboard paste → download |
@@ -102,13 +103,14 @@ When creating `modules/<name>/` or `lab/toys/<name>/`, complete ALL of these:
 
 Notes:
 - 错题图鉴 is a documented exception: it does **not** link `shared/base.css` — it uses its own `--eb-*` book theme.
+- 数据中心 is read-only: it aggregates every module DB and localStorage but writes nothing; no new DB/localStorage keys.
 - `birthday/` is a standalone personal birthday-card page (countdown + flip wishes), intentionally not linked from the hub.
 
 ---
 
 ## Testing
 
-`tests/smoke_test.py` is the automated smoke test (Python + Playwright, dev-side tooling — the zero-dependency constraint applies to product code only). It loads all 15 pages headlessly checking for console errors, verifies key DOM elements, mobile overflow, and theme toggle. Falls back to system Edge when Playwright's Chromium isn't installed. **Run `python tests/smoke_test.py` after any change that touches shared files or page structure; all checks must pass before committing.** See `tests/README.md` for install and extension instructions.
+`tests/smoke_test.py` is the automated smoke test (Python + Playwright, dev-side tooling — the zero-dependency constraint applies to product code only). It loads all 16 pages headlessly checking for console errors, verifies key DOM elements, mobile overflow, and theme toggle. Falls back to system Edge when Playwright's Chromium isn't installed. **Run `python tests/smoke_test.py` after any change that touches shared files or page structure; all checks must pass before committing.** See `tests/README.md` for install and extension instructions.
 
 ---
 

@@ -16,6 +16,17 @@
   <!-- ====== 书架视图 ====== -->
   <div id="shelf-view">
     <h2 class="eb-section-title">📚 我的错题书</h2>
+
+    <!-- ====== 统计总览 ====== -->
+    <div class="eb-dashboard" id="statsDashboard">
+      <div class="eb-dashboard__chart-wrap">
+        <canvas id="pieCanvas" width="200" height="200"></canvas>
+        <div class="eb-dashboard__center" id="pieCenter">0</div>
+      </div>
+      <div class="eb-dashboard__cards" id="statCards"></div>
+    </div>
+    <div class="eb-tagcloud" id="tagCloud"></div>
+
     <div class="eb-shelf" id="bookShelf"></div>
     <div class="eb-shelf-empty" id="shelfEmpty" style="display:none">
       <div class="eb-empty-icon">📭</div>
@@ -43,6 +54,7 @@
 
 <script src="../../shared/db-core.js"></script>
 <script src="../../shared/utils.js"></script>
+<script src="../../shared/charts.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

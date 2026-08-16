@@ -18,6 +18,27 @@ var XMindParser = (function () {
     return (buf[pos] | (buf[pos + 1] << 8)) >>> 0;
   }
 
+  /**
+   * 把 Uint8Array 按 UTF-8 解码为字符串（中文不乱码）。
+   * 超过 500000 字节截断，与旧实现保持一致；TextDecoder 不可用时降级为逐块转码。
+   */
+  function bytesToText(bytes) {
+    var capped = bytes.length > 500000 ? bytes.subarray(0, 500000) : bytes;
+    if (typeof TextDecoder !== 'undefined') {
+      try { return new TextDecoder('utf-8').decode(capped); } catch (_) { /* fall through */ }
+    }
+    // 兜底：Latin-1 字符串 + decodeURIComponent 分块解码 UTF-8
+    var out = '';
+    var CHUNK = 0x8000;
+    for (var i = 0; i < capped.length; i += CHUNK) {
+      var slice = capped.subarray(i, i + CHUNK);
+      var latin = '';
+      for (var j = 0; j < slice.length; j++) latin += String.fromCharCode(slice[j]);
+      try { out += decodeURIComponent(escape(latin)); } catch (_) { out += latin; }
+    }
+    return out;
+  }
+
   /** Find the End of Central Directory record signature in a Uint8Array */
   function findEOCD(buf) {
     for (var i = buf.length - 22; i >= 0; i--) {
@@ -79,8 +100,7 @@ var XMindParser = (function () {
         }
 
         if (data) {
-          var text = '';
-          for (var k = 0; k < data.length && k < 500000; k++) text += String.fromCharCode(data[k]);
+          var text = bytesToText(data);
           files[name] = { text: text, format: contentMatch[1] };
         }
       }
@@ -141,9 +161,7 @@ var XMindParser = (function () {
       var decompressed;
       try {
         if (e.method === 0) {
-          var text = '';
-          for (var ci = 0; ci < chunk.length && ci < 500000; ci++) text += String.fromCharCode(chunk[ci]);
-          decompressed = text;
+          decompressed = bytesToText(chunk);
         } else if (typeof DecompressionStream !== 'undefined') {
           var ds = new DecompressionStream('deflate');
           var writer = ds.writable.getWriter();
@@ -164,13 +182,11 @@ var XMindParser = (function () {
             merged.set(chunks[ci3], offset2);
             offset2 += chunks[ci3].length;
           }
-          var text2 = '';
-          for (var ci4 = 0; ci4 < merged.length && ci4 < 500000; ci4++) text2 += String.fromCharCode(merged[ci4]);
-          decompressed = text2;
+          decompressed = bytesToText(merged);
         } else {
           continue;
         }
-        if (decompressed) results[e.format] = decompressed;
+        if (decompressed) results['content.' + e.format] = decompressed;
       } catch (err) { /* skip failed entry */ }
     }
     return results;

@@ -72,7 +72,6 @@
       this._saveTimer = null;
       this.compositeMode = false;
       this.selectedBooks = new Set();
-      window._qb = this; // for chip inline onclick
     }
 
     /* ---- lifecycle ---- */
@@ -600,8 +599,6 @@
         }
         self._renderStats();
       };
-      // Store on window for inline onclick backup
-      window._qbApplyGroup = applyGroup;
       for (var gi = 0; gi < groups.length; gi++) {
         var cb = document.getElementById('chip_' + gi);
         if (!cb) continue;
@@ -1411,6 +1408,7 @@
           this.els.btnRecheck.style.display = 'none';
           this.els.checkHint.style.display = '';
           // 统计总答题格数（含子题）
+          const subCounts = this.currentAnswerRecord.subCounts || {};
           let totalSlots = 0, filledSlots = 0;
           for (let i = 1; i <= book.questionCount; i++) {
             const sc = subCounts[i] || 1;
@@ -1624,7 +1622,6 @@
       console.error('做题本初始化失败', err);
       alert('做题本初始化失败：' + (err && err.message || err));
     });
-    window._questionBookApp = app;
   });
 
 })();

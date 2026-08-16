@@ -247,24 +247,6 @@
     _drawChart() {
       const canvas = this.els.ratingChart;
       if (!canvas) return;
-      const ctx = canvas.getContext('2d');
-      const dpr = window.devicePixelRatio || 1;
-      const rect = canvas.parentElement.getBoundingClientRect();
-      const W = rect.width, H = 290;
-      canvas.width = W * dpr; canvas.height = H * dpr;
-      canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
-      ctx.scale(dpr, dpr);
-
-      const pad = { top: 20, right: 20, bottom: 35, left: 50 };
-      const pw = W - pad.left - pad.right, ph = H - pad.top - pad.bottom;
-      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-      const s = {
-        bg: isDark ? '#1e293b' : '#fafbfc',
-        grid: isDark ? '#334155' : '#e5e7eb',
-        text: isDark ? '#94a3b8' : '#6b7280',
-      };
-
-      ctx.fillStyle = s.bg; ctx.fillRect(0, 0, W, H);
 
       // Prepare series
       const series = PLATFORMS.map(p => ({
@@ -274,10 +256,6 @@
       }));
 
       // Update legend display
-      series.forEach(sr => {
-        const el = document.getElementById('legend' + sr.label.replace(/[^a-zA-Z]/g, ''));
-        // Map to actual IDs: legendLeetcode, legendNowcoder, legendCodeforces
-      });
       ['leetcode','nowcoder','codeforces'].forEach((key, i) => {
         const el = this.els['legend' + key.charAt(0).toUpperCase() + key.slice(1)];
         if (el) el.className = 'br-legend__item' + (this.chartVisibility[key] ? '' : ' br-legend__item--hidden');
@@ -291,87 +269,49 @@
       }
       this.els.chartEmpty.style.display = 'none';
 
-      // Global date range from all visible data
-      const allDates = allVisible.map(d => d.date);
-      const minDate = Math.min(...allDates);
-      const maxDate = Math.max(...allDates);
-      const dateRange = (maxDate - minDate) || 86400000;
-
-      // Global rating range
-      const allRatings = allVisible.map(d => d.rating);
-      const minR = Math.min(...allRatings);
-      const maxR = Math.max(...allRatings);
-      const rRange = (maxR - minR) || 100;
-      const yMin = Math.floor(minR - rRange * 0.2);
-      const yMax = Math.ceil(maxR + rRange * 0.2);
-      const ySteps = 4;
-
-      function toX(date) { return pad.left + pw * ((date - minDate) / dateRange); }
-      function toY(r) { return pad.top + ph * (1 - (r - yMin) / (yMax - yMin)); }
-
-      // Grid + Y labels
-      ctx.strokeStyle = s.grid; ctx.lineWidth = 0.5;
-      for (let i = 0; i <= ySteps; i++) {
-        const y = pad.top + (ph / ySteps) * i;
-        ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
-        ctx.fillStyle = s.text; ctx.font = '10px sans-serif'; ctx.textAlign = 'right';
-        ctx.fillText(Math.round(yMax - (yMax - yMin) / ySteps * i), pad.left - 6, y + 3);
-      }
-
-      // Draw each platform series
-      this._chartPoints = [];
-      series.forEach(sr => {
-        if (!sr.visible || sr.data.length === 0) return;
-        const d = sr.data;
-        const isDarkFill = isDark ? sr.fill.replace('0.08', '0.12') : sr.fill;
-
-        if (d.length === 1) {
-          const cx = toX(d[0].date);
-          const cy = toY(d[0].rating);
-          ctx.fillStyle = sr.color; ctx.beginPath(); ctx.arc(cx, cy, 5, 0, Math.PI * 2); ctx.fill();
-          ctx.fillStyle = s.bg; ctx.beginPath(); ctx.arc(cx, cy, 2.5, 0, Math.PI * 2); ctx.fill();
-          if (d[0].screenshot) {
-            ctx.strokeStyle = sr.color; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(cx, cy, 7, 0, Math.PI * 2); ctx.stroke();
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      const result = JyCharts.line(canvas, {
+        height: 290,
+        pad: { top: 20, right: 20, bottom: 35, left: 50 },
+        colors: {
+          bg: isDark ? '#1e293b' : '#fafbfc',
+          grid: isDark ? '#334155' : '#e5e7eb',
+          text: isDark ? '#94a3b8' : '#6b7280',
+        },
+        series: series.filter(sr => sr.visible && sr.data.length > 0).map(sr => ({
+          key: sr.key,
+          color: sr.color,
+          area: isDark ? sr.fill.replace('0.08', '0.12') : sr.fill,
+          data: sr.data.map(r => ({ x: r.date, y: r.rating, datum: r })),
+        })),
+        yTicks: 4,
+        yTickFormat: v => String(Math.round(v)),
+        ySpanFallback: 100, // 只有一条记录时值域回退 ±20%
+        xTickFormat: x => fmtDateShort(x),
+        xTickEvery: Math.max(1, Math.floor(allVisible.length / 6)),
+        emptyText: '',
+        dotR: 4,
+        dotInner: '#fff',
+        singleDotR: 5,
+        decorate: (ctx, x, y, datum, sr) => {
+          if (datum && datum.screenshot) {
+            ctx.strokeStyle = sr.color;
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(x, y, 7, 0, Math.PI * 2);
+            ctx.stroke();
           }
-          this._chartPoints.push({ x: cx, y: cy, platform: sr.key, rating: d[0].rating, date: d[0].date, screenshot: d[0].screenshot || null });
-          return;
-        }
-
-        // Area
-        ctx.fillStyle = isDarkFill;
-        ctx.beginPath();
-        d.forEach((pt, i) => { const x = toX(pt.date), y = toY(pt.rating); i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); });
-        const lastX = toX(d[d.length - 1].date);
-        ctx.lineTo(lastX, pad.top + ph); ctx.lineTo(toX(d[0].date), pad.top + ph); ctx.closePath(); ctx.fill();
-
-        // Line
-        ctx.strokeStyle = sr.color; ctx.lineWidth = 2.5; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-        ctx.beginPath();
-        d.forEach((pt, i) => { const x = toX(pt.date), y = toY(pt.rating); i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); });
-        ctx.stroke();
-
-        // Dots
-        d.forEach(pt => {
-          const x = toX(pt.date), y = toY(pt.rating);
-          ctx.fillStyle = sr.color; ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fill();
-          ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x, y, 2, 0, Math.PI * 2); ctx.fill();
-          if (pt.screenshot) {
-            ctx.strokeStyle = sr.color; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(x, y, 7, 0, Math.PI * 2); ctx.stroke();
-          }
-          this._chartPoints.push({ x, y, platform: sr.key, rating: pt.rating, date: pt.date, screenshot: pt.screenshot || null });
-        });
+        },
       });
 
-      // X date labels
-      if (allVisible.length >= 2) {
-        ctx.fillStyle = s.text; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
-        const xStep = Math.max(1, Math.floor(allVisible.length / 6));
-        const sortedDates = [...allVisible].sort((a, b) => a.date - b.date);
-        for (let i = 0; i < sortedDates.length; i += xStep) {
-          const label = fmtDateShort(sortedDates[i].date);
-          ctx.fillText(label, toX(sortedDates[i].date), H - 8);
-        }
-      }
+      this._chartPoints = result.points.map(p => ({
+        x: p.x,
+        y: p.y,
+        platform: p.series.key,
+        rating: p.datum.rating,
+        date: p.datum.date,
+        screenshot: p.datum.screenshot || null,
+      }));
     }
 
     _onChartHover(e) {

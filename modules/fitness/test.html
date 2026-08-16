@@ -100,7 +100,7 @@ async function runTests() {
     await db.add(STORE, { type: 'weight', weight: 70.2, date: new Date('2026-06-05').getTime(), tags: ['减脂'], createdAt: Date.now() });
     await db.add(STORE, { type: 'weight', weight: 69.8, date: new Date('2026-06-10').getTime(), tags: ['减脂'], createdAt: Date.now() });
     await db.add(STORE, { type: 'weight', weight: 69.5, date: new Date('2026-06-15').getTime(), tags: ['减脂'], createdAt: Date.now() });
-    result('添加 4 条体重记录 (供图表)', true, '共5条');
+    result('添加 4 条体重记录 (供图表)', true, '共4条');
 
     // Create more exercises
     await db.add(STORE, { type: 'exercise', exerciseType: '游泳', duration: 45, intensity: 4, date: new Date('2026-06-08').getTime(), tags: ['有氧'], createdAt: Date.now() });
@@ -109,7 +109,7 @@ async function runTests() {
 
     // GetAll
     const all = await db.getAll(STORE);
-    result('getAll 返回 9 条', all.length === 9, all.length + ' 条');
+    result('getAll 返回 7 条', all.length === 7, all.length + ' 条');
 
     // Get by ID
     const item = await db.get(STORE, e1);
@@ -124,7 +124,7 @@ async function runTests() {
     // Delete
     await db.delete(STORE, w1);
     const remaining = await db.getAll(STORE);
-    result('删除 1 条后剩 8 条', remaining.length === 8, remaining.length + ' 条');
+    result('删除 1 条后剩 6 条', remaining.length === 6, remaining.length + ' 条');
     const deleted = await db.get(STORE, w1);
     result('已删除的记录返回 undefined', deleted === undefined);
 
@@ -185,7 +185,7 @@ async function runTests() {
 
     const parsed = JSON.parse(json);
     result('导出格式正确', parsed._format === 'JuYiFitness/1' && Array.isArray(parsed.items));
-    result('导出包含全部数据', parsed.items.length === 8, parsed.items.length + ' 条');
+    result('导出包含全部数据', parsed.items.length === 6, parsed.items.length + ' 条');
 
     // Import simulation: clear then re-add
     await db.clear(STORE);
@@ -194,7 +194,7 @@ async function runTests() {
 
     for (const item of parsed.items) { await db.add(STORE, item); }
     const restored = await db.getAll(STORE);
-    result('重新导入后恢复', restored.length === 8, restored.length + ' 条');
+    result('重新导入后恢复', restored.length === 6, restored.length + ' 条');
 
     // ====== 7. Edge cases ======
     section('7. 边界情况');
@@ -233,7 +233,8 @@ async function runTests() {
     result('测试异常', false, e.message);
     console.error(e);
   } finally {
-    // Cleanup
+    // Cleanup：先关闭连接再删库，避免 deleteDatabase 被 blocked
+    if (db.db) { try { db.db.close(); } catch (_) {} }
     indexedDB.deleteDatabase(DB_NAME);
   }
 

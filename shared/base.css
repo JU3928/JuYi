@@ -11,6 +11,10 @@
   --jy-primary-soft:   #ebedff;
   --jy-primary-text:   #ffffff;
 
+  /* ---- 强调色别名（历史模块使用 --jy-accent*，作为 primary 的别名，随主题联动） ---- */
+  --jy-accent:         var(--jy-primary);
+  --jy-accent-soft:    var(--jy-primary-soft);
+
   /* ---- 背景 ---- */
   --jy-bg:             #f5f6f8;
   --jy-bg-secondary:   #ffffff;
@@ -138,6 +142,9 @@ input, textarea, select { font: inherit; color: inherit; }
 .jy-gap-3 { gap: var(--jy-space-3); }
 .jy-gap-4 { gap: var(--jy-space-4); }
 
+/* 仅移动端显示（配合下方媒体查询），桌面端隐藏 */
+.jy-show-mobile { display: none; }
+
 /* ========================== 淡入动画 ========================== */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(6px); }
@@ -246,4 +253,5 @@ input, textarea, select { font: inherit; color: inherit; }
 /* ========================== 响应式 ========================== */
 @media (max-width: 768px) {
   .jy-container { padding: 0 var(--jy-space-4); }
+  .jy-show-mobile { display: flex; }
 }
