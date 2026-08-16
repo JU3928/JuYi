@@ -600,11 +600,19 @@
           var names = Object.keys(files).join('、') || '（空）';
           throw new Error('该 Gist 里没有 ' + GIST_FILE + ' 文件（现有文件：' + names + '）——很可能 Gist ID 填错了');
         }
+        // 小文件直接用清单里的 content（避免第二次请求）；大文件/被截断时走 raw_url。
+        // 注意：raw_url 请求不能带 Authorization 头——gist.githubusercontent.com 的 CORS
+        // 不允许该头（api.github.com 允许），带了会预检失败报 "Failed to fetch"。
+        // 私有 Gist 的 raw 地址本身就是"链接即凭证"，无需鉴权即可读取。
+        if (typeof file.content === 'string' && file.content && !file.truncated) {
+          return file.content;
+        }
         if (!file.raw_url) throw new Error('云端文件缺少下载地址');
-        // 2) 用 raw_url 读取完整内容（避免 raw 媒体类型只取第一个文件的歧义）
-        return fetch(file.raw_url, { headers: { 'authorization': 'Bearer ' + cfg.token } }).then(function (r2) {
+        return fetch(file.raw_url).then(function (r2) {
           if (!r2.ok) throw new Error('读取云端文件失败：' + r2.status);
           return r2.text();
+        }).catch(function (err) {
+          throw new Error('无法访问 GitHub 文件服务器（网络或 CORS 限制）：' + err.message + '——请确认当前网络能正常打开 github.com');
         });
       }).then(function (text) {
         if (!text || !text.trim()) throw new Error('云端文件为空——可能另一台设备还没有点过「推送到云端」');
