@@ -5,6 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>JuYi</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏯</text></svg>">
   <link rel="stylesheet" href="shared/base.css">
   <style>
     .hub {
@@ -626,6 +627,16 @@
         if (!data || data._format !== 'JuYiSysBackup/1') {
           throw new Error('云端文件不是 JuYi 备份（_format=' + (data && data._format) + '）——请确认该 Gist 是「JuYi 云备份」');
         }
+        // 空占位保护：云端若只是创建时的空壳，禁止覆盖本机数据
+        var recCount = 0;
+        var idb = data.indexedDB || {};
+        Object.keys(idb).forEach(function (n) {
+          var st = idb[n] || {};
+          Object.keys(st).forEach(function (sn) { recCount += (st[sn] || []).length; });
+        });
+        if (recCount === 0 && Object.keys(data.localStorage || {}).length === 0) {
+          throw new Error('云端只有空占位（0KB）——主设备还没有成功「推送到云端」。请先在主设备首页点「⬆️ 推送到云端」并看到绿色成功提示');
+        }
         return data;
       });
     }
@@ -701,9 +712,17 @@
         localStorage.setItem(LS_SYNC_GIST_ID, gist.id);
         localStorage.setItem(LS_SYNC_GIST_TOKEN, token);
         localStorage.setItem(LS_SYNC_MODE, 'gist');
-        sysToast('✅ 云端文件已创建（私有 Gist ' + gist.id.slice(0, 10) + '…），已自动保存配置', 'ok');
-        btn.disabled = false;
-        btn.textContent = '✨ 一键创建云端文件';
+        // 创建成功后自动把当前本机数据推上去，省得用户忘记点推送
+        return sysExportData().then(function (data) {
+          return syncPushBackup({ mode: 'gist', token: token, gistId: gist.id }, JSON.stringify(data)).then(function () {
+            sysToast('✅ 云端文件已创建并自动上传本机数据（私有 Gist ' + gist.id.slice(0, 10) + '…）', 'ok');
+          });
+        }).catch(function (pushErr) {
+          sysToast('✅ 云端文件已创建，但自动上传失败：' + pushErr.message + '（请稍后手动点「⬆️ 推送到云端」）', 'err');
+        }).then(function () {
+          btn.disabled = false;
+          btn.textContent = '✨ 一键创建云端文件';
+        });
       }).catch(function (err) {
         sysToast('创建失败：' + err.message, 'err');
         btn.disabled = false;
