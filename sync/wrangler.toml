@@ -1,9 +1,0 @@
-# JuYi 云同步 Worker 配置（Cloudflare Workers + KV）
-# 部署步骤见 worker.js 头部注释与 sync/README.md
-name = "juyi-sync"
-main = "worker.js"
-compatibility_date = "2026-08-16"
-
-[[kv_namespaces]]
-binding = "JUYI_SYNC"
-id = "把 `npx wrangler kv namespace create JUYI_SYNC` 返回的 id 填到这里"

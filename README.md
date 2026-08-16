@@ -1,6 +1,6 @@
 # JuYi 🏯
 
-前端优先（frontend-first）个人工具箱：每个模块可独立运行、零框架、离线可用，数据本地存储；可选**云同步层**（`sync/`）实现多设备互通。
+前端优先（frontend-first）个人工具箱：每个模块可独立运行、零框架、离线可用，数据完全本地存储。
 
 线上地址：**[ju3928.github.io/JuYi](https://ju3928.github.io/JuYi/)**
 
@@ -11,16 +11,12 @@
 ```
 JuYi/
 ├── README.md
-├── index.html                          # 项目首页（模块导航 + 系统备份 + 云同步）
+├── index.html                          # 项目首页（模块导航 + 系统备份）
 ├── shared/                             # 共享层
 │   ├── base.css                        #   设计系统（CSS 令牌 + 通用组件）
 │   ├── db-core.js                      #   IndexedDB 异步封装（Promise 风格）
 │   ├── utils.js                        #   HTML 净化/转义
 │   └── charts.js                       #   零依赖 Canvas 图表库
-├── sync/                               # 可选云同步后端（Cloudflare Worker + KV）
-│   ├── worker.js                       #   零依赖同步端点（GET/PUT /api/sync，X-Sync-Key 鉴权）
-│   ├── wrangler.toml
-│   └── README.md                       #   一次性部署说明
 ├── birthday/                           # 生日祝福页（独立页面）
 │   ├── index.html
 │   ├── styles.css
@@ -42,7 +38,7 @@ JuYi/
 - **首页导航**：打开根目录 `index.html`，通过卡片导航进入各模块
 - **线上访问**：`https://ju3928.github.io/JuYi/`
 
-> ⚠️ 数据存储在浏览器 IndexedDB 中，完全本地。更换设备/域名可通过各模块导出/导入迁移，或部署 `sync/` 后使用首页「⛅ 云同步」一键互通（详见 `sync/README.md`）。
+> ⚠️ 数据存储在浏览器 IndexedDB 中，完全本地。更换设备/域名请通过各模块的导出/导入功能迁移数据。
 
 ## 模块一览
 
@@ -147,7 +143,6 @@ JuYi/
 | **IndexedDB** | 浏览器本地数据库，通过 `shared/db-core.js` 统一封装（Promise 风格，自动升级 schema，内置导出导入） |
 | **CSS 变量** | 统一设计令牌（`shared/base.css`），全局暗色模式一键切换 |
 | **暗色模式** | `data-theme` 属性切换，Canvas 图表跟随主题自适应颜色 |
-| **云同步（可选）** | `sync/` 下的 Cloudflare Worker + KV，`X-Sync-Key` 鉴权，与首页「⛅ 云同步」面板配套，核心功能不依赖它 |
 
 ### 设计系统
 
@@ -167,7 +162,6 @@ JuYi/
 - **数据库名**：各模块使用独立数据库（如 `JuYiDB`、`JuYiFitness` 等），互不干扰
 - **容量**：通常 > 100MB，足够存储上千条带图记录
 - **迁移**：各模块内置 JSON 导出/导入功能（图片以 base64 内嵌）
-- **云同步**：首页「⛅ 云同步」支持两种后端——**GitHub 私有 Gist（默认推荐，只需一个仅含 gist 权限的 Token，无需任何新账号/服务器）**，或自建 `sync/` 下的 Cloudflare Worker + KV（部署见 `sync/README.md`）。换设备粘一次配置即可拉取；密钥存本机、不进备份
 
 ---
 
@@ -183,7 +177,7 @@ JuYi/
 
 - **前端零框架**：前端不引入任何第三方库或框架
 - **模块独立**：每个模块有独立的 HTML/CSS/JS，可单独运行、离线可用
-- **后端可选**：基础设施只放 `sync/`（或明确标注），任何模块不得依赖它才能工作
+- **后端可选**：若引入后端基础设施，须单独目录存放（或明确标注），任何模块不得依赖它才能工作
 - **共享层**：通用样式、数据库封装与图表库放在 `shared/`，模块通过相对路径引用
 - **暗色模式**：所有模块必须支持 `data-theme="dark"` 切换
 - **中文优先**：UI 文案使用中文
