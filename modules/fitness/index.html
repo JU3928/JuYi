@@ -50,7 +50,11 @@
     <!-- 体重面板 -->
     <div id="panelWeight" class="panel">
       <div class="chart-wrap">
-        <canvas id="weightChart"></canvas>
+        <div class="chart-scroll" id="weightChartScroll">
+          <div class="chart-scroll__inner" id="weightChartInner">
+            <canvas id="weightChart"></canvas>
+          </div>
+        </div>
       </div>
       <div id="weightList" class="record-list"></div>
     </div>

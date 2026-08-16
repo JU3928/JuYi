@@ -180,8 +180,21 @@
       const data = this._filtered('weight').sort((a, b) => a.date - b.date);
       canvas.style.display = 'block';
       const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+
+      // 数据多时给足每点宽度，超出部分横向滚动，避免把大量点挤压在一屏宽度里
+      const wrap = document.getElementById('weightChartScroll');
+      const inner = document.getElementById('weightChartInner');
+      if (wrap && inner) {
+        const perPoint = 56; // 每个数据点占的最小像素宽度
+        const avail = wrap.clientWidth || 600;
+        const needed = Math.max(data.length * perPoint, 240);
+        inner.style.width = needed > avail ? needed + 'px' : '100%';
+      }
+      // 移动端用矮一点的图（顺带修复此前内联高度覆盖 200px 断点的问题）
+      const height = window.innerWidth < 768 ? 200 : 340;
+
       JyCharts.line(canvas, {
-        height: 340,
+        height: height,
         pad: { top: 30, right: 40, bottom: 45, left: 55 },
         colors: {
           bg: isDark ? '#1e293b' : '#ffffff',
