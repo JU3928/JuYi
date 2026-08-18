@@ -131,6 +131,15 @@
           <span class="jy-form-hint" id="qcountHint" style="display:none;font-size:var(--jy-font-size-xs);color:var(--jy-text-muted);margin-top:var(--jy-space-1)">创建后不可修改</span>
         </div>
         <div class="jy-form-group">
+          <label class="jy-label">题号区间 <span style="color:var(--jy-text-muted);font-weight:400">（选填，不填默认 1 到题目数量）</span></label>
+          <div style="display:flex;gap:var(--jy-space-2);align-items:center">
+            <input type="number" id="editBookStartNo" class="jy-input" placeholder="开始题号，如 17" min="0" style="flex:1">
+            <span style="color:var(--jy-text-muted)">—</span>
+            <input type="number" id="editBookEndNo" class="jy-input" placeholder="结束题号，如 24" min="1" style="flex:1">
+          </div>
+          <span class="jy-form-hint" style="display:block;font-size:var(--jy-font-size-xs);color:var(--jy-text-muted);margin-top:var(--jy-space-1)">填了区间会自动计算题目数量（如 17—24 共 8 题），作答与汇总按实际题号显示</span>
+        </div>
+        <div class="jy-form-group">
           <label class="jy-label">备注</label>
           <input type="text" id="editBookNotes" class="jy-input" placeholder="选填">
         </div>

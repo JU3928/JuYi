@@ -135,6 +135,8 @@
         editBookName: q('#editBookName'),
         editBookType: q('#editBookType'),
         editBookQCount: q('#editBookQCount'),
+        editBookStartNo: q('#editBookStartNo'),
+        editBookEndNo: q('#editBookEndNo'),
         editBookNotes: q('#editBookNotes'),
         editBookId: q('#editBookId'),
         qcountHint: q('#qcountHint'),
@@ -171,6 +173,22 @@
 
       // Modals (general)
       E.btnSaveBook.addEventListener('click', () => this._onSaveBook());
+      // 题号区间自动换算题目数量
+      const syncRangeToCount = () => {
+        if (this.els.editBookId.value) return; // 编辑态区间与数量都锁定
+        const sRaw = (this.els.editBookStartNo.value || '').trim();
+        const eRaw = (this.els.editBookEndNo.value || '').trim();
+        if (sRaw === '' || eRaw === '') {
+          this.els.editBookQCount.disabled = false;
+          return;
+        }
+        const s = parseInt(sRaw, 10), e = parseInt(eRaw, 10);
+        if (isNaN(s) || isNaN(e) || e < s) return;
+        this.els.editBookQCount.value = e - s + 1;
+        this.els.editBookQCount.disabled = true;
+      };
+      E.editBookStartNo.addEventListener('input', syncRangeToCount);
+      E.editBookEndNo.addEventListener('input', syncRangeToCount);
       E.btnConfirmDelete.addEventListener('click', () => this._confirmDeleteBook());
       document.querySelectorAll('.modal-close-btn').forEach(btn => {
         btn.addEventListener('click', () => this._closeAllOverlays());
@@ -293,6 +311,20 @@
       this._renderBookList();
     }
 
+    /* ---- 题号区间支持 ---- */
+    /** 起始题号（老书无 startNo 字段时按 1 处理） */
+    _qStart(book) {
+      return book && book.startNo > 0 ? book.startNo : 1;
+    }
+    /** 实际题号列表，如 startNo=17、questionCount=8 → [17..24] */
+    _qNumbers(book) {
+      const s = this._qStart(book);
+      const n = book.questionCount || 0;
+      const arr = [];
+      for (let i = 0; i < n; i++) arr.push(s + i);
+      return arr;
+    }
+
     _showSearchStats() {
       var q = (this.els.searchBooks.value || '').trim().toLowerCase();
       if (!q) { alert('请先输入搜索关键词'); return; }
@@ -306,7 +338,9 @@
         var answers = stored ? (stored.answers || {}) : {};
         var subCounts = stored ? (stored.subCounts || {}) : {};
         var correct = 0, wrong = 0, total = 0;
-        for (var i = 1; i <= book.questionCount; i++) {
+        var nums = self._qNumbers(book);
+        for (var ni = 0; ni < nums.length; ni++) {
+          var i = nums[ni];
           var sc = subCounts[i] || 1;
           for (var j = 1; j <= sc; j++) {
             var key = sc > 1 ? (i + '.' + j) : i.toString();
@@ -443,7 +477,7 @@
       const subCounts = stored.subCounts || {};
       // 统计总答题格数（含子题）
       let totalSlots = 0, answeredSlots = 0;
-      for (let i = 1; i <= book.questionCount; i++) {
+      for (const i of this._qNumbers(book)) {
         const sc = subCounts[i] || 1;
         for (let j = 1; j <= sc; j++) {
           totalSlots++;
@@ -457,7 +491,7 @@
       if (stored.correctAnswers && Object.keys(stored.correctAnswers).length > 0) {
         const correctAnswers = stored.correctAnswers;
         let correct = 0, wrong = 0;
-        for (let i = 1; i <= book.questionCount; i++) {
+        for (const i of this._qNumbers(book)) {
           const sc = subCounts[i] || 1;
           for (let j = 1; j <= sc; j++) {
             const key = sc > 1 ? (i + '.' + j) : i.toString();
@@ -475,7 +509,7 @@
       } else if (book.type === 'open') {
         // 非选择题：从自评结果计算正确率（"正确"/"错误"）
         let correct = 0, wrong = 0;
-        for (let i = 1; i <= book.questionCount; i++) {
+        for (const i of this._qNumbers(book)) {
           const sc = subCounts[i] || 1;
           for (let j = 1; j <= sc; j++) {
             const key = sc > 1 ? (i + '.' + j) : i.toString();
@@ -738,7 +772,7 @@
         const answers = stored ? (stored.answers || {}) : {};
         const subCounts = stored ? (stored.subCounts || {}) : {};
         let correct = 0, wrong = 0, total = 0;
-        for (let i = 1; i <= book.questionCount; i++) {
+        for (const i of self._qNumbers(book)) {
           const sc = subCounts[i] || 1;
           for (let j = 1; j <= sc; j++) {
             const key = sc > 1 ? (i + '.' + j) : i.toString();
@@ -824,11 +858,17 @@
       this.els.editBookName.value = book ? book.name : '';
       this.els.editBookType.value = book ? book.type : 'choice';
       this.els.editBookQCount.value = book ? book.questionCount : '';
+      // 题号区间：老书（无 startNo 或 startNo=1）留空；带区间的书回显
+      const startNo = book && book.startNo > 1 ? book.startNo : null;
+      this.els.editBookStartNo.value = startNo !== null ? startNo : '';
+      this.els.editBookEndNo.value = startNo !== null ? startNo + book.questionCount - 1 : '';
       this.els.editBookNotes.value = book ? (book.notes || '') : '';
       this.els.editBookId.value = book ? book.id : '';
 
       this.els.editBookType.disabled = !!book;
       this.els.editBookQCount.disabled = !!book;
+      this.els.editBookStartNo.disabled = !!book;
+      this.els.editBookEndNo.disabled = !!book;
       this.els.qcountHint.style.display = book ? 'none' : '';
 
       this._openOverlay(this.els.editBookOverlay);
@@ -838,9 +878,20 @@
     async _onSaveBook() {
       const name = this.els.editBookName.value.trim();
       const type = this.els.editBookType.value;
-      const qCount = parseInt(this.els.editBookQCount.value, 10);
       const notes = this.els.editBookNotes.value.trim();
       const id = this.els.editBookId.value;
+      const startRaw = (this.els.editBookStartNo.value || '').trim();
+      const endRaw = (this.els.editBookEndNo.value || '').trim();
+
+      let qCount = parseInt(this.els.editBookQCount.value, 10);
+      let startNo = 1;
+      if (!id && startRaw !== '' && endRaw !== '') {
+        const s = parseInt(startRaw, 10), e = parseInt(endRaw, 10);
+        if (isNaN(s) || isNaN(e) || e < s) { alert('题号区间无效：结束题号需 ≥ 开始题号'); return; }
+        qCount = e - s + 1;
+        if (qCount > 500) { alert('题号区间过大：最多 500 题'); return; }
+        startNo = s;
+      }
 
       if (!name) { alert('请输入做题本名称'); return; }
       if (!qCount || qCount < 1 || qCount > 500) { alert('请输入有效的题目数量（1-500）'); return; }
@@ -852,7 +903,7 @@
         existing.notes = notes;
         await this.db.put(STORE_BOOKS, existing);
       } else {
-        const book = { name, type, questionCount: qCount, notes, createdAt: Date.now() };
+        const book = { name, type, questionCount: qCount, startNo, notes, createdAt: Date.now() };
         const newId = await this.db.add(STORE_BOOKS, book);
         await this.db.add(STORE_ANSWERS, { bookId: newId, answers: {}, updatedAt: Date.now() });
       }
@@ -961,7 +1012,7 @@
       const subCounts = this.currentAnswerRecord.subCounts || {};
       // 计算总答题格数（含子题）
       let totalSlots = 0, answeredSlots = 0;
-      for (let i = 1; i <= book.questionCount; i++) {
+      for (const i of this._qNumbers(book)) {
         const sc = subCounts[i] || 1;
         for (let j = 1; j <= sc; j++) {
           totalSlots++;
@@ -995,7 +1046,7 @@
       let html = '';
 
       // 展平：每道主题目按 subCounts 产生多个子题行
-      for (let i = 1; i <= book.questionCount; i++) {
+      for (const i of this._qNumbers(book)) {
         const sc = subCounts[i] || 1;
         if (sc <= 1) {
           html += this._renderSingleQuestion(i, i.toString(), answers, isChecked, correctAnswers, book);
@@ -1238,7 +1289,7 @@
       if (!book) return false;
       const answers = this.currentAnswerRecord.answers || {};
       const subCounts = this.currentAnswerRecord.subCounts || {};
-      for (let i = 1; i <= book.questionCount; i++) {
+      for (const i of this._qNumbers(book)) {
         const sc = subCounts[i] || 1;
         for (let j = 1; j <= sc; j++) {
           const key = sc > 1 ? (i + '.' + j) : i.toString();
@@ -1269,7 +1320,7 @@
         const subCounts = this.currentAnswerRecord.subCounts || {};
         let correct = 0, total = 0;
         const wrongNums = [];
-        for (let i = 1; i <= book.questionCount; i++) {
+        for (const i of this._qNumbers(book)) {
           const sc = subCounts[i] || 1;
           for (let j = 1; j <= sc; j++) {
             const key = sc > 1 ? (i + '.' + j) : i.toString();
@@ -1283,7 +1334,7 @@
       const subCounts = this.currentAnswerRecord.subCounts || {};
       let correct = 0, wrong = 0;
       const wrongNums = [];
-      for (let i = 1; i <= book.questionCount; i++) {
+      for (const i of this._qNumbers(book)) {
         const sc = subCounts[i] || 1;
         for (let j = 1; j <= sc; j++) {
           const key = sc > 1 ? (i + '.' + j) : i.toString();
@@ -1306,7 +1357,7 @@
       const subCounts = this.currentAnswerRecord.subCounts || {};
 
       let html = '';
-      for (let i = 1; i <= book.questionCount; i++) {
+      for (const i of this._qNumbers(book)) {
         const sc = subCounts[i] || 1;
         if (sc <= 1) {
           const preSelected = existingCorrect[i] || '';
@@ -1410,7 +1461,7 @@
           // 统计总答题格数（含子题）
           const subCounts = this.currentAnswerRecord.subCounts || {};
           let totalSlots = 0, filledSlots = 0;
-          for (let i = 1; i <= book.questionCount; i++) {
+          for (const i of this._qNumbers(book)) {
             const sc = subCounts[i] || 1;
             for (let j = 1; j <= sc; j++) {
               totalSlots++;
@@ -1431,11 +1482,13 @@
 
     _renderChoiceSummary(book, answers) {
       const subCounts = this.currentAnswerRecord.subCounts || {};
+      const nums = this._qNumbers(book);
       let html = '';
-      for (let start = 1; start <= book.questionCount; start += 5) {
-        const end = Math.min(start + 4, book.questionCount);
+      for (let g = 0; g < nums.length; g += 5) {
+        const chunk = nums.slice(g, g + 5);
         let groupStr = '';
-        for (let i = start; i <= end; i++) {
+        for (let k = 0; k < chunk.length; k++) {
+          const i = chunk[k];
           const sc = subCounts[i] || 1;
           if (sc <= 1) {
             const a = answers[i];
@@ -1450,7 +1503,7 @@
             groupStr += parts.join('<span style="color:var(--jy-text-muted)">/</span>');
           }
         }
-        html += `<div class="summary__group">${start}-${end}: ${groupStr}</div>`;
+        html += `<div class="summary__group">${chunk[0]}-${chunk[chunk.length - 1]}: ${groupStr}</div>`;
       }
       this.els.summaryContent.innerHTML = html;
     }
@@ -1460,7 +1513,7 @@
       let html = `<div class="summary__stat">已答 <strong>${answered}</strong> / ${book.questionCount} 题</div>`;
       if (answered > 0) {
         html += '<div class="summary__text-list" style="margin-top:var(--jy-space-3)">';
-        for (let i = 1; i <= book.questionCount; i++) {
+        for (const i of this._qNumbers(book)) {
           const val = answers[i];
           if (val && val.trim()) {
             html += `<div class="summary__text-item"><strong>#${i}</strong> ${esc(val.length > 80 ? val.slice(0, 80) + '...' : val)}</div>`;
@@ -1560,7 +1613,7 @@
       let text;
       if (book.type === 'choice') {
         let full = '';
-        for (let i = 1; i <= book.questionCount; i++) {
+        for (const i of this._qNumbers(book)) {
           const sc = subCounts[i] || 1;
           if (sc <= 1) {
             full += answers[i] || '_';
@@ -1573,7 +1626,7 @@
         text = full;
       } else {
         const lines = [];
-        for (let i = 1; i <= book.questionCount; i++) {
+        for (const i of this._qNumbers(book)) {
           const sc = subCounts[i] || 1;
           if (sc <= 1) {
             lines.push(`${i}. ${answers[i] || '(未答)'}`);
