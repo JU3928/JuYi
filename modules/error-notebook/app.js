@@ -249,9 +249,11 @@
       E.btnSkip.addEventListener('click', () => this._reviewAction('skip'));
       E.btnPrevQuestion.addEventListener('click', () => this._reviewPrev());
       document.getElementById('btnReviewReset').addEventListener('click', () => this._reviewReset());
-      // 图片放大
+      // 图片放大（详情 / 复习卡 / 重做卡 / 解析弹窗）
       E.detailBody.addEventListener('click', e => { if (e.target.tagName === 'IMG') this._zoomImage(e.target.src); });
       E.reviewCardContent.addEventListener('click', e => { if (e.target.tagName === 'IMG') this._zoomImage(e.target.src); });
+      E.redoCardContent.addEventListener('click', e => { if (e.target.tagName === 'IMG') this._zoomImage(e.target.src); });
+      E.answerBody.addEventListener('click', e => { if (e.target.tagName === 'IMG') this._zoomImage(e.target.src); });
       // 富文本编辑器
       document.querySelectorAll('.rich-editor').forEach(ed => this._initRichEditor(ed));
     }
